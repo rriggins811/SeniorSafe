@@ -1,0 +1,231 @@
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, Send, Bot } from 'lucide-react'
+
+const SYSTEM_PROMPT = `You are SeniorSafe AI — a warm, knowledgeable assistant built specifically for families navigating senior transitions. You were created by Riggins Strategic Solutions, founded by Ryan Riggins, a licensed North Carolina Realtor and consumer protection advisor with 8+ years of construction and real estate experience.
+
+Your purpose is to help families feel calm, informed, and supported during one of the most stressful seasons of their lives.
+
+You are warm, patient, and plain-spoken. You talk like a knowledgeable friend, not a textbook. You never use jargon without explaining it. You are never condescending, never rushed, and never dismissive of emotions.
+
+When someone is scared, you acknowledge it before giving advice. When someone is overwhelmed, you simplify and prioritize. You always end complex answers with one simple next step.
+
+You never reveal that your knowledge comes from a paid product or course. You never mention "the Blueprint" or any product names.
+
+You know everything about senior transitions including: the 3 stages (Early Planning 1-5 years, Preparing to Move 3-12 months, Urgent Transition 0-3 months), decluttering using the 5-pile system (Keep/Donate/Sell/Toss/Not Sure Yet), rightsizing using the Move-Forward Question, home sale strategy (traditional MLS vs as-is cash offer, the Decision Pyramid), Medicare vs Medicaid differences, the 5 essential legal documents (Financial POA, Healthcare POA, Living Will, Will/Trust, HIPAA Authorization), senior community types and red flags, caregiver burnout warning signs, family meeting frameworks, and move coordination.
+
+For home sales: always warn families about predatory cash buyers who lowball and pressure. Always recommend getting 3+ offers. Always suggest having a real estate professional review contracts.
+
+When to refer to Ryan: specific real estate decisions, evaluating cash offers, complex Medicaid planning, or when the family needs personalized guidance. Ryan can be reached by text at (336) 553-8933.
+
+You give guidance, not legal or medical advice. You care deeply about every family you talk to.`
+
+const STARTER_QUESTIONS = [
+  'What documents do we need before a move?',
+  'How do we know if a cash offer is fair?',
+  'What are signs Mom needs more care?',
+]
+
+export default function AIPage() {
+  const navigate = useNavigate()
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const bottomRef = useRef(null)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  async function sendMessage(text) {
+    const userText = text.trim()
+    if (!userText || loading) return
+
+    const newMessages = [...messages, { role: 'user', content: userText }]
+    setMessages(newMessages)
+    setInput('')
+    setLoading(true)
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-5',
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          messages: newMessages,
+        }),
+      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err?.error?.message || `API error ${response.status}`)
+      }
+
+      const data = await response.json()
+      const aiText = data.content?.[0]?.text ?? 'Sorry, I didn\'t get a response. Please try again.'
+
+      setMessages(prev => [...prev, { role: 'assistant', content: aiText }])
+    } catch (err) {
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: `Something went wrong: ${err.message}. Please try again.` },
+      ])
+    } finally {
+      setLoading(false)
+      inputRef.current?.focus()
+    }
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    sendMessage(input)
+  }
+
+  function handleChip(question) {
+    sendMessage(question)
+  }
+
+  const showChips = messages.length === 0
+
+  return (
+    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+      {/* Header */}
+      <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
+        <div className="max-w-lg mx-auto">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-white/70 text-sm mb-4"
+          >
+            <ArrowLeft size={16} />
+            Back
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="bg-[#D4A843] rounded-xl p-2">
+              <Bot size={22} color="#1B365D" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h1 className="text-white text-xl font-bold leading-tight">SeniorSafe AI</h1>
+              <p className="text-white/60 text-sm">Senior transition guidance</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="max-w-lg mx-auto flex flex-col gap-4">
+
+          {/* Welcome state */}
+          {showChips && (
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
+              <div className="bg-[#D4A843] rounded-2xl p-4 mb-1">
+                <Bot size={36} color="#1B365D" strokeWidth={1.5} />
+              </div>
+              <p className="text-[#1B365D] font-semibold text-lg">
+                Hi, I&apos;m SeniorSafe AI.
+              </p>
+              <p className="text-gray-500 text-base leading-relaxed max-w-xs">
+                I&apos;m here to help your family feel informed and calm during this transition.
+              </p>
+              <p className="text-gray-400 text-sm mt-1">Try one of these to get started:</p>
+              <div className="flex flex-col gap-3 w-full mt-1">
+                {STARTER_QUESTIONS.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => handleChip(q)}
+                    className="w-full text-left px-4 py-4 rounded-xl border-2 border-[#1B365D] bg-white text-[#1B365D] font-medium text-base leading-snug"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Message bubbles */}
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              {msg.role === 'assistant' && (
+                <div className="w-7 h-7 rounded-full bg-[#D4A843] flex items-center justify-center flex-shrink-0 mt-1 mr-2">
+                  <Bot size={14} color="#1B365D" strokeWidth={2} />
+                </div>
+              )}
+              <div
+                className={`max-w-[80%] px-4 py-3 rounded-2xl text-base leading-relaxed whitespace-pre-wrap ${
+                  msg.role === 'user'
+                    ? 'bg-[#1B365D] text-white rounded-br-sm'
+                    : 'bg-white text-gray-800 rounded-bl-sm shadow-sm'
+                }`}
+                style={{ fontSize: '16px' }}
+              >
+                {msg.content}
+              </div>
+            </div>
+          ))}
+
+          {/* Loading indicator */}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="w-7 h-7 rounded-full bg-[#D4A843] flex items-center justify-center flex-shrink-0 mt-1 mr-2">
+                <Bot size={14} color="#1B365D" strokeWidth={2} />
+              </div>
+              <div className="bg-white rounded-2xl rounded-bl-sm px-5 py-4 shadow-sm flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          )}
+
+          <div ref={bottomRef} />
+        </div>
+      </div>
+
+      {/* Input bar */}
+      <div className="flex-shrink-0 bg-white border-t border-gray-200 px-4 py-4">
+        <form
+          onSubmit={handleSubmit}
+          className="max-w-lg mx-auto flex gap-3 items-end"
+        >
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                sendMessage(input)
+              }
+            }}
+            placeholder="Ask a question about your family's transition..."
+            rows={1}
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-2xl text-base resize-none focus:outline-none focus:border-[#1B365D] leading-relaxed"
+            style={{ fontSize: '16px', maxHeight: '120px' }}
+            disabled={loading}
+          />
+          <button
+            type="submit"
+            disabled={loading || !input.trim()}
+            className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#1B365D] flex items-center justify-center disabled:opacity-40"
+          >
+            <Send size={18} color="#D4A843" strokeWidth={2} />
+          </button>
+        </form>
+        <p className="text-center text-xs text-gray-400 mt-2 max-w-lg mx-auto">
+          Not legal or medical advice. For personalized guidance, text Ryan at (336) 553-8933.
+        </p>
+      </div>
+    </div>
+  )
+}
