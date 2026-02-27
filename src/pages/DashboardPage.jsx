@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   Shield, CheckCircle, Pill, Calendar, MessageCircle,
   Phone, Heart, LogOut, ChevronRight, Users, AlertTriangle, Settings,
@@ -388,8 +388,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-300 pb-2">
+        <p className="text-center text-xs text-gray-300 pb-1">
           Riggins Strategic Solutions • Ryan Riggins, Licensed NC Realtor
+        </p>
+        <p className="text-center text-xs text-gray-300 pb-2">
+          <Link to="/terms" className="underline hover:text-gray-500">Terms of Service</Link>
+          {' | '}
+          <Link to="/privacy" className="underline hover:text-gray-500">Privacy Policy</Link>
         </p>
       </div>
 

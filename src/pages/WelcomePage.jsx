@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Shield } from 'lucide-react'
 
 export default function WelcomePage() {
@@ -47,6 +47,11 @@ export default function WelcomePage() {
         {/* Footer note */}
         <p className="text-xs text-gray-400 text-center">
           Powered by Riggins Strategic Solutions
+        </p>
+        <p className="text-xs text-gray-400 text-center">
+          <Link to="/terms" className="underline hover:text-gray-600">Terms of Service</Link>
+          {' | '}
+          <Link to="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>
         </p>
       </div>
     </div>

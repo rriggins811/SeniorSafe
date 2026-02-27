@@ -90,6 +90,12 @@ export default function SignInPage() {
             Get started
           </Link>
         </p>
+
+        <p className="text-xs text-gray-400 text-center">
+          <Link to="/terms" className="underline hover:text-gray-600">Terms of Service</Link>
+          {' | '}
+          <Link to="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>
+        </p>
       </div>
     </div>
   )
