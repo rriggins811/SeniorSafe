@@ -142,7 +142,7 @@ export default function DashboardPage() {
       .single()
 
     if (ownProfile?.phone) {
-      await sendSMS(ownProfile.phone, `✅ Your I'm Okay check-in was sent to your family - SeniorSafe`)
+      await sendSMS(ownProfile.phone, `✅ Your I'm Okay check-in was recorded and your family has been notified - SeniorSafe`)
     }
 
     setTimeout(() => setCheckInStatus('idle'), 3000)

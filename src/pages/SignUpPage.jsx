@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Shield } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -7,8 +7,213 @@ function generateFamilyCode() {
   return Math.random().toString(36).substr(2, 6).toUpperCase()
 }
 
+// ─── Member signup (invited via URL ?code=XXXXXX) ─────────────────────────
+function MemberSignup({ urlCode }) {
+  const navigate = useNavigate()
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    password: '',
+    inviteCode: urlCode,
+  })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  function handleChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    const code = form.inviteCode.trim().toUpperCase()
+
+    // Validate invite code
+    const { data: adminProfile, error: lookupErr } = await supabase
+      .from('user_profile')
+      .select('user_id, family_name')
+      .eq('family_code', code)
+      .single()
+
+    if (lookupErr || !adminProfile) {
+      setError('Invite code not found. Double-check the code and try again.')
+      setLoading(false)
+      return
+    }
+
+    // Create account
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        data: {
+          first_name: form.firstName.trim(),
+          last_name: form.lastName.trim(),
+          family_name: adminProfile.family_name,
+          phone: form.phone.trim(),
+          role: 'member',
+          invited_by: adminProfile.user_id,
+        },
+      },
+    })
+
+    if (signUpError) {
+      setError(signUpError.message)
+      setLoading(false)
+      return
+    }
+
+    // Create user_profile directly — skip onboarding
+    await supabase.from('user_profile').upsert({
+      user_id: data.user.id,
+      family_name: adminProfile.family_name,
+      first_name: form.firstName.trim(),
+      last_name: form.lastName.trim(),
+      phone: form.phone.trim() || null,
+      role: 'member',
+      invited_by: adminProfile.user_id,
+      family_code: null,
+      onboarding_complete: true,
+    }, { onConflict: 'user_id' })
+
+    setLoading(false)
+    navigate('/dashboard')
+  }
+
+  return (
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
+      <div className="w-full max-w-sm flex flex-col gap-6">
+
+        <div className="flex flex-col items-center gap-2">
+          <div className="bg-[#1B365D] rounded-2xl p-3">
+            <Shield size={32} color="#D4A843" strokeWidth={1.5} />
+          </div>
+          <h1 className="text-2xl font-bold text-[#1B365D] text-center">Join Your Family on SeniorSafe</h1>
+          <p className="text-sm text-gray-500 text-center leading-relaxed">
+            You've been invited to connect with your family. Create your account to get started.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">First name</label>
+              <input
+                name="firstName"
+                type="text"
+                required
+                value={form.firstName}
+                onChange={handleChange}
+                placeholder="Jane"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Last name</label>
+              <input
+                name="lastName"
+                type="text"
+                required
+                value={form.lastName}
+                onChange={handleChange}
+                placeholder="Smith"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              name="email"
+              type="email"
+              required
+              value={form.email}
+              onChange={handleChange}
+              placeholder="jane@example.com"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mobile phone <span className="text-gray-400 font-normal">(for notifications)</span>
+            </label>
+            <input
+              name="phone"
+              type="tel"
+              value={form.phone}
+              onChange={handleChange}
+              placeholder="(336) 555-0100"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              value={form.password}
+              onChange={handleChange}
+              placeholder="At least 6 characters"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Family invite code</label>
+            <input
+              name="inviteCode"
+              type="text"
+              required
+              value={form.inviteCode}
+              onChange={e => setForm({ ...form, inviteCode: e.target.value.toUpperCase() })}
+              placeholder="e.g. A3BX7K"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D] uppercase tracking-widest"
+            />
+          </div>
+
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg mt-1 disabled:opacity-60"
+          >
+            {loading ? 'Creating account...' : 'Join Family'}
+          </button>
+        </form>
+
+        <p className="text-sm text-center text-gray-500">
+          Already have an account?{' '}
+          <Link to="/signin" className="text-[#1B365D] font-semibold underline">Sign in</Link>
+        </p>
+        <p className="text-xs text-gray-400 text-center">
+          <Link to="/terms" className="underline hover:text-gray-600">Terms of Service</Link>
+          {' | '}
+          <Link to="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Admin signup (no invite code in URL) ─────────────────────────────────
 export default function SignUpPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const urlCode = searchParams.get('code')?.toUpperCase() || ''
+
+  // If URL has invite code, show member flow
+  if (urlCode) return <MemberSignup urlCode={urlCode} />
+
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -92,7 +297,6 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm flex flex-col gap-6">
 
-        {/* Header */}
         <div className="flex flex-col items-center gap-2">
           <div className="bg-[#1B365D] rounded-2xl p-3">
             <Shield size={32} color="#D4A843" strokeWidth={1.5} />
@@ -101,7 +305,6 @@ export default function SignUpPage() {
           <p className="text-sm text-gray-500 text-center">Join SeniorSafe and get your family organized.</p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex gap-3">
             <div className="flex-1">
@@ -171,7 +374,6 @@ export default function SignUpPage() {
             />
           </div>
 
-          {/* Family name — hide when invite code is entered (will use admin's name) */}
           {!hasInvite && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Family name</label>
@@ -186,7 +388,6 @@ export default function SignUpPage() {
             </div>
           )}
 
-          {/* Divider */}
           <div className="border-t border-gray-100 pt-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Family invite code{' '}
@@ -201,15 +402,11 @@ export default function SignUpPage() {
               className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D] uppercase tracking-widest"
             />
             {hasInvite && (
-              <p className="text-[#1B365D] text-xs mt-1.5">
-                ✓ You'll join an existing family account
-              </p>
+              <p className="text-[#1B365D] text-xs mt-1.5">✓ You'll join an existing family account</p>
             )}
           </div>
 
-          {error && (
-            <p className="text-red-500 text-sm text-center">{error}</p>
-          )}
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
           <button
             type="submit"
@@ -222,11 +419,8 @@ export default function SignUpPage() {
 
         <p className="text-sm text-center text-gray-500">
           Already have an account?{' '}
-          <Link to="/signin" className="text-[#1B365D] font-semibold underline">
-            Sign in
-          </Link>
+          <Link to="/signin" className="text-[#1B365D] font-semibold underline">Sign in</Link>
         </p>
-
         <p className="text-xs text-gray-400 text-center">
           <Link to="/terms" className="underline hover:text-gray-600">Terms of Service</Link>
           {' | '}
