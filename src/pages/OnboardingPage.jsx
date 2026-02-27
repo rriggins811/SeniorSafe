@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 const STEPS = [
   {
     id: 'senior_name',
-    question: "What is your loved one's name?",
+    question: "What is your loved one's first name?",
     type: 'text',
     placeholder: 'e.g. Margaret',
   },
@@ -17,16 +17,21 @@ const STEPS = [
     placeholder: 'e.g. 78',
   },
   {
-    id: 'current_living',
+    id: 'living_situation',
     question: 'Where are they currently living?',
     type: 'select',
-    options: ['Own Home', 'With Family', 'Assisted Living', 'Memory Care', 'Other'],
+    options: ['Own Home', 'With Family Member', 'Assisted Living', 'Memory Care', 'Other'],
   },
   {
     id: 'timeline',
     question: 'What is your timeline?',
     type: 'select',
-    options: ['Just planning ahead', '6–12 months', '3–6 months', 'We need to move now'],
+    options: [
+      'Just planning ahead — 1–5 years',
+      'Starting to prepare — 6–12 months',
+      'Actively preparing — 3–6 months',
+      'We need to move now',
+    ],
   },
   {
     id: 'biggest_concern',
@@ -43,18 +48,18 @@ const STEPS = [
   },
 ]
 
-const TOTAL = STEPS.length // 5
+const TOTAL = STEPS.length
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [familyName, setFamilyName] = useState('')
-  const [step, setStep] = useState(0)   // 0–4 = questions, 5 = completion
+  const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [answers, setAnswers] = useState({
     senior_name: '',
     senior_age: '',
-    current_living: '',
+    living_situation: '',
     timeline: '',
     biggest_concern: '',
   })
@@ -64,8 +69,6 @@ export default function OnboardingPage() {
       if (!user) { navigate('/signin'); return }
       setUser(user)
       setFamilyName(user.user_metadata?.family_name || '')
-
-      // Already completed onboarding — skip straight to dashboard
       supabase
         .from('user_profile')
         .select('onboarding_complete')
@@ -77,46 +80,26 @@ export default function OnboardingPage() {
     })
   }, [navigate])
 
-  function currentValue() {
-    return answers[STEPS[step]?.id] ?? ''
-  }
-
-  function canAdvance() {
-    return String(currentValue()).trim().length > 0
-  }
-
-  function setAnswer(val) {
-    setAnswers(prev => ({ ...prev, [STEPS[step].id]: val }))
-  }
+  const currentValue = () => answers[STEPS[step]?.id] ?? ''
+  const canAdvance = () => String(currentValue()).trim().length > 0
+  const setAnswer = (val) => setAnswers(prev => ({ ...prev, [STEPS[step].id]: val }))
 
   async function handleNext() {
-    if (step < TOTAL - 1) {
-      setStep(s => s + 1)
-      return
-    }
-    // Last question → save and show completion
+    if (step < TOTAL - 1) { setStep(s => s + 1); return }
     setSaving(true)
     const { error } = await supabase.from('user_profile').upsert({
       user_id: user.id,
       family_name: familyName,
       senior_name: answers.senior_name.trim(),
       senior_age: answers.senior_age ? parseInt(answers.senior_age) : null,
-      current_living: answers.current_living,
+      living_situation: answers.living_situation,
       timeline: answers.timeline,
       biggest_concern: answers.biggest_concern,
       onboarding_complete: true,
     }, { onConflict: 'user_id' })
-
     setSaving(false)
-    if (error) {
-      alert('Something went wrong saving your profile: ' + error.message)
-    } else {
-      setStep(5) // completion screen
-    }
-  }
-
-  function handleBack() {
-    if (step > 0) setStep(s => s - 1)
+    if (error) alert('Error saving your profile: ' + error.message)
+    else setStep(5)
   }
 
   // ── Completion screen ──────────────────────────────────────────────
@@ -124,7 +107,7 @@ export default function OnboardingPage() {
     const name = familyName || 'Your'
     const summary = [
       ['Loved one', answers.senior_name + (answers.senior_age ? `, age ${answers.senior_age}` : '')],
-      ['Living situation', answers.current_living],
+      ['Living situation', answers.living_situation],
       ['Timeline', answers.timeline],
       ['Main concern', answers.biggest_concern],
     ]
@@ -134,19 +117,16 @@ export default function OnboardingPage() {
           <div className="bg-[#D4A843] rounded-2xl p-5">
             <CheckCircle size={48} color="#1B365D" strokeWidth={1.5} />
           </div>
-
           <div className="text-center">
             <h1 className="text-2xl font-bold text-[#1B365D]">
               You&apos;re all set, {name} Family!
             </h1>
             <p className="text-gray-500 text-base mt-2 leading-relaxed">
-              SeniorSafe AI is now personalized for{' '}
-              <span className="font-semibold text-[#1B365D]">{answers.senior_name}</span>
-              &apos;s situation. Every response will speak directly to your family.
+              SeniorSafe is now personalized for{' '}
+              <span className="font-semibold text-[#1B365D]">{answers.senior_name}</span>.
+              Every AI response will speak directly to your situation.
             </p>
           </div>
-
-          {/* Summary */}
           <div className="w-full flex flex-col gap-2">
             {summary.map(([label, value]) => value && (
               <div key={label} className="bg-[#F5F5F5] rounded-xl px-4 py-3 flex items-center justify-between gap-4">
@@ -155,7 +135,6 @@ export default function OnboardingPage() {
               </div>
             ))}
           </div>
-
           <button
             onClick={() => navigate('/dashboard')}
             className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg"
@@ -169,39 +148,36 @@ export default function OnboardingPage() {
 
   // ── Question screens ───────────────────────────────────────────────
   const currentStep = STEPS[step]
-  const progressPct = ((step) / TOTAL) * 100
+  const progressPct = (step / TOTAL) * 100
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Progress bar */}
-      <div className="w-full h-1.5 bg-gray-100">
-        <div
-          className="h-full bg-[#D4A843] transition-all duration-500"
-          style={{ width: `${progressPct}%` }}
-        />
+      {/* Navy header with gold progress bar */}
+      <div className="bg-[#1B365D] flex-shrink-0">
+        <div className="px-6 pt-12 pb-4 max-w-sm mx-auto w-full flex items-center justify-between">
+          <button
+            onClick={() => step > 0 ? setStep(s => s - 1) : null}
+            className={`p-2 -ml-2 rounded-lg ${step === 0 ? 'opacity-0 pointer-events-none' : 'text-white/70'}`}
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <span className="text-[#D4A843] text-sm font-semibold">
+            Question {step + 1} of {TOTAL}
+          </span>
+          <div className="w-8" />
+        </div>
+        {/* Gold progress bar */}
+        <div className="w-full h-1 bg-white/20">
+          <div
+            className="h-full bg-[#D4A843] transition-all duration-500"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
       </div>
 
-      {/* Header */}
-      <div className="px-6 pt-8 pb-2 flex items-center justify-between max-w-sm mx-auto w-full">
-        <button
-          onClick={handleBack}
-          disabled={step === 0}
-          className="p-2 -ml-2 text-gray-400 disabled:opacity-0"
-        >
-          <ChevronLeft size={24} />
-        </button>
-        <span className="text-sm font-medium text-[#D4A843]">
-          Question {step + 1} of {TOTAL}
-        </span>
-        <div className="w-8" /> {/* spacer */}
-      </div>
-
-      {/* Question */}
-      <div className="flex-1 px-6 pt-6 pb-8 max-w-sm mx-auto w-full flex flex-col gap-8">
-        <h1
-          className="text-[#1B365D] font-bold leading-snug"
-          style={{ fontSize: '22px' }}
-        >
+      {/* Question content */}
+      <div className="flex-1 px-6 pt-8 pb-6 max-w-sm mx-auto w-full flex flex-col gap-8">
+        <h1 className="text-[#1B365D] font-bold leading-snug" style={{ fontSize: '22px' }}>
           {currentStep.question}
         </h1>
 
@@ -235,10 +211,10 @@ export default function OnboardingPage() {
                   }`}
                   style={{ fontSize: '17px' }}
                 >
-                  <span className="flex items-center justify-between">
-                    {opt}
+                  <span className="flex items-center justify-between gap-3">
+                    <span>{opt}</span>
                     {selected && (
-                      <span className="w-5 h-5 rounded-full bg-[#D4A843] flex items-center justify-center flex-shrink-0">
+                      <span className="w-6 h-6 rounded-full bg-[#D4A843] flex items-center justify-center flex-shrink-0">
                         <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                           <path d="M1 4l2.5 2.5L9 1" stroke="#1B365D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
@@ -252,12 +228,13 @@ export default function OnboardingPage() {
         )}
       </div>
 
-      {/* Next button — pinned to bottom */}
-      <div className="px-6 pb-10 max-w-sm mx-auto w-full">
+      {/* Next button pinned to bottom */}
+      <div className="px-6 pb-10 max-w-sm mx-auto w-full flex-shrink-0">
         <button
           onClick={handleNext}
           disabled={!canAdvance() || saving}
           className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg disabled:opacity-40 transition-opacity"
+          style={{ fontSize: '18px' }}
         >
           {saving ? 'Saving...' : step === TOTAL - 1 ? 'Finish' : 'Next'}
         </button>

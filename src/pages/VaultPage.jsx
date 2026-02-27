@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Upload, Camera, Trash2, FileText, X, FolderLock } from 'lucide-react'
+import { Upload, Camera, Trash2, FileText, X, FolderLock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import BottomNav from '../components/BottomNav'
 
 const CATEGORIES = ['Legal', 'Financial', 'Medical', 'Property', 'Personal']
 const FILTER_TABS = ['All', ...CATEGORIES]
@@ -19,7 +19,6 @@ function isImageFile(fileName) {
 }
 
 export default function VaultPage() {
-  const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [documents, setDocuments] = useState([])
   const [filter, setFilter] = useState('All')
@@ -136,7 +135,7 @@ export default function VaultPage() {
     : documents.filter(d => d.category === filter)
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+    <div className="min-h-screen bg-[#F5F5F5] flex flex-col pb-20">
       {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
@@ -157,13 +156,6 @@ export default function VaultPage() {
       {/* Header */}
       <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 text-white/70 text-sm mb-4"
-          >
-            <ArrowLeft size={16} />
-            Back
-          </button>
           <div className="flex items-center gap-3">
             <div className="bg-white/15 rounded-xl p-2">
               <FolderLock size={22} color="#D4A843" strokeWidth={1.5} />
@@ -347,6 +339,7 @@ export default function VaultPage() {
           </div>
         </div>
       )}
+      <BottomNav />
     </div>
   )
 }

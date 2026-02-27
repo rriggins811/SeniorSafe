@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, Bot, Mic, MicOff, Volume2, VolumeX } from 'lucide-react'
+import { Send, Bot, Mic, MicOff, Volume2, VolumeX } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import BottomNav from '../components/BottomNav'
 
 const SYSTEM_PROMPT = `You are SeniorSafe AI — a warm, knowledgeable assistant built specifically for families navigating senior transitions. You were created by Riggins Strategic Solutions, founded by Ryan Riggins, a licensed North Carolina Realtor and consumer protection advisor with 8+ years of construction and real estate experience.
 
@@ -48,12 +49,12 @@ function pickVoice() {
 
 function buildSystemPrompt(profile) {
   if (!profile?.senior_name) return SYSTEM_PROMPT
-  const { senior_name, senior_age, current_living, timeline, biggest_concern, family_name } = profile
+  const { senior_name, senior_age, living_situation, timeline, biggest_concern, family_name } = profile
   let ctx = `\n\n---\nCURRENT FAMILY CONTEXT:\nThe family you are helping right now is the ${family_name || 'this'} Family.`
   ctx += ` Their loved one's name is ${senior_name}`
   if (senior_age) ctx += `, and they are ${senior_age} years old`
   ctx += '.'
-  if (current_living) ctx += ` ${senior_name} is currently living in: ${current_living}.`
+  if (living_situation) ctx += ` ${senior_name} is currently living in: ${living_situation}.`
   if (timeline) ctx += ` Their timeline for this transition is: ${timeline}.`
   if (biggest_concern) ctx += ` Their biggest concern right now is: ${biggest_concern}.`
   ctx += `\n\nUse ${senior_name}'s name naturally in your responses when appropriate. Tailor all guidance directly to their situation — their timeline, living situation, and primary concern. This family is counting on you.`
@@ -208,17 +209,10 @@ export default function AIPage() {
   const showChips = messages.length === 0
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+    <div className="h-screen bg-[#F5F5F5] flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 text-white/70 text-sm mb-4"
-          >
-            <ArrowLeft size={16} />
-            Back
-          </button>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-[#D4A843] rounded-xl p-2">
@@ -378,6 +372,7 @@ export default function AIPage() {
           Not legal or medical advice. For personalized guidance, text Ryan at (336) 553-8933.
         </p>
       </div>
+      <BottomNav inline />
     </div>
   )
 }

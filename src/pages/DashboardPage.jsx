@@ -1,115 +1,269 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderLock, Bot, Phone, LogOut, Shield } from 'lucide-react'
+import {
+  Shield, CheckCircle, Pill, Calendar, MessageCircle,
+  Phone, Heart, LogOut, ChevronRight,
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
-
-const cards = [
-  {
-    icon: FolderLock,
-    iconColor: '#1B365D',
-    title: 'Family Vault',
-    description: 'Store your important documents securely',
-    route: '/vault',
-    bg: 'bg-white',
-    border: 'border border-gray-200',
-  },
-  {
-    icon: Bot,
-    iconColor: '#D4A843',
-    title: 'SeniorSafe AI',
-    description: 'Get answers about your transition',
-    route: '/ai',
-    bg: 'bg-white',
-    border: 'border border-gray-200',
-  },
-  {
-    icon: Phone,
-    iconColor: '#1B365D',
-    title: 'Contact Ryan',
-    description: 'Your advisor is one tap away',
-    route: '/contact',
-    bg: 'bg-white',
-    border: 'border border-gray-200',
-  },
-]
+import BottomNav from '../components/BottomNav'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const [user, setUser] = useState(null)
   const [familyName, setFamilyName] = useState('')
+  const [seniorName, setSeniorName] = useState('')
+  const [checkInStatus, setCheckInStatus] = useState('idle') // idle | loading | sent
+  const [lastCheckIn, setLastCheckIn] = useState(null)
+  const [medsDue, setMedsDue] = useState(0)
+  const [nextAppt, setNextAppt] = useState(null)
+  const [msgCount, setMsgCount] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.user_metadata?.family_name) {
-        setFamilyName(user.user_metadata.family_name)
-      }
+      if (!user) return
+      setUser(user)
+      setFamilyName(user.user_metadata?.family_name || '')
+
+      const todayStr = new Date().toISOString().split('T')[0]
+      const todayStart = todayStr + 'T00:00:00.000Z'
+
+      // Senior name from profile
+      supabase.from('user_profile').select('senior_name').eq('user_id', user.id).single()
+        .then(({ data }) => setSeniorName(data?.senior_name || ''))
+
+      // Last check-in today
+      supabase.from('checkins')
+        .select('checked_in_at')
+        .eq('user_id', user.id)
+        .gte('checked_in_at', todayStart)
+        .order('checked_in_at', { ascending: false })
+        .limit(1)
+        .then(({ data }) => {
+          if (data?.[0]) setLastCheckIn(new Date(data[0].checked_in_at))
+        })
+
+      // Meds due today (active meds minus taken logs today)
+      supabase.from('medications').select('id, times, frequency').eq('user_id', user.id).eq('active', true)
+        .then(({ data: meds }) => {
+          if (!meds?.length) { setMedsDue(0); return }
+          supabase.from('med_logs')
+            .select('medication_id, scheduled_time')
+            .eq('user_id', user.id)
+            .eq('date', todayStr)
+            .then(({ data: logs }) => {
+              let totalDue = 0
+              let totalTaken = 0
+              meds.forEach(m => {
+                if (m.frequency !== 'As needed') totalDue += (m.times?.length || 1)
+              })
+              totalTaken = logs?.length || 0
+              setMedsDue(Math.max(0, totalDue - totalTaken))
+            })
+        })
+
+      // Next upcoming appointment
+      supabase.from('appointments')
+        .select('title, appointment_date, appointment_time, provider_name')
+        .eq('user_id', user.id)
+        .gte('appointment_date', todayStr)
+        .order('appointment_date', { ascending: true })
+        .order('appointment_time', { ascending: true })
+        .limit(1)
+        .then(({ data }) => setNextAppt(data?.[0] || null))
+
+      // Family message count
+      supabase.from('family_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .then(({ count }) => setMsgCount(count || 0))
+
+      setLoading(false)
     })
   }, [])
+
+  async function handleCheckIn() {
+    if (checkInStatus !== 'idle' || !user) return
+    setCheckInStatus('loading')
+    await supabase.from('checkins').insert({
+      user_id: user.id,
+      family_name: familyName,
+      checked_in_at: new Date().toISOString(),
+    })
+    setLastCheckIn(new Date())
+    setCheckInStatus('sent')
+    setTimeout(() => setCheckInStatus('idle'), 3000)
+  }
 
   async function handleSignOut() {
     await supabase.auth.signOut()
     navigate('/')
   }
 
+  function formatCheckIn(date) {
+    if (!date) return null
+    const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    return `Today at ${time}`
+  }
+
+  function formatApptDate(dateStr) {
+    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  const isSent = checkInStatus === 'sent'
   const displayName = familyName || 'Your'
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
+    <div className="min-h-screen bg-[#F5F5F5] pb-20">
       {/* Header */}
-      <div className="bg-[#1B365D] px-6 pt-12 pb-8">
-        <div className="max-w-sm mx-auto flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <Shield size={28} color="#D4A843" strokeWidth={1.5} />
+      <div className="bg-[#1B365D] px-5 pt-12 pb-5">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Shield size={22} color="#D4A843" strokeWidth={1.5} />
             <div>
-              <p className="text-[#D4A843] text-sm font-medium">SeniorSafe</p>
-              <h1 className="text-white text-xl font-bold leading-tight">
+              <p className="text-[#D4A843] text-xs font-semibold tracking-wide">SENIORSAFE</p>
+              <h1 className="text-white font-bold leading-tight" style={{ fontSize: '18px' }}>
                 {displayName} Family
               </h1>
             </div>
           </div>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-1.5 text-white/70 text-sm py-2 px-3 rounded-lg hover:bg-white/10"
-          >
-            <LogOut size={16} />
-            Sign out
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/emergency')}
+              className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center"
+              title="Emergency Info"
+            >
+              <Heart size={17} color="#EF4444" strokeWidth={0} fill="#EF4444" />
+            </button>
+            <button
+              onClick={() => navigate('/contact')}
+              className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center"
+              title="Contact Ryan"
+            >
+              <Phone size={17} color="white" strokeWidth={1.5} />
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center"
+              title="Sign out"
+            >
+              <LogOut size={17} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Cards */}
-      <div className="px-6 py-6 max-w-sm mx-auto flex flex-col gap-4">
-        <p className="text-gray-500 text-sm font-medium uppercase tracking-wide">Your tools</p>
-        {cards.map((card) => {
-          const Icon = card.icon
-          return (
-            <button
-              key={card.route}
-              onClick={() => navigate(card.route)}
-              className={`w-full ${card.bg} ${card.border} rounded-2xl p-5 flex items-center gap-4 shadow-sm active:scale-98`}
-            >
-              <div className="bg-[#F5F5F5] rounded-xl p-3">
-                <Icon size={28} color={card.iconColor} strokeWidth={1.5} />
-              </div>
-              <div className="flex flex-col items-start text-left">
-                <span className="text-[#1B365D] font-semibold text-base">{card.title}</span>
-                <span className="text-gray-500 text-sm">{card.description}</span>
-              </div>
-              <div className="ml-auto text-gray-300">
-                <svg width="8" height="14" viewBox="0 0 8 14" fill="none">
-                  <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-            </button>
-          )
-        })}
-      </div>
+      <div className="px-4 pt-5 pb-4 max-w-lg mx-auto flex flex-col gap-5">
 
-      {/* Footer */}
-      <div className="px-6 pb-8 max-w-sm mx-auto">
-        <p className="text-center text-xs text-gray-400">
+        {/* ── I'm Okay button ── */}
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={handleCheckIn}
+            disabled={checkInStatus === 'loading'}
+            className={`w-full rounded-2xl py-7 flex flex-col items-center gap-2 shadow-md transition-all active:scale-[0.98] ${
+              isSent ? 'bg-green-500' : 'bg-[#1B365D]'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <CheckCircle
+                size={32}
+                color={isSent ? 'white' : '#D4A843'}
+                strokeWidth={isSent ? 2.5 : 1.5}
+              />
+              <span className="text-white font-bold" style={{ fontSize: '22px' }}>
+                {isSent ? '✓ Sent!' : "I'm Okay Today"}
+              </span>
+            </div>
+            <span className="text-white/75" style={{ fontSize: '15px' }}>
+              {isSent
+                ? 'Your family has been notified'
+                : "Tap to let your family know you're doing well"}
+            </span>
+          </button>
+          <p className="text-center text-sm text-gray-400">
+            {lastCheckIn
+              ? `Last check-in: ${formatCheckIn(lastCheckIn)}`
+              : 'No check-in today yet'}
+          </p>
+        </div>
+
+        {/* ── Today at a glance ── */}
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1">
+            Today at a glance
+          </p>
+          <div className="flex flex-col gap-3">
+
+            {/* Medications */}
+            <button
+              onClick={() => navigate('/medications')}
+              className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm active:opacity-80"
+            >
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <Pill size={24} color="#2563EB" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>
+                  Today&apos;s Medications
+                </p>
+                <p className="text-gray-500 text-sm">
+                  {medsDue > 0
+                    ? `${medsDue} dose${medsDue !== 1 ? 's' : ''} remaining`
+                    : 'All doses taken ✓'}
+                </p>
+              </div>
+              <ChevronRight size={18} color="#D1D5DB" />
+            </button>
+
+            {/* Appointments */}
+            <button
+              onClick={() => navigate('/appointments')}
+              className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm active:opacity-80"
+            >
+              <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
+                <Calendar size={24} color="#7C3AED" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>
+                  Upcoming Appointments
+                </p>
+                <p className="text-gray-500 text-sm">
+                  {nextAppt
+                    ? `${nextAppt.title} — ${formatApptDate(nextAppt.appointment_date)}`
+                    : 'No upcoming appointments'}
+                </p>
+              </div>
+              <ChevronRight size={18} color="#D1D5DB" />
+            </button>
+
+            {/* Family Messages */}
+            <button
+              onClick={() => navigate('/family')}
+              className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm active:opacity-80"
+            >
+              <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
+                <MessageCircle size={24} color="#16A34A" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>
+                  Family Messages
+                </p>
+                <p className="text-gray-500 text-sm">
+                  {msgCount > 0 ? `${msgCount} message${msgCount !== 1 ? 's' : ''}` : 'No messages yet'}
+                </p>
+              </div>
+              <ChevronRight size={18} color="#D1D5DB" />
+            </button>
+
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-gray-300 pb-2">
           Riggins Strategic Solutions • Ryan Riggins, Licensed NC Realtor
         </p>
       </div>
+
+      <BottomNav />
     </div>
   )
 }
