@@ -76,9 +76,9 @@ export default function FamilyPage() {
     if (msgPhoto) {
       const ext = msgPhoto.file.name.split('.').pop()
       const path = `family-photos/${user.id}/msg-${Date.now()}.${ext}`
-      const { error: storageErr } = await supabase.storage.from('documents').upload(path, msgPhoto.file)
+      const { error: storageErr } = await supabase.storage.from('Documents').upload(path, msgPhoto.file)
       if (!storageErr) {
-        const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
+        const { data: { publicUrl } } = supabase.storage.from('Documents').getPublicUrl(path)
         photoUrl = publicUrl
       }
     }
@@ -112,9 +112,9 @@ export default function FamilyPage() {
     setUploading(true)
     const ext = file.name.split('.').pop()
     const path = `family-photos/${user.id}/${Date.now()}.${ext}`
-    const { error: storageErr } = await supabase.storage.from('documents').upload(path, file)
+    const { error: storageErr } = await supabase.storage.from('Documents').upload(path, file)
     if (storageErr) { alert('Upload failed: ' + storageErr.message); setUploading(false); return }
-    const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path)
+    const { data: { publicUrl } } = supabase.storage.from('Documents').getPublicUrl(path)
     await supabase.from('family_photos').insert({
       user_id: user.id,
       family_name: user.user_metadata?.family_name || '',
@@ -130,11 +130,11 @@ export default function FamilyPage() {
     if (!window.confirm('Delete this photo?')) return
     try {
       const url = new URL(photo.photo_url)
-      const marker = '/object/public/documents/'
+      const marker = '/object/public/Documents/'
       const idx = url.pathname.indexOf(marker)
       if (idx !== -1) {
         const storagePath = decodeURIComponent(url.pathname.slice(idx + marker.length))
-        await supabase.storage.from('documents').remove([storagePath])
+        await supabase.storage.from('Documents').remove([storagePath])
       }
     } catch (_) {}
     await supabase.from('family_photos').delete().eq('id', photo.id)

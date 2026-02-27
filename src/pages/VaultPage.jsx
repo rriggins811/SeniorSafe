@@ -78,7 +78,7 @@ export default function VaultPage() {
     const storagePath = `${user.id}/${Date.now()}.${ext}`
 
     const { error: storageError } = await supabase.storage
-      .from('documents')
+      .from('Documents')
       .upload(storagePath, file)
 
     if (storageError) {
@@ -88,7 +88,7 @@ export default function VaultPage() {
     }
 
     const { data: { publicUrl } } = supabase.storage
-      .from('documents')
+      .from('Documents')
       .getPublicUrl(storagePath)
 
     const { error: dbError } = await supabase.from('documents').insert({
@@ -117,11 +117,11 @@ export default function VaultPage() {
     // Extract storage path from public URL
     try {
       const url = new URL(doc.file_url)
-      const marker = '/object/public/documents/'
+      const marker = '/object/public/Documents/'
       const idx = url.pathname.indexOf(marker)
       if (idx !== -1) {
         const storagePath = decodeURIComponent(url.pathname.slice(idx + marker.length))
-        await supabase.storage.from('documents').remove([storagePath])
+        await supabase.storage.from('Documents').remove([storagePath])
       }
     } catch (_) { /* ignore storage path errors — still delete DB row */ }
 
