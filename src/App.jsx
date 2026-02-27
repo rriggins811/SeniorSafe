@@ -14,6 +14,7 @@ import AppointmentsPage from './pages/AppointmentsPage'
 import FamilyPage from './pages/FamilyPage'
 import EmergencyPage from './pages/EmergencyPage'
 import FamilyInvitePage from './pages/FamilyInvitePage'
+import ProfilePage from './pages/ProfilePage'
 
 function ProtectedRoute({ children }) {
   const [session, setSession] = useState(undefined)
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/family"      element={<P><FamilyPage /></P>} />
         <Route path="/emergency"   element={<P><EmergencyPage /></P>} />
         <Route path="/family-invite" element={<P><FamilyInvitePage /></P>} />
+        <Route path="/profile"       element={<P><ProfilePage /></P>} />
       </Routes>
     </BrowserRouter>
   )

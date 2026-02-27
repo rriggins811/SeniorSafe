@@ -54,6 +54,7 @@ export default function MedicationsPage() {
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [toggling, setToggling] = useState(null)   // dose key being toggled
+  const [userPhone, setUserPhone] = useState('')
   const [form, setForm] = useState({
     med_name: '', dosage: '', frequency: 'Once daily', times: ['08:00'],
     reminder_enabled: false, reminder_phone: '',
@@ -64,6 +65,12 @@ export default function MedicationsPage() {
       if (!user) return
       setUser(user)
       fetchAll(user.id)
+      // Fetch user's phone for pre-filling the reminder field
+      supabase.from('user_profile').select('phone').eq('user_id', user.id).single()
+        .then(({ data }) => {
+          const phone = data?.phone || user.user_metadata?.phone || ''
+          setUserPhone(phone)
+        })
     })
   }, [])
 
@@ -160,7 +167,10 @@ export default function MedicationsPage() {
               </div>
             </div>
             <button
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setForm(f => ({ ...f, reminder_phone: f.reminder_phone || userPhone }))
+                setShowForm(true)
+              }}
               className="w-10 h-10 rounded-xl bg-[#D4A843] flex items-center justify-center"
             >
               <Plus size={22} color="#1B365D" strokeWidth={2.5} />

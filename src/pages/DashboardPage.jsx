@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Shield, CheckCircle, Pill, Calendar, MessageCircle,
-  Phone, Heart, LogOut, ChevronRight, Users, AlertTriangle,
+  Phone, Heart, LogOut, ChevronRight, Users, AlertTriangle, Settings,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { sendSMS } from '../lib/sms'
@@ -204,6 +204,13 @@ export default function DashboardPage() {
                 <Users size={17} color="white" strokeWidth={1.5} />
               </button>
             )}
+            <button
+              onClick={() => navigate('/profile')}
+              className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center"
+              title="Profile & Settings"
+            >
+              <Settings size={17} color="white" strokeWidth={1.5} />
+            </button>
             <button
               onClick={() => navigate('/emergency')}
               className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center"

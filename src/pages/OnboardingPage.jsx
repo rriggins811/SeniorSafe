@@ -46,6 +46,14 @@ const STEPS = [
       'Just getting organized',
     ],
   },
+  {
+    id: 'phone',
+    question: 'What is your mobile number?',
+    subtitle: "We'll use this to send your family check-in notifications.",
+    type: 'tel',
+    placeholder: '(336) 555-0100',
+    optional: true,
+  },
 ]
 
 const TOTAL = STEPS.length
@@ -62,6 +70,7 @@ export default function OnboardingPage() {
     living_situation: '',
     timeline: '',
     biggest_concern: '',
+    phone: '',
   })
 
   useEffect(() => {
@@ -69,6 +78,10 @@ export default function OnboardingPage() {
       if (!user) { navigate('/signin'); return }
       setUser(user)
       setFamilyName(user.user_metadata?.family_name || '')
+      // Pre-fill phone from metadata if already provided at signup
+      if (user.user_metadata?.phone) {
+        setAnswers(prev => ({ ...prev, phone: user.user_metadata.phone }))
+      }
       supabase
         .from('user_profile')
         .select('onboarding_complete')
@@ -81,7 +94,10 @@ export default function OnboardingPage() {
   }, [navigate])
 
   const currentValue = () => answers[STEPS[step]?.id] ?? ''
-  const canAdvance = () => String(currentValue()).trim().length > 0
+  const canAdvance = () => {
+    if (STEPS[step]?.optional) return true
+    return String(currentValue()).trim().length > 0
+  }
   const setAnswer = (val) => setAnswers(prev => ({ ...prev, [STEPS[step].id]: val }))
 
   async function handleNext() {
@@ -93,7 +109,7 @@ export default function OnboardingPage() {
       family_name: familyName,
       first_name: meta.first_name || '',
       last_name: meta.last_name || '',
-      phone: meta.phone || null,
+      phone: answers.phone?.trim() || meta.phone || null,
       role: meta.role || 'admin',
       family_code: meta.family_code || null,
       invited_by: meta.invited_by || null,
@@ -106,11 +122,11 @@ export default function OnboardingPage() {
     }, { onConflict: 'user_id' })
     setSaving(false)
     if (error) alert('Error saving your profile: ' + error.message)
-    else setStep(5)
+    else setStep(TOTAL)
   }
 
   // ── Completion screen ──────────────────────────────────────────────
-  if (step === 5) {
+  if (step === TOTAL) {
     const name = familyName || 'Your'
     const summary = [
       ['Loved one', answers.senior_name + (answers.senior_age ? `, age ${answers.senior_age}` : '')],
@@ -155,7 +171,7 @@ export default function OnboardingPage() {
 
   // ── Question screens ───────────────────────────────────────────────
   const currentStep = STEPS[step]
-  const progressPct = (step / TOTAL) * 100
+  const progressPct = ((step + 1) / TOTAL) * 100
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -183,16 +199,38 @@ export default function OnboardingPage() {
       </div>
 
       {/* Question content */}
-      <div className="flex-1 px-6 pt-8 pb-6 max-w-sm mx-auto w-full flex flex-col gap-8">
-        <h1 className="text-[#1B365D] font-bold leading-snug" style={{ fontSize: '22px' }}>
-          {currentStep.question}
-        </h1>
+      <div className="flex-1 px-6 pt-8 pb-6 max-w-sm mx-auto w-full flex flex-col gap-5">
+        <div>
+          <h1 className="text-[#1B365D] font-bold leading-snug" style={{ fontSize: '22px' }}>
+            {currentStep.question}
+          </h1>
+          {currentStep.subtitle && (
+            <p className="text-gray-500 text-base mt-2 leading-relaxed">{currentStep.subtitle}</p>
+          )}
+          {currentStep.optional && (
+            <p className="text-gray-400 text-sm mt-1">Optional — you can skip this step.</p>
+          )}
+        </div>
 
         {/* Text / Number input */}
         {(currentStep.type === 'text' || currentStep.type === 'number') && (
           <input
             type={currentStep.type}
             inputMode={currentStep.type === 'number' ? 'numeric' : 'text'}
+            value={currentValue()}
+            onChange={e => setAnswer(e.target.value)}
+            placeholder={currentStep.placeholder}
+            autoFocus
+            className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-gray-800 font-medium"
+            style={{ fontSize: '18px' }}
+          />
+        )}
+
+        {/* Tel input */}
+        {currentStep.type === 'tel' && (
+          <input
+            type="tel"
+            inputMode="tel"
             value={currentValue()}
             onChange={e => setAnswer(e.target.value)}
             placeholder={currentStep.placeholder}

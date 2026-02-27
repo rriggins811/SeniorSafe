@@ -131,6 +131,20 @@ export default function SignUpPage() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mobile phone <span className="text-gray-400 font-normal">(for SMS notifications)</span>
+            </label>
+            <input
+              name="phone"
+              type="tel"
+              value={form.phone}
+              onChange={handleChange}
+              placeholder="(336) 555-0100"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               name="email"
@@ -171,20 +185,6 @@ export default function SignUpPage() {
               />
             </div>
           )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone <span className="text-gray-400 font-normal">(optional — for SMS notifications)</span>
-            </label>
-            <input
-              name="phone"
-              type="tel"
-              value={form.phone}
-              onChange={handleChange}
-              placeholder="(336) 555-0100"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
-            />
-          </div>
 
           {/* Divider */}
           <div className="border-t border-gray-100 pt-2">
