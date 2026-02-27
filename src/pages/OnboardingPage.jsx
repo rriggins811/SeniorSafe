@@ -104,14 +104,19 @@ export default function OnboardingPage() {
     if (step < TOTAL - 1) { setStep(s => s + 1); return }
     setSaving(true)
     const meta = user.user_metadata || {}
+    const role = meta.role || 'admin'
+    // Always ensure admins have a family_code — generate one if metadata didn't carry it
+    const family_code = role === 'member'
+      ? null
+      : (meta.family_code || Math.random().toString(36).substr(2, 6).toUpperCase())
     const { error } = await supabase.from('user_profile').upsert({
       user_id: user.id,
       family_name: familyName,
       first_name: meta.first_name || '',
       last_name: meta.last_name || '',
       phone: answers.phone?.trim() || meta.phone || null,
-      role: meta.role || 'admin',
-      family_code: meta.family_code || null,
+      role,
+      family_code,
       invited_by: meta.invited_by || null,
       senior_name: answers.senior_name.trim(),
       senior_age: answers.senior_age ? parseInt(answers.senior_age) : null,
