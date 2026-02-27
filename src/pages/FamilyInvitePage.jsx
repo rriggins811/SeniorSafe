@@ -17,7 +17,16 @@ export default function FamilyInvitePage() {
       setUser(user)
 
       supabase.from('user_profile').select('*').eq('user_id', user.id).single()
-        .then(({ data: p }) => {
+        .then(async ({ data: p }) => {
+          // If admin has no family_code, generate one now (handles pre-feature accounts)
+          if (p && p.role !== 'member' && !p.family_code) {
+            const newCode = Math.random().toString(36).substr(2, 6).toUpperCase()
+            await supabase.from('user_profile')
+              .update({ family_code: newCode, role: 'admin' })
+              .eq('user_id', user.id)
+            p = { ...p, family_code: newCode, role: 'admin' }
+          }
+
           setProfile(p)
 
           if (p?.role === 'admin') {

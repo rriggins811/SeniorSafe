@@ -124,13 +124,25 @@ export default function DashboardPage() {
       .eq('invited_by', user.id)
       .not('phone', 'is', null)
 
+    const senderName = user.user_metadata?.first_name || familyName || 'Your loved one'
+
     if (memberProfiles?.length) {
-      const senderName = user.user_metadata?.first_name || familyName || 'Your loved one'
       await Promise.all(
         memberProfiles.map(m =>
           sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today.`)
         )
       )
+    }
+
+    // Also confirm to the senior's own phone
+    const { data: ownProfile } = await supabase
+      .from('user_profile')
+      .select('phone')
+      .eq('user_id', user.id)
+      .single()
+
+    if (ownProfile?.phone) {
+      await sendSMS(ownProfile.phone, `✅ Your I'm Okay check-in was sent to your family - SeniorSafe`)
     }
 
     setTimeout(() => setCheckInStatus('idle'), 3000)
