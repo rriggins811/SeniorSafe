@@ -43,7 +43,7 @@ export default function SignUpPage() {
     if (error) {
       setError(error.message)
     } else {
-      navigate('/dashboard')
+      navigate('/onboarding')
     }
   }
 

@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage'
 import VaultPage from './pages/VaultPage'
 import AIPage from './pages/AIPage'
 import ContactPage from './pages/ContactPage'
+import OnboardingPage from './pages/OnboardingPage'
 
 function ProtectedRoute({ children }) {
   const [session, setSession] = useState(undefined)
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/" element={<WelcomePage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/signin" element={<SignInPage />} />
+        <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/vault" element={<ProtectedRoute><VaultPage /></ProtectedRoute>} />
         <Route path="/ai" element={<ProtectedRoute><AIPage /></ProtectedRoute>} />

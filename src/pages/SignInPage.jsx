@@ -15,14 +15,20 @@ export default function SignInPage() {
     setError('')
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     setLoading(false)
 
     if (error) {
       setError(error.message)
     } else {
-      navigate('/dashboard')
+      // Check if this user has completed onboarding
+      const { data: profile } = await supabase
+        .from('user_profile')
+        .select('onboarding_complete')
+        .eq('user_id', data.user.id)
+        .single()
+      navigate(profile?.onboarding_complete ? '/dashboard' : '/onboarding')
     }
   }
 

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, Bot, Mic, MicOff, Volume2, VolumeX } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const SYSTEM_PROMPT = `You are SeniorSafe AI — a warm, knowledgeable assistant built specifically for families navigating senior transitions. You were created by Riggins Strategic Solutions, founded by Ryan Riggins, a licensed North Carolina Realtor and consumer protection advisor with 8+ years of construction and real estate experience.
 
@@ -45,6 +46,20 @@ function pickVoice() {
   return voices.find(v => v.lang.startsWith('en')) || null
 }
 
+function buildSystemPrompt(profile) {
+  if (!profile?.senior_name) return SYSTEM_PROMPT
+  const { senior_name, senior_age, current_living, timeline, biggest_concern, family_name } = profile
+  let ctx = `\n\n---\nCURRENT FAMILY CONTEXT:\nThe family you are helping right now is the ${family_name || 'this'} Family.`
+  ctx += ` Their loved one's name is ${senior_name}`
+  if (senior_age) ctx += `, and they are ${senior_age} years old`
+  ctx += '.'
+  if (current_living) ctx += ` ${senior_name} is currently living in: ${current_living}.`
+  if (timeline) ctx += ` Their timeline for this transition is: ${timeline}.`
+  if (biggest_concern) ctx += ` Their biggest concern right now is: ${biggest_concern}.`
+  ctx += `\n\nUse ${senior_name}'s name naturally in your responses when appropriate. Tailor all guidance directly to their situation — their timeline, living situation, and primary concern. This family is counting on you.`
+  return SYSTEM_PROMPT + ctx
+}
+
 export default function AIPage() {
   const navigate = useNavigate()
   const [messages, setMessages] = useState([])
@@ -53,12 +68,29 @@ export default function AIPage() {
   const [listening, setListening] = useState(false)
   const [soundOn, setSoundOn] = useState(true)
   const [voiceSupported, setVoiceSupported] = useState(true)
+  const [profile, setProfile] = useState(null)
 
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const recognitionRef = useRef(null)
-  // Use a ref so speakText always sees current soundOn without stale closure
   const soundOnRef = useRef(true)
+  const profileRef = useRef(null)
+
+  useEffect(() => {
+    // Fetch user profile for personalized system prompt
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase
+        .from('user_profile')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data }) => {
+          setProfile(data)
+          profileRef.current = data
+        })
+    })
+  }, [])
 
   useEffect(() => {
     // Check SpeechRecognition support
@@ -149,7 +181,7 @@ export default function AIPage() {
         body: JSON.stringify({
           model: 'claude-opus-4-5',
           max_tokens: 1024,
-          system: SYSTEM_PROMPT,
+          system: buildSystemPrompt(profileRef.current),
           messages: newMessages,
         }),
       })
@@ -226,7 +258,9 @@ export default function AIPage() {
               </div>
               <p className="text-[#1B365D] font-semibold text-lg">Hi, I&apos;m SeniorSafe AI.</p>
               <p className="text-gray-500 text-base leading-relaxed max-w-xs">
-                I&apos;m here to help your family feel informed and calm during this transition.
+                {profile?.senior_name
+                  ? `I'm here to help your family navigate ${profile.senior_name}'s transition — every response is personalized to your situation.`
+                  : "I'm here to help your family feel informed and calm during this transition."}
               </p>
               <p className="text-gray-400 text-sm mt-1">Try one of these to get started:</p>
               <div className="flex flex-col gap-3 w-full mt-1">
