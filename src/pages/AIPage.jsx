@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, Bot } from 'lucide-react'
+import { ArrowLeft, Send, Bot, Mic, MicOff, Volume2, VolumeX } from 'lucide-react'
 
 const SYSTEM_PROMPT = `You are SeniorSafe AI — a warm, knowledgeable assistant built specifically for families navigating senior transitions. You were created by Riggins Strategic Solutions, founded by Ryan Riggins, a licensed North Carolina Realtor and consumer protection advisor with 8+ years of construction and real estate experience.
 
@@ -26,17 +26,107 @@ const STARTER_QUESTIONS = [
   'What are signs Mom needs more care?',
 ]
 
+// Pick the best female English voice available
+function pickVoice() {
+  const voices = window.speechSynthesis.getVoices()
+  // Prefer named female voices on common platforms
+  const preferred = [
+    'Samantha', 'Karen', 'Moira', 'Tessa', 'Fiona', 'Victoria',
+    'Susan', 'Zira', 'Hazel', 'Catherine',
+  ]
+  for (const name of preferred) {
+    const v = voices.find(v => v.name.includes(name))
+    if (v) return v
+  }
+  // Fallback: any female-named voice
+  const female = voices.find(v => /female/i.test(v.name))
+  if (female) return female
+  // Fallback: any English voice
+  return voices.find(v => v.lang.startsWith('en')) || null
+}
+
 export default function AIPage() {
   const navigate = useNavigate()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [listening, setListening] = useState(false)
+  const [soundOn, setSoundOn] = useState(true)
+  const [voiceSupported, setVoiceSupported] = useState(true)
+
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
+  const recognitionRef = useRef(null)
+  // Use a ref so speakText always sees current soundOn without stale closure
+  const soundOnRef = useRef(true)
+
+  useEffect(() => {
+    // Check SpeechRecognition support
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    setVoiceSupported(!!SR)
+
+    // Pre-load voices (Chrome loads them async)
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices()
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices()
+    }
+
+    return () => {
+      recognitionRef.current?.abort()
+      window.speechSynthesis?.cancel()
+    }
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  function toggleSound() {
+    const next = !soundOn
+    setSoundOn(next)
+    soundOnRef.current = next
+    if (!next) window.speechSynthesis?.cancel()
+  }
+
+  const speakText = useCallback((text) => {
+    if (!soundOnRef.current || !window.speechSynthesis) return
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.rate = 0.9
+    utterance.pitch = 1.0
+    const voice = pickVoice()
+    if (voice) utterance.voice = voice
+    window.speechSynthesis.speak(utterance)
+  }, [])
+
+  function startListening() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) return
+
+    // Stop any ongoing speech so mic doesn't pick it up
+    window.speechSynthesis?.cancel()
+
+    const recognition = new SR()
+    recognition.lang = 'en-US'
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript
+      setInput(prev => prev ? `${prev} ${transcript}` : transcript)
+    }
+    recognition.onend = () => setListening(false)
+    recognition.onerror = () => setListening(false)
+
+    recognitionRef.current = recognition
+    recognition.start()
+    setListening(true)
+  }
+
+  function stopListening() {
+    recognitionRef.current?.stop()
+    setListening(false)
+  }
 
   async function sendMessage(text) {
     const userText = text.trim()
@@ -70,27 +160,17 @@ export default function AIPage() {
       }
 
       const data = await response.json()
-      const aiText = data.content?.[0]?.text ?? 'Sorry, I didn\'t get a response. Please try again.'
+      const aiText = data.content?.[0]?.text ?? "Sorry, I didn't get a response. Please try again."
 
       setMessages(prev => [...prev, { role: 'assistant', content: aiText }])
+      speakText(aiText)
     } catch (err) {
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: `Something went wrong: ${err.message}. Please try again.` },
-      ])
+      const errMsg = `Something went wrong: ${err.message}. Please try again.`
+      setMessages(prev => [...prev, { role: 'assistant', content: errMsg }])
     } finally {
       setLoading(false)
       inputRef.current?.focus()
     }
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault()
-    sendMessage(input)
-  }
-
-  function handleChip(question) {
-    sendMessage(question)
   }
 
   const showChips = messages.length === 0
@@ -107,14 +187,29 @@ export default function AIPage() {
             <ArrowLeft size={16} />
             Back
           </button>
-          <div className="flex items-center gap-3">
-            <div className="bg-[#D4A843] rounded-xl p-2">
-              <Bot size={22} color="#1B365D" strokeWidth={1.5} />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-[#D4A843] rounded-xl p-2">
+                <Bot size={22} color="#1B365D" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h1 className="text-white text-xl font-bold leading-tight">SeniorSafe AI</h1>
+                <p className="text-white/60 text-sm">Senior transition guidance</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-white text-xl font-bold leading-tight">SeniorSafe AI</h1>
-              <p className="text-white/60 text-sm">Senior transition guidance</p>
-            </div>
+
+            {/* Sound toggle */}
+            <button
+              onClick={toggleSound}
+              className="flex items-center gap-1.5 text-white/70 text-sm py-2 px-3 rounded-xl hover:bg-white/10"
+              title={soundOn ? 'Mute voice responses' : 'Enable voice responses'}
+            >
+              {soundOn
+                ? <Volume2 size={20} color="white" />
+                : <VolumeX size={20} color="rgba(255,255,255,0.4)" />
+              }
+              <span className="text-xs">{soundOn ? 'Voice on' : 'Muted'}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -123,24 +218,22 @@ export default function AIPage() {
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-lg mx-auto flex flex-col gap-4">
 
-          {/* Welcome state */}
+          {/* Welcome / starter chips */}
           {showChips && (
             <div className="flex flex-col items-center gap-3 py-4 text-center">
               <div className="bg-[#D4A843] rounded-2xl p-4 mb-1">
                 <Bot size={36} color="#1B365D" strokeWidth={1.5} />
               </div>
-              <p className="text-[#1B365D] font-semibold text-lg">
-                Hi, I&apos;m SeniorSafe AI.
-              </p>
+              <p className="text-[#1B365D] font-semibold text-lg">Hi, I&apos;m SeniorSafe AI.</p>
               <p className="text-gray-500 text-base leading-relaxed max-w-xs">
                 I&apos;m here to help your family feel informed and calm during this transition.
               </p>
               <p className="text-gray-400 text-sm mt-1">Try one of these to get started:</p>
               <div className="flex flex-col gap-3 w-full mt-1">
-                {STARTER_QUESTIONS.map((q) => (
+                {STARTER_QUESTIONS.map(q => (
                   <button
                     key={q}
-                    onClick={() => handleChip(q)}
+                    onClick={() => sendMessage(q)}
                     className="w-full text-left px-4 py-4 rounded-xl border-2 border-[#1B365D] bg-white text-[#1B365D] font-medium text-base leading-snug"
                   >
                     {q}
@@ -152,17 +245,14 @@ export default function AIPage() {
 
           {/* Message bubbles */}
           {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
                 <div className="w-7 h-7 rounded-full bg-[#D4A843] flex items-center justify-center flex-shrink-0 mt-1 mr-2">
                   <Bot size={14} color="#1B365D" strokeWidth={2} />
                 </div>
               )}
               <div
-                className={`max-w-[80%] px-4 py-3 rounded-2xl text-base leading-relaxed whitespace-pre-wrap ${
+                className={`max-w-[80%] px-4 py-3 rounded-2xl leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user'
                     ? 'bg-[#1B365D] text-white rounded-br-sm'
                     : 'bg-white text-gray-800 rounded-bl-sm shadow-sm'
@@ -174,7 +264,7 @@ export default function AIPage() {
             </div>
           ))}
 
-          {/* Loading indicator */}
+          {/* Loading dots */}
           {loading && (
             <div className="flex justify-start">
               <div className="w-7 h-7 rounded-full bg-[#D4A843] flex items-center justify-center flex-shrink-0 mt-1 mr-2">
@@ -195,9 +285,34 @@ export default function AIPage() {
       {/* Input bar */}
       <div className="flex-shrink-0 bg-white border-t border-gray-200 px-4 py-4">
         <form
-          onSubmit={handleSubmit}
-          className="max-w-lg mx-auto flex gap-3 items-end"
+          onSubmit={e => { e.preventDefault(); sendMessage(input) }}
+          className="max-w-lg mx-auto flex gap-2 items-end"
         >
+          {/* Mic button */}
+          {voiceSupported && (
+            <button
+              type="button"
+              onClick={listening ? stopListening : startListening}
+              disabled={loading}
+              className="relative flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center disabled:opacity-40"
+              style={{ background: listening ? '#EF4444' : '#F5F5F5' }}
+              title={listening ? 'Stop listening' : 'Speak your question'}
+            >
+              {/* Pulsing ring while listening */}
+              {listening && (
+                <span
+                  className="absolute inset-0 rounded-2xl animate-ping"
+                  style={{ background: 'rgba(239,68,68,0.4)' }}
+                />
+              )}
+              {listening
+                ? <MicOff size={20} color="white" strokeWidth={2} />
+                : <Mic size={20} color="#1B365D" strokeWidth={2} />
+              }
+            </button>
+          )}
+
+          {/* Text input */}
           <textarea
             ref={inputRef}
             value={input}
@@ -208,12 +323,14 @@ export default function AIPage() {
                 sendMessage(input)
               }
             }}
-            placeholder="Ask a question about your family's transition..."
+            placeholder={listening ? 'Listening...' : "Ask a question about your family's transition..."}
             rows={1}
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-2xl text-base resize-none focus:outline-none focus:border-[#1B365D] leading-relaxed"
-            style={{ fontSize: '16px', maxHeight: '120px' }}
             disabled={loading}
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-2xl resize-none focus:outline-none focus:border-[#1B365D] leading-relaxed"
+            style={{ fontSize: '16px', maxHeight: '120px' }}
           />
+
+          {/* Send button */}
           <button
             type="submit"
             disabled={loading || !input.trim()}
@@ -222,6 +339,7 @@ export default function AIPage() {
             <Send size={18} color="#D4A843" strokeWidth={2} />
           </button>
         </form>
+
         <p className="text-center text-xs text-gray-400 mt-2 max-w-lg mx-auto">
           Not legal or medical advice. For personalized guidance, text Ryan at (336) 553-8933.
         </p>
