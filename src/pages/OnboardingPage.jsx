@@ -87,9 +87,16 @@ export default function OnboardingPage() {
   async function handleNext() {
     if (step < TOTAL - 1) { setStep(s => s + 1); return }
     setSaving(true)
+    const meta = user.user_metadata || {}
     const { error } = await supabase.from('user_profile').upsert({
       user_id: user.id,
       family_name: familyName,
+      first_name: meta.first_name || '',
+      last_name: meta.last_name || '',
+      phone: meta.phone || null,
+      role: meta.role || 'admin',
+      family_code: meta.family_code || null,
+      invited_by: meta.invited_by || null,
       senior_name: answers.senior_name.trim(),
       senior_age: answers.senior_age ? parseInt(answers.senior_age) : null,
       living_situation: answers.living_situation,

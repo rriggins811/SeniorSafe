@@ -2,22 +2,27 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Shield, CheckCircle, Pill, Calendar, MessageCircle,
-  Phone, Heart, LogOut, ChevronRight,
+  Phone, Heart, LogOut, ChevronRight, Users, AlertTriangle,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { sendSMS } from '../lib/sms'
 import BottomNav from '../components/BottomNav'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
+  const [profile, setProfile] = useState(null)
   const [familyName, setFamilyName] = useState('')
   const [seniorName, setSeniorName] = useState('')
   const [checkInStatus, setCheckInStatus] = useState('idle') // idle | loading | sent
   const [lastCheckIn, setLastCheckIn] = useState(null)
+  const [adminCheckIn, setAdminCheckIn] = useState(null)    // for member view
+  const [adminCheckInLoaded, setAdminCheckInLoaded] = useState(false)
   const [medsDue, setMedsDue] = useState(0)
   const [nextAppt, setNextAppt] = useState(null)
   const [msgCount, setMsgCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [reminding, setReminding] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -28,11 +33,30 @@ export default function DashboardPage() {
       const todayStr = new Date().toISOString().split('T')[0]
       const todayStart = todayStr + 'T00:00:00.000Z'
 
-      // Senior name from profile
-      supabase.from('user_profile').select('senior_name').eq('user_id', user.id).single()
-        .then(({ data }) => setSeniorName(data?.senior_name || ''))
+      // Load profile (includes role + invited_by)
+      supabase.from('user_profile').select('*').eq('user_id', user.id).single()
+        .then(({ data: p }) => {
+          setProfile(p)
+          setSeniorName(p?.senior_name || '')
 
-      // Last check-in today
+          // If member, check if admin has checked in today
+          if (p?.invited_by) {
+            supabase.from('checkins')
+              .select('checked_in_at')
+              .eq('user_id', p.invited_by)
+              .gte('checked_in_at', todayStart)
+              .order('checked_in_at', { ascending: false })
+              .limit(1)
+              .then(({ data }) => {
+                setAdminCheckIn(data?.[0] || null)
+                setAdminCheckInLoaded(true)
+              })
+          } else {
+            setAdminCheckInLoaded(true)
+          }
+        })
+
+      // Last admin's own check-in today
       supabase.from('checkins')
         .select('checked_in_at')
         .eq('user_id', user.id)
@@ -43,7 +67,7 @@ export default function DashboardPage() {
           if (data?.[0]) setLastCheckIn(new Date(data[0].checked_in_at))
         })
 
-      // Meds due today (active meds minus taken logs today)
+      // Meds due today
       supabase.from('medications').select('id, times, frequency').eq('user_id', user.id).eq('active', true)
         .then(({ data: meds }) => {
           if (!meds?.length) { setMedsDue(0); return }
@@ -53,12 +77,10 @@ export default function DashboardPage() {
             .eq('date', todayStr)
             .then(({ data: logs }) => {
               let totalDue = 0
-              let totalTaken = 0
               meds.forEach(m => {
                 if (m.frequency !== 'As needed') totalDue += (m.times?.length || 1)
               })
-              totalTaken = logs?.length || 0
-              setMedsDue(Math.max(0, totalDue - totalTaken))
+              setMedsDue(Math.max(0, totalDue - (logs?.length || 0)))
             })
         })
 
@@ -85,14 +107,56 @@ export default function DashboardPage() {
   async function handleCheckIn() {
     if (checkInStatus !== 'idle' || !user) return
     setCheckInStatus('loading')
+
     await supabase.from('checkins').insert({
       user_id: user.id,
       family_name: familyName,
       checked_in_at: new Date().toISOString(),
     })
+
     setLastCheckIn(new Date())
     setCheckInStatus('sent')
+
+    // Notify all family members who have a phone number
+    const { data: memberProfiles } = await supabase
+      .from('user_profile')
+      .select('phone, first_name')
+      .eq('invited_by', user.id)
+      .not('phone', 'is', null)
+
+    if (memberProfiles?.length) {
+      const senderName = user.user_metadata?.first_name || familyName || 'Your loved one'
+      await Promise.all(
+        memberProfiles.map(m =>
+          sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today.`)
+        )
+      )
+    }
+
     setTimeout(() => setCheckInStatus('idle'), 3000)
+  }
+
+  async function sendAdminReminder() {
+    if (!profile?.invited_by || reminding) return
+    setReminding(true)
+
+    const { data: adminProfile } = await supabase
+      .from('user_profile')
+      .select('phone, first_name')
+      .eq('user_id', profile.invited_by)
+      .single()
+
+    if (adminProfile?.phone) {
+      const senderName = user.user_metadata?.first_name || 'Your family'
+      await sendSMS(
+        adminProfile.phone,
+        `👋 ${senderName} is checking on you via SeniorSafe. Tap "I'm Okay Today" when you get a chance!`
+      )
+    } else {
+      alert("No phone number on file for this account holder — they can add one in Settings.")
+    }
+
+    setReminding(false)
   }
 
   async function handleSignOut() {
@@ -110,8 +174,11 @@ export default function DashboardPage() {
     return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
+  const isMember = profile?.role === 'member'
+  const isAdmin = !isMember
   const isSent = checkInStatus === 'sent'
   const displayName = familyName || 'Your'
+  const showMemberWarning = isMember && adminCheckInLoaded && !adminCheckIn && new Date().getHours() >= 10
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-20">
@@ -128,6 +195,15 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => navigate('/family-invite')}
+                className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center"
+                title="Family Invite"
+              >
+                <Users size={17} color="white" strokeWidth={1.5} />
+              </button>
+            )}
             <button
               onClick={() => navigate('/emergency')}
               className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center"
@@ -155,37 +231,72 @@ export default function DashboardPage() {
 
       <div className="px-4 pt-5 pb-4 max-w-lg mx-auto flex flex-col gap-5">
 
-        {/* ── I'm Okay button ── */}
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={handleCheckIn}
-            disabled={checkInStatus === 'loading'}
-            className={`w-full rounded-2xl py-7 flex flex-col items-center gap-2 shadow-md transition-all active:scale-[0.98] ${
-              isSent ? 'bg-green-500' : 'bg-[#1B365D]'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <CheckCircle
-                size={32}
-                color={isSent ? 'white' : '#D4A843'}
-                strokeWidth={isSent ? 2.5 : 1.5}
-              />
-              <span className="text-white font-bold" style={{ fontSize: '22px' }}>
-                {isSent ? '✓ Sent!' : "I'm Okay Today"}
-              </span>
+        {/* Member: no check-in warning banner */}
+        {showMemberWarning && (
+          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-2xl p-4 flex flex-col gap-3">
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={20} color="#D97706" className="flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-yellow-800 font-semibold text-sm">No check-in yet today</p>
+                <p className="text-yellow-700 text-sm mt-0.5 leading-relaxed">
+                  {seniorName || 'Your loved one'} hasn&apos;t tapped &ldquo;I&apos;m Okay&rdquo; yet today.
+                </p>
+              </div>
             </div>
-            <span className="text-white/75" style={{ fontSize: '15px' }}>
-              {isSent
-                ? 'Your family has been notified'
-                : "Tap to let your family know you're doing well"}
-            </span>
-          </button>
-          <p className="text-center text-sm text-gray-400">
-            {lastCheckIn
-              ? `Last check-in: ${formatCheckIn(lastCheckIn)}`
-              : 'No check-in today yet'}
-          </p>
-        </div>
+            <button
+              onClick={sendAdminReminder}
+              disabled={reminding}
+              className="w-full py-3 rounded-xl bg-yellow-400 text-yellow-900 font-semibold text-sm disabled:opacity-60"
+            >
+              {reminding ? 'Sending...' : '📱 Send them a reminder'}
+            </button>
+          </div>
+        )}
+
+        {/* Member: check-in confirmed */}
+        {isMember && adminCheckInLoaded && adminCheckIn && (
+          <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-4 flex items-center gap-3">
+            <CheckCircle size={22} color="#16A34A" strokeWidth={2} />
+            <div>
+              <p className="text-green-800 font-semibold text-sm">Checked in today ✓</p>
+              <p className="text-green-700 text-sm">{seniorName || 'Your loved one'} is doing well today.</p>
+            </div>
+          </div>
+        )}
+
+        {/* I'm Okay button — admin only */}
+        {isAdmin && (
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleCheckIn}
+              disabled={checkInStatus === 'loading'}
+              className={`w-full rounded-2xl py-7 flex flex-col items-center gap-2 shadow-md transition-all active:scale-[0.98] ${
+                isSent ? 'bg-green-500' : 'bg-[#1B365D]'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <CheckCircle
+                  size={32}
+                  color={isSent ? 'white' : '#D4A843'}
+                  strokeWidth={isSent ? 2.5 : 1.5}
+                />
+                <span className="text-white font-bold" style={{ fontSize: '22px' }}>
+                  {isSent ? '✓ Sent!' : "I'm Okay Today"}
+                </span>
+              </div>
+              <span className="text-white/75" style={{ fontSize: '15px' }}>
+                {isSent
+                  ? 'Your family has been notified'
+                  : "Tap to let your family know you're doing well"}
+              </span>
+            </button>
+            <p className="text-center text-sm text-gray-400">
+              {lastCheckIn
+                ? `Last check-in: ${formatCheckIn(lastCheckIn)}`
+                : 'No check-in today yet'}
+            </p>
+          </div>
+        )}
 
         {/* ── Today at a glance ── */}
         <div>

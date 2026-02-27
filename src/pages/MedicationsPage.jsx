@@ -56,6 +56,7 @@ export default function MedicationsPage() {
   const [toggling, setToggling] = useState(null)   // dose key being toggled
   const [form, setForm] = useState({
     med_name: '', dosage: '', frequency: 'Once daily', times: ['08:00'],
+    reminder_enabled: false, reminder_phone: '',
   })
 
   useEffect(() => {
@@ -101,11 +102,13 @@ export default function MedicationsPage() {
       frequency: form.frequency,
       times: form.times,
       active: true,
+      reminder_enabled: form.reminder_enabled,
+      reminder_phone: form.reminder_phone.trim(),
     })
     setSaving(false)
     if (error) { alert('Error: ' + error.message); return }
     setShowForm(false)
-    setForm({ med_name: '', dosage: '', frequency: 'Once daily', times: ['08:00'] })
+    setForm({ med_name: '', dosage: '', frequency: 'Once daily', times: ['08:00'], reminder_enabled: false, reminder_phone: '' })
     fetchAll(user.id)
   }
 
@@ -315,6 +318,41 @@ export default function MedicationsPage() {
                 </div>
               </div>
             )}
+
+            {/* Reminder toggle */}
+            <div className="border-t border-gray-100 pt-3">
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Remind me by text</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Send an SMS when it's time to take this</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, reminder_enabled: !f.reminder_enabled }))}
+                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
+                    form.reminder_enabled ? 'bg-[#1B365D]' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    form.reminder_enabled ? 'translate-x-6' : 'translate-x-0'
+                  }`} />
+                </button>
+              </div>
+
+              {form.reminder_enabled && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone number for reminders</label>
+                  <input
+                    type="tel"
+                    value={form.reminder_phone}
+                    onChange={e => setForm(f => ({ ...f, reminder_phone: e.target.value }))}
+                    placeholder="(336) 555-0100"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                    style={{ fontSize: '16px' }}
+                  />
+                </div>
+              )}
+            </div>
 
             <button
               type="submit"

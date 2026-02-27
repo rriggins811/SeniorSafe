@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, Calendar, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Calendar, X, ChevronDown, ChevronUp, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const APPT_TYPES = ['Medical', 'Dental', 'Vision', 'Therapy', 'Other']
@@ -27,6 +27,43 @@ function formatTime(timeStr) {
 }
 
 function todayStr() { return new Date().toISOString().split('T')[0] }
+
+function downloadIcs(appt) {
+  const dateBase = appt.appointment_date
+  const startTime = appt.appointment_time || '09:00'
+  const [sh, sm] = startTime.split(':').map(Number)
+  const endH = String(sh + 1).padStart(2, '0')
+  const endTime = `${endH}:${String(sm).padStart(2, '0')}`
+
+  const toIcsDate = (d, t) => {
+    const dt = new Date(`${d}T${t}:00`)
+    return dt.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')
+  }
+
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//SeniorSafe//EN',
+    'BEGIN:VEVENT',
+    `UID:${appt.id}@seniorsafe`,
+    `DTSTART:${toIcsDate(dateBase, startTime)}`,
+    `DTEND:${toIcsDate(dateBase, endTime)}`,
+    `SUMMARY:${appt.title}`,
+    appt.provider_name ? `DESCRIPTION:with ${appt.provider_name}` : null,
+    appt.location ? `LOCATION:${appt.location}` : null,
+    appt.notes ? `COMMENT:${appt.notes.replace(/\n/g, '\\n')}` : null,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].filter(Boolean).join('\r\n')
+
+  const blob = new Blob([lines], { type: 'text/calendar;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${appt.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.ics`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 export default function AppointmentsPage() {
   const navigate = useNavigate()
@@ -144,6 +181,16 @@ export default function AppointmentsPage() {
           {appt.notes && (
             <p className="mt-2 text-sm text-gray-500 leading-relaxed">{appt.notes}</p>
           )}
+
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <button
+              onClick={() => downloadIcs(appt)}
+              className="flex items-center gap-1.5 text-[#1B365D] text-sm font-medium hover:opacity-70"
+            >
+              <Download size={14} strokeWidth={2} />
+              Add to Calendar
+            </button>
+          </div>
         </div>
       </div>
     )

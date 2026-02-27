@@ -3,6 +3,10 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Shield } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
+function generateFamilyCode() {
+  return Math.random().toString(36).substr(2, 6).toUpperCase()
+}
+
 export default function SignUpPage() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
@@ -11,10 +15,13 @@ export default function SignUpPage() {
     email: '',
     password: '',
     familyName: '',
-    accessCode: '',
+    phone: '',
+    inviteCode: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const hasInvite = form.inviteCode.trim().length > 0
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -23,25 +30,59 @@ export default function SignUpPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+
+    if (!hasInvite && !form.familyName.trim()) {
+      setError('Please enter your family name or a family invite code.')
+      return
+    }
+
     setLoading(true)
 
-    const { error } = await supabase.auth.signUp({
+    let role = 'admin'
+    let family_code = generateFamilyCode()
+    let invited_by = null
+    let resolvedFamilyName = form.familyName.trim()
+
+    // Validate invite code if provided
+    if (hasInvite) {
+      const { data: adminProfile, error: lookupErr } = await supabase
+        .from('user_profile')
+        .select('user_id, family_name, family_code')
+        .eq('family_code', form.inviteCode.trim().toUpperCase())
+        .single()
+
+      if (lookupErr || !adminProfile) {
+        setError('Invite code not found. Double-check the code and try again.')
+        setLoading(false)
+        return
+      }
+
+      role = 'member'
+      family_code = null
+      invited_by = adminProfile.user_id
+      resolvedFamilyName = adminProfile.family_name
+    }
+
+    const { error: signUpError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
         data: {
           first_name: form.firstName,
           last_name: form.lastName,
-          family_name: form.familyName,
-          access_code: form.accessCode,
+          family_name: resolvedFamilyName,
+          phone: form.phone.trim(),
+          role,
+          family_code,
+          invited_by,
         },
       },
     })
 
     setLoading(false)
 
-    if (error) {
-      setError(error.message)
+    if (signUpError) {
+      setError(signUpError.message)
     } else {
       navigate('/onboarding')
     }
@@ -116,31 +157,54 @@ export default function SignUpPage() {
             />
           </div>
 
+          {/* Family name — hide when invite code is entered (will use admin's name) */}
+          {!hasInvite && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Family name</label>
+              <input
+                name="familyName"
+                type="text"
+                value={form.familyName}
+                onChange={handleChange}
+                placeholder="e.g. The Johnson Family"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+              />
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Family name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone <span className="text-gray-400 font-normal">(optional — for SMS notifications)</span>
+            </label>
             <input
-              name="familyName"
-              type="text"
-              required
-              value={form.familyName}
+              name="phone"
+              type="tel"
+              value={form.phone}
               onChange={handleChange}
-              placeholder="e.g. The Johnson Family"
+              placeholder="(336) 555-0100"
               className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
             />
           </div>
 
-          <div>
+          {/* Divider */}
+          <div className="border-t border-gray-100 pt-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Access code <span className="text-gray-400 font-normal">(optional)</span>
+              Family invite code{' '}
+              <span className="text-gray-400 font-normal">(if someone invited you)</span>
             </label>
             <input
-              name="accessCode"
+              name="inviteCode"
               type="text"
-              value={form.accessCode}
-              onChange={handleChange}
-              placeholder="Provided by your advisor"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+              value={form.inviteCode}
+              onChange={e => setForm({ ...form, inviteCode: e.target.value.toUpperCase() })}
+              placeholder="e.g. A3BX7K"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D] uppercase tracking-widest"
             />
+            {hasInvite && (
+              <p className="text-[#1B365D] text-xs mt-1.5">
+                ✓ You'll join an existing family account
+              </p>
+            )}
           </div>
 
           {error && (
