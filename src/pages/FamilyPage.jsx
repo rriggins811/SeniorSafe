@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, ImagePlus, Send, Trash2, X } from 'lucide-react'
+import { Users, ImagePlus, Send, Trash2, X, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 
 export default function FamilyPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
+  const [subscriptionTier, setSubscriptionTier] = useState('paid')
   const [tab, setTab] = useState('messages') // 'messages' | 'photos'
 
   // Messages
@@ -31,6 +32,8 @@ export default function FamilyPage() {
       setUser(user)
       fetchMessages(user.id)
       fetchPhotos(user.id)
+      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
+        .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'paid'))
     })
   }, [])
 
@@ -242,52 +245,78 @@ export default function FamilyPage() {
             </div>
           </div>
 
-          {/* Post message form */}
-          <div className="flex-shrink-0 bg-white border-t border-gray-200 px-4 py-3">
-            <div className="max-w-lg mx-auto">
-              {msgPhoto && (
-                <div className="relative w-20 h-20 mb-2">
-                  <img src={msgPhoto.previewUrl} alt="preview" className="w-full h-full object-cover rounded-xl" />
+          {/* Post message form — paid only */}
+          {subscriptionTier === 'paid' ? (
+            <div className="flex-shrink-0 bg-white border-t border-gray-200 px-4 py-3">
+              <div className="max-w-lg mx-auto">
+                {msgPhoto && (
+                  <div className="relative w-20 h-20 mb-2">
+                    <img src={msgPhoto.previewUrl} alt="preview" className="w-full h-full object-cover rounded-xl" />
+                    <button
+                      onClick={() => { URL.revokeObjectURL(msgPhoto.previewUrl); setMsgPhoto(null) }}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center"
+                    >
+                      <X size={10} color="white" />
+                    </button>
+                  </div>
+                )}
+                <form onSubmit={postMessage} className="flex gap-2 items-end">
                   <button
-                    onClick={() => { URL.revokeObjectURL(msgPhoto.previewUrl); setMsgPhoto(null) }}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center"
+                    type="button"
+                    onClick={() => msgPhotoRef.current?.click()}
+                    className="flex-shrink-0 w-11 h-11 rounded-2xl bg-[#F5F5F5] flex items-center justify-center"
                   >
-                    <X size={10} color="white" />
+                    <ImagePlus size={20} color="#1B365D" strokeWidth={1.5} />
                   </button>
-                </div>
-              )}
-              <form onSubmit={postMessage} className="flex gap-2 items-end">
-                <button
-                  type="button"
-                  onClick={() => msgPhotoRef.current?.click()}
-                  className="flex-shrink-0 w-11 h-11 rounded-2xl bg-[#F5F5F5] flex items-center justify-center"
-                >
-                  <ImagePlus size={20} color="#1B365D" strokeWidth={1.5} />
-                </button>
-                <textarea
-                  value={newMsg}
-                  onChange={e => setNewMsg(e.target.value)}
-                  placeholder="Write a message to your family..."
-                  rows={1}
-                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-2xl resize-none focus:outline-none focus:border-[#1B365D]"
-                  style={{ fontSize: '16px', maxHeight: '100px' }}
-                />
-                <button
-                  type="submit"
-                  disabled={posting || (!newMsg.trim() && !msgPhoto)}
-                  className="flex-shrink-0 w-11 h-11 rounded-2xl bg-[#1B365D] flex items-center justify-center disabled:opacity-40"
-                >
-                  <Send size={18} color="#D4A843" strokeWidth={2} />
-                </button>
-              </form>
+                  <textarea
+                    value={newMsg}
+                    onChange={e => setNewMsg(e.target.value)}
+                    placeholder="Write a message to your family..."
+                    rows={1}
+                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-2xl resize-none focus:outline-none focus:border-[#1B365D]"
+                    style={{ fontSize: '16px', maxHeight: '100px' }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={posting || (!newMsg.trim() && !msgPhoto)}
+                    className="flex-shrink-0 w-11 h-11 rounded-2xl bg-[#1B365D] flex items-center justify-center disabled:opacity-40"
+                  >
+                    <Send size={18} color="#D4A843" strokeWidth={2} />
+                  </button>
+                </form>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex-shrink-0 bg-gray-50 border-t border-gray-200 px-4 py-3">
+              <p className="text-center text-sm text-gray-400 max-w-lg mx-auto">
+                <Lock size={12} className="inline mr-1" />
+                View only — <a href="sms:3365538933" className="text-[#1B365D] underline">upgrade to Premium</a> to post messages
+              </p>
+            </div>
+          )}
         </div>
       )}
 
       {/* ── PHOTOS TAB ── */}
       {tab === 'photos' && (
         <div className="flex-1 overflow-y-auto">
+          {subscriptionTier !== 'paid' ? (
+            <div className="flex flex-col items-center justify-center px-6 py-16 text-center gap-5">
+              <div className="bg-[#1B365D] rounded-2xl p-5">
+                <Lock size={40} color="#D4A843" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h2 className="text-[#1B365D] text-xl font-bold mb-2">Premium Feature</h2>
+                <p className="text-gray-500 text-base leading-relaxed max-w-xs">
+                  Family photo sharing is available on SeniorSafe Premium.
+                </p>
+              </div>
+              <a href="sms:3365538933" className="w-full max-w-xs py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg text-center block">
+                Text Ryan to Upgrade
+              </a>
+              <p className="text-gray-400 text-sm">(336) 553-8933 · $12–25/month</p>
+            </div>
+          ) : (
           <div className="max-w-lg mx-auto px-4 py-4">
             {/* Upload button */}
             <button
@@ -324,6 +353,7 @@ export default function FamilyPage() {
               </div>
             )}
           </div>
+          )}
         </div>
       )}
 

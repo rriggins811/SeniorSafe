@@ -50,7 +50,7 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 - **GitHub:** https://github.com/rriggins811/SeniorSafe (PUBLIC repo)
 - **Local dev path:** C:\Users\Ryanr\seniorsafe
 - **Hosting:** Vercel (auto-deploys on `git push` to `main`)
-- **Beta:** Free access, 50 message AI limit per user
+- **Beta:** All beta users default to 'paid' tier. Free tier built in code but not exposed yet.
 
 ---
 
@@ -64,7 +64,7 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 | Icons | Lucide React | 0.575 |
 | Database/Auth | Supabase | JS client 2.98 |
 | AI | Anthropic Claude API | claude-opus-4-5 (direct browser) |
-| SMS | GoHighLevel API | via Supabase Edge Functions |
+| SMS | Twilio REST API | via Supabase Edge Functions |
 | Hosting | Vercel | auto-deploy from GitHub |
 
 ### Tailwind CSS v4 — CRITICAL
@@ -108,23 +108,25 @@ Brand colors used inline: `bg-[#1B365D]`, `text-[#D4A843]` — not via config cl
 
 ### `user_profile` (key table)
 ```
-user_id           uuid PK (FK auth.users)
-first_name        text
-last_name         text
-family_name       text
-senior_name       text
-senior_age        int
-living_situation  text
-timeline          text
-biggest_concern   text
-phone             text
-role              text  -- 'admin' or 'member'
-family_code       text  -- 6-char uppercase, admin only
-invited_by        uuid  -- admin's user_id (members only)
+user_id             uuid PK (FK auth.users)
+first_name          text
+last_name           text
+family_name         text
+senior_name         text
+senior_age          int
+living_situation    text
+timeline            text
+biggest_concern     text
+phone               text
+role                text  -- 'admin' or 'member'
+family_code         text  -- 6-char uppercase, admin only
+invited_by          uuid  -- admin's user_id (members only)
 onboarding_complete boolean
-sms_notifications boolean DEFAULT true
-message_count     int DEFAULT 0
-message_limit     int DEFAULT 50
+sms_notifications   boolean DEFAULT true
+message_count       int DEFAULT 0
+message_limit       int DEFAULT 50
+subscription_tier   text DEFAULT 'paid'  -- 'free' or 'paid'
+message_week_start  date  -- for weekly AI reset (paid tier)
 ```
 
 ### All tables
@@ -147,21 +149,31 @@ message_limit     int DEFAULT 50
 ALTER TABLE user_profile
   ADD COLUMN IF NOT EXISTS sms_notifications boolean DEFAULT true,
   ADD COLUMN IF NOT EXISTS message_count int DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS message_limit int DEFAULT 50;
+  ADD COLUMN IF NOT EXISTS message_limit int DEFAULT 50,
+  ADD COLUMN IF NOT EXISTS subscription_tier text DEFAULT 'paid',
+  ADD COLUMN IF NOT EXISTS message_week_start date;
 ```
 
 ---
 
 ## Edge Functions
 
-### `send-sms` — Outbound SMS via GHL
+### `send-sms` — Outbound SMS via Twilio
 File: `supabase/functions/send-sms/index.ts`
 Called from: `src/lib/sms.js`
 
-**2-step flow** (GHL requires contactId, cannot send to bare phone):
-1. `GET /contacts/?locationId=...&query=phone` — find existing contact
-2. If not found: `POST /contacts/` — create minimal contact
-3. `POST /conversations/messages` with `{ type: 'SMS', contactId, message }`
+**Twilio REST API** (Basic auth with SID:Token base64, form-encoded body):
+- Endpoint: `POST https://api.twilio.com/2010-04-01/Accounts/{ACCOUNT_SID}/Messages.json`
+- Auth: `Authorization: Basic base64(SID:TOKEN)`
+- Body: form-encoded `To`, `From`, `Body`
+- Phone normalization: strips non-digits, prepends `+1` if needed
+
+Secrets needed in Supabase:
+```
+TWILIO_ACCOUNT_SID   <in Supabase dashboard>
+TWILIO_AUTH_TOKEN    <auth token>
+TWILIO_PHONE_NUMBER  +13365536225
+```
 
 ### `medication-reminders` — Cron SMS
 File: `supabase/functions/medication-reminders/index.ts`
@@ -169,7 +181,7 @@ File: `supabase/functions/medication-reminders/index.ts`
 
 Flow: query medications with `reminder_enabled=true` → check ±5 min window → skip if taken → skip if reminder_logs exists → send SMS → log to `reminder_logs`
 
-⚠️ **KNOWN ISSUE:** This function still uses the old GHL endpoint (`/conversations/messages/outbound`) — needs updating to match `send-sms` contact-lookup flow.
+⚠️ **KNOWN ISSUE:** This function still uses the old GHL endpoint — needs updating to use Twilio (same pattern as send-sms).
 
 ### Deploy command
 ```bash
@@ -182,13 +194,9 @@ SUPABASE_ACCESS_TOKEN=sbp_9c4d988f47762fa77d32eb3c9d0929318633a46c \
 
 ---
 
-## GHL (GoHighLevel) SMS
-- **Correct endpoint:** `POST https://services.leadconnectorhq.com/conversations/messages`
-- **Required header:** `Version: 2021-04-15`
-- **Auth:** `Authorization: Bearer <GHL_API_KEY>`
-- **GHL phone:** (336) 733-6462 / `+13367336462`
-- **Location ID:** `qvSvBqNwvDLyqkKoZXl2`
-- **Contact search:** `GET /contacts/?locationId=...&query=phone` (Version: `2021-07-28`)
+## Twilio SMS
+- **Account SID:** <in Supabase dashboard>
+- **From number:** +13365536225
 
 ### SMS helper — `src/lib/sms.js`
 ```js
@@ -200,9 +208,9 @@ export async function sendSMS(to, message) { ... }
 
 ## Supabase Secrets (server-side, edge functions only)
 ```
-GHL_API_KEY       pit-074951bc-1aaa-45a2-a694-c2c408564b5a
-GHL_LOCATION_ID   qvSvBqNwvDLyqkKoZXl2
-GHL_PHONE_NUMBER  +13367336462
+TWILIO_ACCOUNT_SID   <in Supabase dashboard>
+TWILIO_AUTH_TOKEN    <in Supabase dashboard>
+TWILIO_PHONE_NUMBER  +13365536225
 ```
 
 ## Vercel Environment Variables (client-side)
@@ -300,7 +308,7 @@ seniorsafe/
 Final upsert generates `family_code` inline if not in metadata (safety net). Sets `onboarding_complete: true`.
 
 ### DashboardPage — role-based
-- **Admin view:** "I'm Okay Today" button → inserts checkin → SMS to all family members with phone → confirmation SMS to senior's own phone ("✅ Your I'm Okay check-in was recorded and your family has been notified - SeniorSafe")
+- **Admin view:** "I'm Okay Today" button → inserts checkin → daily limit (once per day, `alreadyCheckedIn` state) → paid tier sends SMS to family + confirmation to senior; free tier records in app only
 - **Member view:** shows admin's check-in status; yellow warning banner if no check-in by 10am; "Send them a reminder" button → SMS to admin's phone
 - Header icons (admin): Family Invite, Profile, Emergency, Contact Ryan, Sign Out
 - Bottom nav: Home / Vault / Family / AI
@@ -309,11 +317,13 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 - Direct Anthropic API from browser (`anthropic-dangerous-direct-browser-access: true`)
 - Model: `claude-opus-4-5` | Key: `VITE_ANTHROPIC_API_KEY`
 - SYSTEM_PROMPT: personalized with user_profile data (senior_name, age, living_situation, timeline, biggest_concern), includes all 19 Blueprint module references
-- 50-message beta limit: `message_count` / `message_limit` in user_profile
-- Uses refs (`msgCountRef`, `msgLimitRef`, `userIdRef`, `profileRef`, `soundOnRef`) to avoid stale closures
+- **Free tier:** 10 messages lifetime (no reset)
+- **Paid tier:** 50 messages/week (resets every 7 days via `message_week_start` column)
+- Uses refs (`msgCountRef`, `msgLimitRef`, `userIdRef`, `profileRef`, `soundOnRef`, `tierRef`) to avoid stale closures
 - At limit: shows lead capture message with Ryan's text number (336) 553-8933
-- Counter below input: gray → yellow at 40+ → red at 48+
+- Counter below input: gray → yellow at 80%+ → red at 95%+ of limit
 - Voice: Web Speech API (`speechSynthesis`) with sound toggle
+- **iOS fix:** "Tap to enable voice" banner on mobile to unlock audio context (required by iOS Safari)
 
 ### FamilyInvitePage
 - Admin: shows family_code in large display, copy + share buttons, member list with remove option
@@ -355,18 +365,29 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 ---
 
 ## SMS Notifications
-- **I'm Okay:** notifies all family members with phone + confirmation to senior's own phone
+- **Provider:** Twilio (replaced GHL)
+- **From number:** (336) 553-6225 / `+13365536225`
+- **I'm Okay (paid tier):** notifies all family members with phone + confirmation to senior's own phone
+- **I'm Okay (free tier):** records check-in in app only, no SMS sent
 - **Medication reminders:** sends to `reminder_phone` on each medication record at scheduled time
 - **Missed check-in:** member sees yellow banner + "Send reminder" button → SMS to admin
-- **A2P registration:** pending with GHL — texts fire correctly, carrier holds delivery until approved
-- **GHL phone number:** (336) 733-6462
+- **A2P registration:** may be pending — texts fire correctly, carrier may hold until approved
 
 ---
 
+## Freemium Model
+- **subscription_tier** column on `user_profile` ('free' or 'paid', DEFAULT 'paid')
+- All beta users default to 'paid' — free tier built in code but not exposed yet
+- **Paid features:** I'm Okay with SMS, all pages, 50 AI messages/week (resets every 7 days)
+- **Free features:** I'm Okay (no SMS), messages view-only, photos/vault/meds/appts/emergency/invite blocked
+- **Free AI limit:** 10 messages lifetime (no reset)
+- **Weekly reset:** `message_week_start` date on profile; if >7 days old → reset count to 0
+- **Stripe:** not yet integrated — upgrade by texting Ryan (336) 553-8933
+
 ## Known Issues / Pending Work
-1. **medication-reminders edge fn** uses old GHL endpoint — needs contact-lookup fix (same as send-sms)
-2. **A2P SMS registration** pending — carrier-dependent ETA
-3. **Stripe** not integrated — beta is free
+1. **medication-reminders edge fn** uses old GHL endpoint — needs updating to Twilio
+2. **A2P SMS registration** may be pending — carrier-dependent
+3. **Stripe** not integrated — upgrade manually via text to Ryan
 4. **Blueprint access codes** system not built
 5. **Anthropic key** is browser-exposed (`VITE_` prefix) — move to edge function post-beta
 6. **Pending SQL** if not yet applied in Supabase:
@@ -374,7 +395,9 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
    ALTER TABLE user_profile
      ADD COLUMN IF NOT EXISTS sms_notifications boolean DEFAULT true,
      ADD COLUMN IF NOT EXISTS message_count int DEFAULT 0,
-     ADD COLUMN IF NOT EXISTS message_limit int DEFAULT 50;
+     ADD COLUMN IF NOT EXISTS message_limit int DEFAULT 50,
+     ADD COLUMN IF NOT EXISTS subscription_tier text DEFAULT 'paid',
+     ADD COLUMN IF NOT EXISTS message_week_start date;
    ```
 7. **Cron schedule** for medication-reminders: set `*/5 * * * *` in Supabase Dashboard → Edge Functions → medication-reminders → Schedule
 
