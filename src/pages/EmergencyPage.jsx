@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Heart, Edit2, Save } from 'lucide-react'
+import { ArrowLeft, Heart, Edit2, Save, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const BLOOD_TYPES = ['Unknown', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
@@ -39,6 +39,7 @@ function Section({ title, children }) {
 export default function EmergencyPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
+  const [subscriptionTier, setSubscriptionTier] = useState(null)
   const [info, setInfo] = useState(EMPTY)
   const [editMode, setEditMode] = useState(false)
   const [draft, setDraft] = useState(EMPTY)
@@ -50,6 +51,10 @@ export default function EmergencyPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       setUser(user)
+
+      // Fetch subscription tier
+      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
+        .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'paid'))
 
       // Fetch existing emergency info
       supabase.from('emergency_info').select('*').eq('user_id', user.id).single()
@@ -112,6 +117,47 @@ export default function EmergencyPage() {
       style={{ fontSize: '16px' }}
     />
   )
+
+  if (subscriptionTier === 'free') {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+        <div className="bg-red-600 px-5 pt-12 pb-5 flex-shrink-0">
+          <div className="max-w-lg mx-auto">
+            <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-white/80 text-sm mb-4">
+              <ArrowLeft size={16} /> Back
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 rounded-xl p-2">
+                <Heart size={20} color="white" strokeWidth={0} fill="white" />
+              </div>
+              <div>
+                <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Emergency Info</h1>
+                <p className="text-white/70 text-sm">For first responders</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center gap-5">
+          <div className="bg-[#1B365D] rounded-2xl p-5">
+            <Lock size={40} color="#D4A843" strokeWidth={1.5} />
+          </div>
+          <div>
+            <h2 className="text-[#1B365D] text-xl font-bold mb-2">Premium Feature</h2>
+            <p className="text-gray-500 text-base leading-relaxed max-w-xs">
+              The Emergency Info card is available on SeniorSafe Premium — critical for first responders.
+            </p>
+          </div>
+          <a href="sms:3365538933" className="w-full max-w-xs py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg text-center block">
+            Text Ryan to Upgrade
+          </a>
+          <p className="text-gray-400 text-sm">(336) 553-8933 · $12–25/month</p>
+          <button onClick={() => navigate('/dashboard')} className="text-[#1B365D] text-sm underline">
+            ← Back to Dashboard
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col">

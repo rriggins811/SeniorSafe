@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Upload, Camera, Trash2, FileText, X, FolderLock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Upload, Camera, Trash2, FileText, X, FolderLock, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 
@@ -19,7 +20,9 @@ function isImageFile(fileName) {
 }
 
 export default function VaultPage() {
+  const navigate = useNavigate()
   const [user, setUser] = useState(null)
+  const [subscriptionTier, setSubscriptionTier] = useState(null)
   const [documents, setDocuments] = useState([])
   const [filter, setFilter] = useState('All')
   const [loading, setLoading] = useState(true)
@@ -37,7 +40,11 @@ export default function VaultPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
-      if (user) fetchDocuments(user.id)
+      if (user) {
+        fetchDocuments(user.id)
+        supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
+          .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'paid'))
+      }
     })
   }, [])
 
@@ -133,6 +140,44 @@ export default function VaultPage() {
   const filtered = filter === 'All'
     ? documents
     : documents.filter(d => d.category === filter)
+
+  // Show upgrade prompt for free tier (null = still loading, show nothing yet)
+  if (subscriptionTier === 'free') {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+        <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
+          <div className="max-w-lg mx-auto flex items-center gap-3">
+            <div className="bg-white/15 rounded-xl p-2">
+              <FolderLock size={22} color="#D4A843" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h1 className="text-white text-xl font-bold leading-tight">Family Vault</h1>
+              <p className="text-white/60 text-sm">Your important documents</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center gap-5">
+          <div className="bg-[#1B365D] rounded-2xl p-5">
+            <Lock size={40} color="#D4A843" strokeWidth={1.5} />
+          </div>
+          <div>
+            <h2 className="text-[#1B365D] text-xl font-bold mb-2">Premium Feature</h2>
+            <p className="text-gray-500 text-base leading-relaxed max-w-xs">
+              The Family Vault is available on SeniorSafe Premium. Store important documents securely for your whole family.
+            </p>
+          </div>
+          <a href="sms:3365538933" className="w-full max-w-xs py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg text-center block">
+            Text Ryan to Upgrade
+          </a>
+          <p className="text-gray-400 text-sm">(336) 553-8933 · $12–25/month</p>
+          <button onClick={() => navigate('/dashboard')} className="text-[#1B365D] text-sm underline">
+            ← Back to Dashboard
+          </button>
+        </div>
+        <BottomNav />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col pb-20">

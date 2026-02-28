@@ -14,8 +14,10 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState(null)
   const [familyName, setFamilyName] = useState('')
   const [seniorName, setSeniorName] = useState('')
-  const [checkInStatus, setCheckInStatus] = useState('idle') // idle | loading | sent
+  const [checkInStatus, setCheckInStatus] = useState('idle') // idle | loading | sent | done
   const [lastCheckIn, setLastCheckIn] = useState(null)
+  const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false)
+  const [subscriptionTier, setSubscriptionTier] = useState('paid')
   const [adminCheckIn, setAdminCheckIn] = useState(null)    // for member view
   const [adminCheckInLoaded, setAdminCheckInLoaded] = useState(false)
   const [medsDue, setMedsDue] = useState(0)
@@ -38,6 +40,7 @@ export default function DashboardPage() {
         .then(({ data: p }) => {
           setProfile(p)
           setSeniorName(p?.senior_name || '')
+          setSubscriptionTier(p?.subscription_tier || 'paid')
 
           // If member, check if admin has checked in today
           if (p?.invited_by) {
@@ -64,7 +67,10 @@ export default function DashboardPage() {
         .order('checked_in_at', { ascending: false })
         .limit(1)
         .then(({ data }) => {
-          if (data?.[0]) setLastCheckIn(new Date(data[0].checked_in_at))
+          if (data?.[0]) {
+            setLastCheckIn(new Date(data[0].checked_in_at))
+            setAlreadyCheckedIn(true)
+          }
         })
 
       // Meds due today
@@ -106,6 +112,11 @@ export default function DashboardPage() {
 
   async function handleCheckIn() {
     if (checkInStatus !== 'idle' || !user) return
+    if (alreadyCheckedIn) {
+      setCheckInStatus('sent')
+      setTimeout(() => setCheckInStatus('idle'), 3000)
+      return
+    }
     setCheckInStatus('loading')
 
     await supabase.from('checkins').insert({
@@ -115,34 +126,38 @@ export default function DashboardPage() {
     })
 
     setLastCheckIn(new Date())
+    setAlreadyCheckedIn(true)
     setCheckInStatus('sent')
 
-    // Notify all family members who have a phone number
-    const { data: memberProfiles } = await supabase
-      .from('user_profile')
-      .select('phone, first_name')
-      .eq('invited_by', user.id)
-      .not('phone', 'is', null)
+    // Only send SMS for paid tier
+    if (subscriptionTier === 'paid') {
+      // Notify all family members who have a phone number
+      const { data: memberProfiles } = await supabase
+        .from('user_profile')
+        .select('phone, first_name')
+        .eq('invited_by', user.id)
+        .not('phone', 'is', null)
 
-    const senderName = user.user_metadata?.first_name || familyName || 'Your loved one'
+      const senderName = user.user_metadata?.first_name || familyName || 'Your loved one'
 
-    if (memberProfiles?.length) {
-      await Promise.all(
-        memberProfiles.map(m =>
-          sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today.`)
+      if (memberProfiles?.length) {
+        await Promise.all(
+          memberProfiles.map(m =>
+            sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today.`)
+          )
         )
-      )
-    }
+      }
 
-    // Also confirm to the senior's own phone
-    const { data: ownProfile } = await supabase
-      .from('user_profile')
-      .select('phone')
-      .eq('user_id', user.id)
-      .single()
+      // Also confirm to the senior's own phone
+      const { data: ownProfile } = await supabase
+        .from('user_profile')
+        .select('phone')
+        .eq('user_id', user.id)
+        .single()
 
-    if (ownProfile?.phone) {
-      await sendSMS(ownProfile.phone, `✅ Your I'm Okay check-in was recorded and your family has been notified - SeniorSafe`)
+      if (ownProfile?.phone) {
+        await sendSMS(ownProfile.phone, `✅ Your I'm Okay check-in was recorded and your family has been notified - SeniorSafe`)
+      }
     }
 
     setTimeout(() => setCheckInStatus('idle'), 3000)
@@ -288,23 +303,25 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-2">
             <button
               onClick={handleCheckIn}
-              disabled={checkInStatus === 'loading'}
+              disabled={checkInStatus === 'loading' || alreadyCheckedIn}
               className={`w-full rounded-2xl py-7 flex flex-col items-center gap-2 shadow-md transition-all active:scale-[0.98] ${
-                isSent ? 'bg-green-500' : 'bg-[#1B365D]'
+                isSent || alreadyCheckedIn ? 'bg-green-500' : 'bg-[#1B365D]'
               }`}
             >
               <div className="flex items-center gap-3">
                 <CheckCircle
                   size={32}
-                  color={isSent ? 'white' : '#D4A843'}
-                  strokeWidth={isSent ? 2.5 : 1.5}
+                  color={isSent || alreadyCheckedIn ? 'white' : '#D4A843'}
+                  strokeWidth={isSent || alreadyCheckedIn ? 2.5 : 1.5}
                 />
                 <span className="text-white font-bold" style={{ fontSize: '22px' }}>
-                  {isSent ? '✓ Sent!' : "I'm Okay Today"}
+                  {isSent || alreadyCheckedIn ? '✓ Checked In' : "I'm Okay Today"}
                 </span>
               </div>
               <span className="text-white/75" style={{ fontSize: '15px' }}>
-                {isSent
+                {alreadyCheckedIn
+                  ? "You've already checked in today. Check back tomorrow!"
+                  : isSent
                   ? 'Your family has been notified'
                   : "Tap to let your family know you're doing well"}
               </span>

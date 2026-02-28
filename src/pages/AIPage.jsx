@@ -4,7 +4,8 @@ import { Send, Bot, Mic, MicOff, Volume2, VolumeX } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 
-const LIMIT_MESSAGE = "You've reached your 50 message beta limit. You're clearly serious about protecting your family — that's exactly who I was built for. Text Ryan directly at (336) 553-8933 to get full access and personalized help."
+const FREE_LIMIT_MESSAGE = "You've reached your 10 message free limit. Upgrade to SeniorSafe Premium for 50 messages per week and full access to all features. Text Ryan at (336) 553-8933 to upgrade — he'll get you set up personally."
+const PAID_LIMIT_MESSAGE = "You've reached your 50 message weekly limit. Your limit resets every 7 days. For immediate personalized help, text Ryan directly at (336) 553-8933."
 
 const SYSTEM_PROMPT = `You are SeniorSafe AI — a warm, knowledgeable assistant built specifically for families navigating senior transitions. You were created by Riggins Strategic Solutions, founded by Ryan Riggins, a licensed North Carolina Realtor and consumer protection advisor with 8+ years of construction and real estate experience.
 
@@ -95,6 +96,8 @@ export default function AIPage() {
   const [profile, setProfile] = useState(null)
   const [msgCount, setMsgCount] = useState(0)
   const [msgLimit, setMsgLimit] = useState(50)
+  const [subscriptionTier, setSubscriptionTier] = useState('paid')
+  const [voiceUnlocked, setVoiceUnlocked] = useState(false)
 
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -104,6 +107,7 @@ export default function AIPage() {
   const msgCountRef = useRef(0)
   const msgLimitRef = useRef(50)
   const userIdRef = useRef(null)
+  const tierRef = useRef('paid')
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -117,8 +121,32 @@ export default function AIPage() {
         .then(({ data }) => {
           setProfile(data)
           profileRef.current = data
-          const count = data?.message_count || 0
-          const limit = data?.message_limit || 50
+
+          const tier = data?.subscription_tier || 'paid'
+          setSubscriptionTier(tier)
+          tierRef.current = tier
+
+          let count = data?.message_count || 0
+          let limit = tier === 'paid' ? 50 : 10
+
+          // Weekly reset for paid users
+          if (tier === 'paid') {
+            if (data?.message_week_start) {
+              const weekStart = new Date(data.message_week_start)
+              const daysSince = (Date.now() - weekStart.getTime()) / (1000 * 60 * 60 * 24)
+              if (daysSince >= 7) {
+                count = 0
+                supabase.from('user_profile')
+                  .update({ message_count: 0, message_week_start: new Date().toISOString().split('T')[0] })
+                  .eq('user_id', user.id)
+              }
+            } else {
+              supabase.from('user_profile')
+                .update({ message_week_start: new Date().toISOString().split('T')[0] })
+                .eq('user_id', user.id)
+            }
+          }
+
           setMsgCount(count)
           setMsgLimit(limit)
           msgCountRef.current = count
@@ -199,10 +227,11 @@ export default function AIPage() {
     setMessages(newMessages)
     setInput('')
 
-    // Check beta message limit
+    // Check message limit
     if (msgCountRef.current >= msgLimitRef.current) {
-      setMessages(prev => [...prev, { role: 'assistant', content: LIMIT_MESSAGE }])
-      speakText(LIMIT_MESSAGE)
+      const limitMsg = tierRef.current === 'paid' ? PAID_LIMIT_MESSAGE : FREE_LIMIT_MESSAGE
+      setMessages(prev => [...prev, { role: 'assistant', content: limitMsg }])
+      speakText(limitMsg)
       return
     }
 
@@ -256,12 +285,17 @@ export default function AIPage() {
 
   const showChips = messages.length === 0
 
-  // Counter color thresholds
-  const counterColor = msgCount >= 48
-    ? 'text-red-500'
-    : msgCount >= 40
-    ? 'text-yellow-500'
-    : 'text-gray-400'
+  // Counter color thresholds (proportional)
+  const ratio = msgLimit > 0 ? msgCount / msgLimit : 0
+  const counterColor = ratio >= 0.95 ? 'text-red-500' : ratio >= 0.80 ? 'text-yellow-500' : 'text-gray-400'
+
+  // iOS voice unlock
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  function unlockVoice() {
+    const u = new SpeechSynthesisUtterance('')
+    window.speechSynthesis.speak(u)
+    setVoiceUnlocked(true)
+  }
 
   return (
     <div className="h-screen bg-[#F5F5F5] flex flex-col overflow-hidden">
@@ -294,6 +328,16 @@ export default function AIPage() {
           </div>
         </div>
       </div>
+
+      {/* iOS voice unlock banner */}
+      {isMobile && soundOn && !voiceUnlocked && (
+        <button
+          onClick={unlockVoice}
+          className="flex-shrink-0 bg-[#D4A843]/15 border-b border-[#D4A843]/30 px-4 py-2.5 text-center text-sm text-[#1B365D] font-medium"
+        >
+          🔊 Tap here to enable voice responses
+        </button>
+      )}
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
@@ -424,7 +468,7 @@ export default function AIPage() {
 
         {/* Message counter */}
         <p className={`text-center text-xs mt-2 max-w-lg mx-auto ${counterColor}`}>
-          {msgCount} of {msgLimit} beta messages used
+          {msgCount} of {msgLimit} {subscriptionTier === 'paid' ? 'weekly' : 'free'} messages used
         </p>
         <p className="text-center text-xs text-gray-400 mt-0.5 max-w-lg mx-auto">
           Not legal or medical advice. For personalized guidance, text Ryan at (336) 553-8933.
