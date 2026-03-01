@@ -25,6 +25,9 @@ export default function DashboardPage() {
   const [msgCount, setMsgCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [reminding, setReminding] = useState(false)
+  const [helpModal, setHelpModal] = useState(false)
+  const [helpSending, setHelpSending] = useState(false)
+  const [helpSent, setHelpSent] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -186,6 +189,32 @@ export default function DashboardPage() {
     setReminding(false)
   }
 
+  async function sendHelpAlert() {
+    if (helpSending || !user) return
+    setHelpSending(true)
+
+    const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    const name = seniorName || user.user_metadata?.first_name || familyName || 'Your loved one'
+    const message = `🆘 URGENT: ${name} pressed "I Need Help" at ${time}. Please check on them immediately. - SeniorSafe Alert`
+
+    const { data: memberProfiles } = await supabase
+      .from('user_profile')
+      .select('phone')
+      .eq('invited_by', user.id)
+      .not('phone', 'is', null)
+
+    if (memberProfiles?.length) {
+      await Promise.all(memberProfiles.map(m => sendSMS(m.phone, message)))
+    }
+
+    setHelpSending(false)
+    setHelpSent(true)
+    setTimeout(() => {
+      setHelpSent(false)
+      setHelpModal(false)
+    }, 3000)
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut()
     navigate('/')
@@ -331,6 +360,14 @@ export default function DashboardPage() {
                 ? `Last check-in: ${formatCheckIn(lastCheckIn)}`
                 : 'No check-in today yet'}
             </p>
+
+            {/* I Need Help button */}
+            <button
+              onClick={() => setHelpModal(true)}
+              className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 bg-red-600 shadow-sm active:scale-[0.98] transition-all"
+            >
+              <span className="text-white font-semibold" style={{ fontSize: '17px' }}>🆘 I Need Help</span>
+            </button>
           </div>
         )}
 
@@ -414,6 +451,48 @@ export default function DashboardPage() {
           <Link to="/privacy" className="underline hover:text-gray-500">Privacy Policy</Link>
         </p>
       </div>
+
+      {/* I Need Help confirmation modal */}
+      {helpModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-6">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col gap-5 shadow-xl">
+            {helpSent ? (
+              <div className="flex flex-col items-center gap-3 py-4 text-center">
+                <CheckCircle size={48} color="#16A34A" strokeWidth={1.5} />
+                <p className="text-green-700 font-bold text-lg">Help alert sent to your family!</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+                    <AlertTriangle size={30} color="#DC2626" strokeWidth={2} />
+                  </div>
+                  <h2 className="text-[#1B365D] font-bold text-xl">Are you sure?</h2>
+                  <p className="text-gray-500 text-base leading-relaxed">
+                    This will send an urgent alert to your entire family.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={sendHelpAlert}
+                    disabled={helpSending}
+                    className="w-full py-4 rounded-xl bg-red-600 text-white font-bold text-lg disabled:opacity-60"
+                  >
+                    {helpSending ? 'Sending...' : 'Yes, Send Alert'}
+                  </button>
+                  <button
+                    onClick={() => setHelpModal(false)}
+                    disabled={helpSending}
+                    className="w-full py-4 rounded-xl bg-gray-300 text-gray-700 font-semibold text-lg disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>
