@@ -1,20 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  return digits.startsWith('1') ? `+${digits}` : `+1${digits}`
+}
+
 serve(async (_req) => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
 
-  const GHL_API_KEY = Deno.env.get('GHL_API_KEY')!
-  const GHL_LOCATION_ID = Deno.env.get('GHL_LOCATION_ID')!
-  const GHL_PHONE_NUMBER = Deno.env.get('GHL_PHONE_NUMBER')!
+  const ACCOUNT_SID  = Deno.env.get('TWILIO_ACCOUNT_SID')!
+  const AUTH_TOKEN   = Deno.env.get('TWILIO_AUTH_TOKEN')!
+  const FROM_NUMBER  = Deno.env.get('TWILIO_PHONE_NUMBER')!
+  const credentials  = btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`)
 
   const now = new Date()
   const currentHour = now.getUTCHours()
-  const currentMin = now.getUTCMinutes()
-  const todayStr = now.toISOString().split('T')[0]
+  const currentMin  = now.getUTCMinutes()
+  const todayStr    = now.toISOString().split('T')[0]
 
   // Get all active medications with reminders enabled
   const { data: meds } = await supabase
@@ -34,7 +40,7 @@ serve(async (_req) => {
     for (const scheduledTime of (med.times || [])) {
       const [sh, sm] = scheduledTime.split(':').map(Number)
       const scheduledMins = sh * 60 + sm
-      const currentMins = currentHour * 60 + currentMin
+      const currentMins   = currentHour * 60 + currentMin
 
       // Only send if within ±5 minute window
       if (Math.abs(currentMins - scheduledMins) > 5) continue
@@ -61,30 +67,28 @@ serve(async (_req) => {
 
       if (alreadySent?.length) continue
 
-      // Format phone to E.164
-      const digits = med.reminder_phone.replace(/\D/g, '')
-      const toPhone = digits.startsWith('1') ? `+${digits}` : `+1${digits}`
-
+      const toPhone   = normalizePhone(med.reminder_phone)
       const medDisplay = med.dosage ? `${med.med_name} ${med.dosage}` : med.med_name
+      const message   = `💊 Medication reminder: Time to take your ${medDisplay}. — SeniorSafe`
 
-      // Send SMS via GHL
-      await fetch('https://services.leadconnectorhq.com/conversations/messages/outbound', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${GHL_API_KEY}`,
-          'Content-Type': 'application/json',
-          'Version': '2021-04-15',
-        },
-        body: JSON.stringify({
-          locationId: GHL_LOCATION_ID,
-          type: 'SMS',
-          message: `💊 Medication reminder: Time to take your ${medDisplay}. — SeniorSafe`,
-          toNumber: toPhone,
-          fromNumber: GHL_PHONE_NUMBER,
-        }),
-      })
+      // Send SMS via Twilio
+      const body = new URLSearchParams({ To: toPhone, From: FROM_NUMBER, Body: message })
+      const response = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${credentials}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: body.toString(),
+        }
+      )
 
-      // Log so we don't send duplicate
+      const result = await response.json()
+      console.log(`SMS to ${toPhone}:`, response.status, result?.sid || result?.message)
+
+      // Log so we don't send a duplicate
       await supabase.from('reminder_logs').insert({
         medication_id: med.id,
         user_id: med.user_id,
