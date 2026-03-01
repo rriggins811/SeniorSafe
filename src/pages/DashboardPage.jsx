@@ -25,6 +25,8 @@ export default function DashboardPage() {
   const [msgCount, setMsgCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [reminding, setReminding] = useState(false)
+  const [showHelpModal, setShowHelpModal] = useState(false)
+  const [helpAlertStatus, setHelpAlertStatus] = useState('idle') // idle | sending | sent
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -161,6 +163,32 @@ export default function DashboardPage() {
     }
 
     setTimeout(() => setCheckInStatus('idle'), 3000)
+  }
+
+  async function handleHelpAlert() {
+    if (helpAlertStatus === 'sending' || !user || !profile) return
+    setHelpAlertStatus('sending')
+
+    const now = new Date()
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    const name = seniorName || profile?.first_name || 'Your loved one'
+    const message = `🆘 URGENT: ${name} pressed 'I Need Help' at ${timeStr}. Please check on them immediately. - SeniorSafe Alert`
+
+    const { data: familyMembers } = await supabase
+      .from('user_profile')
+      .select('phone, first_name')
+      .eq('invited_by', user.id)
+      .not('phone', 'is', null)
+
+    if (familyMembers?.length) {
+      await Promise.all(familyMembers.map(m => sendSMS(m.phone, message)))
+    }
+
+    setHelpAlertStatus('sent')
+    setTimeout(() => {
+      setHelpAlertStatus('idle')
+      setShowHelpModal(false)
+    }, 3000)
   }
 
   async function sendAdminReminder() {
@@ -326,6 +354,12 @@ export default function DashboardPage() {
                   : "Tap to let your family know you're doing well"}
               </span>
             </button>
+            <button
+              onClick={() => setShowHelpModal(true)}
+              className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 bg-red-600 shadow-md active:scale-[0.98] transition-all"
+            >
+              <span className="text-white font-bold" style={{ fontSize: '18px' }}>🆘 I Need Help</span>
+            </button>
             <p className="text-center text-sm text-gray-400">
               {lastCheckIn
                 ? `Last check-in: ${formatCheckIn(lastCheckIn)}`
@@ -414,6 +448,45 @@ export default function DashboardPage() {
           <Link to="/privacy" className="underline hover:text-gray-500">Privacy Policy</Link>
         </p>
       </div>
+
+      {/* I Need Help — confirmation modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-5">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl flex flex-col gap-5">
+            {helpAlertStatus === 'sent' ? (
+              <div className="flex flex-col items-center gap-3 py-2">
+                <span className="text-3xl">✅</span>
+                <p className="text-[#1B365D] font-bold text-lg text-center">Help alert sent to your family!</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2">
+                  <p className="text-xl font-bold text-[#1B365D] text-center">⚠️ Are you sure?</p>
+                  <p className="text-gray-600 text-sm text-center leading-relaxed">
+                    This will send an urgent alert to your entire family.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handleHelpAlert}
+                    disabled={helpAlertStatus === 'sending'}
+                    className="w-full py-3 rounded-xl bg-red-600 text-white font-bold text-base disabled:opacity-60"
+                  >
+                    {helpAlertStatus === 'sending' ? 'Sending...' : 'Yes, Send Alert'}
+                  </button>
+                  <button
+                    onClick={() => setShowHelpModal(false)}
+                    disabled={helpAlertStatus === 'sending'}
+                    className="w-full py-3 rounded-xl bg-gray-400 text-white font-semibold text-base disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>
