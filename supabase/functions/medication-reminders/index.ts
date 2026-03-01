@@ -7,9 +7,9 @@ serve(async (_req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
 
-  const GHL_API_KEY = Deno.env.get('GHL_API_KEY')!
-  const GHL_LOCATION_ID = Deno.env.get('GHL_LOCATION_ID')!
-  const GHL_PHONE_NUMBER = Deno.env.get('GHL_PHONE_NUMBER')!
+  const ACCOUNT_SID  = Deno.env.get('TWILIO_ACCOUNT_SID')!
+  const AUTH_TOKEN   = Deno.env.get('TWILIO_AUTH_TOKEN')!
+  const FROM_NUMBER  = Deno.env.get('TWILIO_PHONE_NUMBER')!
 
   const now = new Date()
   const currentHour = now.getUTCHours()
@@ -67,22 +67,25 @@ serve(async (_req) => {
 
       const medDisplay = med.dosage ? `${med.med_name} ${med.dosage}` : med.med_name
 
-      // Send SMS via GHL
-      await fetch('https://services.leadconnectorhq.com/conversations/messages/outbound', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${GHL_API_KEY}`,
-          'Content-Type': 'application/json',
-          'Version': '2021-04-15',
-        },
-        body: JSON.stringify({
-          locationId: GHL_LOCATION_ID,
-          type: 'SMS',
-          message: `💊 Medication reminder: Time to take your ${medDisplay}. — SeniorSafe`,
-          toNumber: toPhone,
-          fromNumber: GHL_PHONE_NUMBER,
-        }),
+      // Send SMS via Twilio
+      const credentials = btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`)
+      const smsBody = new URLSearchParams({
+        To: toPhone,
+        From: FROM_NUMBER,
+        Body: `💊 Medication reminder: Time to take your ${medDisplay}. — SeniorSafe`,
       })
+
+      await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${credentials}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: smsBody.toString(),
+        }
+      )
 
       // Log so we don't send duplicate
       await supabase.from('reminder_logs').insert({
