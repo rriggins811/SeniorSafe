@@ -19,20 +19,20 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 
 ## Revenue Streams
 1. **$47** — Senior Transition Blueprint (19 modules, 90+ tools) at seniortransitionblueprint.com
-2. **$14.99/month** — SeniorSafe App subscription (beta users default to paid tier)
+2. **$14.99/month** — SeniorSafe App Premium subscription (free tier available)
 3. **$1,500–2,500** — Strategy Consultations
 4. **$1,875–5,000** — National Referral Fees
 5. **$7,500–10,500** — Local Real Estate Listings
-- Blueprint buyers get 3 months free SeniorSafe access (access code system not yet built)
+- Blueprint buyers get 3 months free SeniorSafe Premium access (access code system not yet built)
 
 ---
 
 ## Book
 - **Title:** "The Unheard Conversation: How to Talk to Your Aging Parents About What's Next—Without Starting a War"
 - **Author:** Ryan Riggins
-- Formatted for Amazon KDP 6x9 paperback
-- Published on KDP and available on Gumroad as a tripwire product
-- Referenced in email nurture sequences and used as a lead magnet
+- **Status:** Published on Amazon KDP (ebook + 6x9 paperback)
+- Gumroad version formatted but not published yet
+- Referenced in email nurture sequences
 
 ---
 
@@ -45,14 +45,26 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 
 ---
 
-## SeniorSafe App
-- **Live URL:** https://app.seniorsafeapp.com (custom domain → Vercel)
-- **Vercel URL:** https://senior-safe-hazel.vercel.app (still works)
+## SeniorSafe App — Current Deployment
+
+### Live URLs
+- **App:** https://app.seniorsafeapp.com (custom domain, configured March 2, 2026)
+- **Landing Page:** https://seniorsafeapp.com (GHL marketing page, configured March 2, 2026)
+- **Legacy URL:** https://senior-safe-hazel.vercel.app (still works, redirects to custom domain)
+
+### Domain Setup (March 2, 2026)
+- **Root domain:** seniorsafeapp.com → GoHighLevel landing page
+  - DNS: A record + CNAME pointing to GHL servers
+  - Managed in Squarespace domain registrar
+- **Subdomain:** app.seniorsafeapp.com → Vercel React app
+  - DNS: CNAME pointing to Vercel (`cname.vercel-dns.com`)
+  - SSL auto-provisioned by Vercel
+
+### Repository & Hosting
 - **GitHub:** https://github.com/rriggins811/SeniorSafe (PUBLIC repo)
 - **Local dev path:** C:\Users\Ryanr\seniorsafe
 - **Hosting:** Vercel (auto-deploys on `git push` to `main`)
-- **Custom domain:** app.seniorsafeapp.com — configured in Vercel project settings, DNS via GHL
-- **Beta:** All beta users default to 'paid' tier. Free tier built in code but not exposed yet.
+- **Beta status:** All beta users default to 'paid' tier. Free tier fully built but not exposed to public yet.
 
 ---
 
@@ -68,6 +80,7 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 | AI | Anthropic Claude API | claude-opus-4-5 (direct browser) |
 | SMS | Twilio REST API | via Supabase Edge Functions |
 | Hosting | Vercel | auto-deploy from GitHub |
+| Landing Page | GoHighLevel | seniorsafeapp.com |
 
 ### Tailwind CSS v4 — CRITICAL
 Do NOT use `tailwind.config.js`. Config lives in `src/index.css`:
@@ -134,7 +147,7 @@ message_week_start  date  -- for weekly AI reset (paid tier)
 ### All tables
 | Table | Purpose |
 |---|---|
-| `user_profile` | Core user data, roles, family linking, onboarding answers |
+| `user_profile` | Core user data, roles, family linking, onboarding answers, freemium tier |
 | `checkins` | Daily "I'm Okay" records (user_id, checked_in_at) |
 | `medications` | Medication list (med_name, dosage, frequency, times[], reminder_enabled, reminder_phone) |
 | `med_logs` | Daily dose log (medication_id, scheduled_time, date, taken_at) |
@@ -145,16 +158,6 @@ message_week_start  date  -- for weekly AI reset (paid tier)
 | `emergency_info` | First responder card (blood_type, allergies, doctors, emergency contacts, insurance) |
 | `family_members` | Legacy/reserved |
 | `reminder_logs` | Dedup tracker for medication SMS (medication_id, date, scheduled_time) |
-
-### Pending SQL (run in Supabase SQL Editor if not applied)
-```sql
-ALTER TABLE user_profile
-  ADD COLUMN IF NOT EXISTS sms_notifications boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS message_count int DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS message_limit int DEFAULT 50,
-  ADD COLUMN IF NOT EXISTS subscription_tier text DEFAULT 'paid',
-  ADD COLUMN IF NOT EXISTS message_week_start date;
-```
 
 ---
 
@@ -179,11 +182,15 @@ TWILIO_PHONE_NUMBER  +13365536225
 
 ### `medication-reminders` — Cron SMS
 File: `supabase/functions/medication-reminders/index.ts`
+**Status:** ✅ Updated to Twilio (March 1, 2026)
 **Cron:** every 5 minutes — set in Supabase Dashboard → Edge Functions → Schedule → `*/5 * * * *`
 
 Flow: query medications with `reminder_enabled=true` → check ±5 min window → skip if taken → skip if reminder_logs exists → send SMS via Twilio → log to `reminder_logs`
 
-Uses Twilio REST API directly (same credentials as send-sms: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER).
+Uses same Twilio pattern as `send-sms`:
+- REST API with Basic Auth
+- Form-encoded body
+- Phone normalization (+1 prefix)
 
 ### Deploy command
 ```bash
@@ -198,13 +205,21 @@ SUPABASE_ACCESS_TOKEN=sbp_9c4d988f47762fa77d32eb3c9d0929318633a46c \
 
 ## Twilio SMS
 - **Account SID:** <in Supabase dashboard>
-- **From number:** +13365536225
+- **From number:** (336) 553-6225 / `+13365536225`
+- **A2P Registration:** Pending carrier approval (messages fire correctly, may be held until approved)
 
 ### SMS helper — `src/lib/sms.js`
 ```js
 const EDGE_FN_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/send-sms'
 export async function sendSMS(to, message) { ... }
 ```
+
+### SMS Usage in App
+- **I'm Okay (paid tier):** notifies all family members with phone + confirmation to senior's own phone
+- **I'm Okay (free tier):** records check-in in app only, no SMS sent
+- **I Need Help button:** sends urgent alert to all family members (paid tier only)
+- **Medication reminders:** sends to `reminder_phone` on each medication record at scheduled time
+- **Missed check-in:** member sees yellow banner + "Send reminder" button → SMS to admin
 
 ---
 
@@ -310,11 +325,27 @@ seniorsafe/
 Final upsert generates `family_code` inline if not in metadata (safety net). Sets `onboarding_complete: true`.
 
 ### DashboardPage — role-based
-- **Admin view:** "I'm Okay Today" button → inserts checkin → daily limit (once per day, `alreadyCheckedIn` state) → paid tier sends SMS to family + confirmation to senior; free tier records in app only
-- **"I Need Help" button:** Red emergency button below I'm Okay → confirmation modal ("Are you sure?") → sends urgent SMS to all family members with phone → auto-closes to success state after 3 seconds
-- **Member view:** shows admin's check-in status; yellow warning banner if no check-in by 10am; "Send them a reminder" button → SMS to admin's phone
-- Header icons (admin): Family Invite, Profile, Emergency, Contact Ryan, Sign Out
+
+**Admin view:**
+- **"I'm Okay Today" button** → inserts checkin → daily limit (once per day, `alreadyCheckedIn` state)
+  - Paid tier: sends SMS to family + confirmation to senior
+  - Free tier: records in app only, no SMS
+- **"I Need Help" button** (NEW - March 2, 2026) → emergency alert
+  - Stacked below "I'm Okay" button
+  - Red styling (bg-red-600), smaller padding (py-3)
+  - Confirmation modal prevents accidental clicks: "⚠️ Are you sure? This will send an urgent alert to your entire family."
+  - Two-button modal: "Yes, Send Alert" (red) | "Cancel" (gray)
+  - On confirm: SMS blast to all family members with phones
+  - Message: "🆘 URGENT: [Senior Name] pressed 'I Need Help' at [time]. Please check on them immediately. - SeniorSafe Alert"
+  - Success message: "Help alert sent to your family!" (auto-closes after 3 seconds)
+  - Uses existing sendSMS() from src/lib/sms.js, queries user_profile for family_code matches
+- Header icons: Family Invite, Profile, Emergency, Contact Ryan, Sign Out
 - Bottom nav: Home / Vault / Family / AI
+
+**Member view:**
+- Shows admin's check-in status
+- Yellow warning banner if no check-in by 10am
+- "Send them a reminder" button → SMS to admin's phone
 
 ### AIPage — key details
 - Direct Anthropic API from browser (`anthropic-dangerous-direct-browser-access: true`)
@@ -367,47 +398,96 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 
 ---
 
-## SMS Notifications
-- **Provider:** Twilio (replaced GHL)
-- **From number:** (336) 553-6225 / `+13365536225`
-- **I'm Okay (paid tier):** notifies all family members with phone + confirmation to senior's own phone
-- **I'm Okay (free tier):** records check-in in app only, no SMS sent
-- **Medication reminders:** sends to `reminder_phone` on each medication record at scheduled time
-- **Missed check-in:** member sees yellow banner + "Send reminder" button → SMS to admin
-- **A2P registration:** may be pending — texts fire correctly, carrier may hold until approved
-
----
-
 ## Freemium Model
 - **subscription_tier** column on `user_profile` ('free' or 'paid', DEFAULT 'paid')
-- All beta users default to 'paid' — free tier built in code but not exposed yet
-- **Paid features:** I'm Okay with SMS, all pages, 50 AI messages/week (resets every 7 days)
-- **Free features:** I'm Okay (no SMS), messages view-only, photos/vault/meds/appts/emergency/invite blocked
+- All beta users default to 'paid' — free tier built in code but not exposed to public yet
+- **Paid features ($14.99/month):** I'm Okay with SMS, "I Need Help" alerts, all pages, 50 AI messages/week (resets every 7 days)
+- **Free features:** I'm Okay (no SMS), messages view-only, photos/vault/meds/appts/emergency/invite blocked, "I Need Help" blocked
 - **Free AI limit:** 10 messages lifetime (no reset)
 - **Weekly reset:** `message_week_start` date on profile; if >7 days old → reset count to 0
 - **Stripe:** not yet integrated — upgrade by texting Ryan (336) 553-8933
 
+---
+
+## Landing Page (GoHighLevel)
+
+**URL:** https://seniorsafeapp.com
+**Built:** March 2, 2026
+**Purpose:** Marketing landing page for SeniorSafe app
+
+### Page Structure
+1. **Hero Section**
+   - Shield logo with navy/gold branding
+   - Headline: "Your family. One place. One plan."
+   - Subheadline: "The app built for families navigating senior transitions."
+   - CTAs: "Get Started" + "Sign In" → app.seniorsafeapp.com
+
+2. **Features Grid** (8 feature cards)
+   - Daily Check-Ins, Medication Tracking, AI Assistant
+   - Document Vault, Appointments, Emergency Alerts
+   - Family Messages, Emergency Info Card
+
+3. **How It Works** (3-step flow)
+   - Sign Up → Invite Family → Stay Connected
+
+4. **Pricing** (Free vs. Premium $14.99/month)
+   - Free tier benefits clearly listed
+   - Premium tier with "Most Popular" badge
+   - All features itemized
+
+5. **Resources Section**
+   - Links to Starter Guide, Book, Blueprint
+   - "Not Ready to Commit?" positioning
+
+6. **Final CTA + Footer**
+   - Repeat signup CTAs
+   - Text Ryan option
+   - Terms, Privacy, Powered by RSS
+
+### Design
+- Navy (#1B365D) and Gold (#D4A843) color scheme
+- Mobile-responsive grid layouts
+- Clean, professional PBS-documentary tone
+- No excessive formatting or bullet points in prose
+
+---
+
+## RSS Website Integration
+
+**New Page:** /seniorsafe-app (created March 2, 2026)
+**Status:** Built, unlisted until payment integration complete
+**Purpose:** Showcase SeniorSafe on main RSS website
+
+### Page Content
+- Standalone product positioning (not dependent on Blueprint)
+- All 8 features highlighted
+- Pricing displayed ($14.99/month Premium, Free tier)
+- Connection to Blueprint explained (optional companion tool)
+- Links to app.seniorsafeapp.com
+
+### Header Navigation
+When published, add to main nav as: "SeniorSafe App"
+
+---
+
 ## Known Issues / Pending Work
 
-### 🔴 High Priority
-1. **Stripe** not integrated — upgrade manually via text to Ryan (336) 553-8933
-2. **Cron schedule** for medication-reminders: confirm `*/5 * * * *` is set in Supabase Dashboard → Edge Functions → medication-reminders → Schedule
+### 🔴 CRITICAL (Fix Before Beta Launch)
+1. **Document Vault** — needs testing for upload/download/delete functionality
+2. **Anthropic API key exposed** — VITE_ prefix makes it browser-accessible; move to Supabase Edge Function
+3. **Freemium tier restrictions not enforced in UI** — free users can currently access all pages; need to add subscription_tier checks
 
-### 🟡 Medium Priority
-3. **A2P SMS registration** may be pending — carrier-dependent, texts fire but may be held
-4. **Blueprint access codes** system not built (Blueprint buyers get 3 months free)
-5. **Anthropic key** is browser-exposed (`VITE_` prefix) — move to edge function post-beta
+### 🟡 IMPORTANT (Complete Before Public Announcement)
+4. **Stripe integration** — no payment flow yet; all users default to 'paid' manually
+5. **Blueprint access code system** — 3 months free for Blueprint buyers not built
+6. **A2P SMS registration** — pending carrier approval (Twilio configured, messages fire but may be held)
+7. **Terms & Privacy pages** — routes exist but content not written
 
-### 🟢 Low Priority / SQL
-6. **Pending SQL** if not yet applied in Supabase:
-   ```sql
-   ALTER TABLE user_profile
-     ADD COLUMN IF NOT EXISTS sms_notifications boolean DEFAULT true,
-     ADD COLUMN IF NOT EXISTS message_count int DEFAULT 0,
-     ADD COLUMN IF NOT EXISTS message_limit int DEFAULT 50,
-     ADD COLUMN IF NOT EXISTS subscription_tier text DEFAULT 'paid',
-     ADD COLUMN IF NOT EXISTS message_week_start date;
-   ```
+### 🟢 POLISH (Can Do After Launch)
+8. **Message limit enforcement** — weekly reset logic exists but needs testing
+9. **Medication reminders cron verification** — confirm 5-minute schedule fires correctly
+10. **Mobile responsiveness testing** — all pages need phone/tablet verification
+11. **Family invite flow testing** — confirm invite codes work end-to-end
 
 ---
 
@@ -435,7 +515,7 @@ Git config for this repo:
 
 ## Other Business Tools
 - **GoHighLevel:** CRM, email automation, booking, landing pages (go.rigginsstrategicsolutions.com)
-- **Squarespace:** main website (rigginsstrategicsolutions.com)
+- **Squarespace:** main website + domain registrar (rigginsstrategicsolutions.com)
 - **Buffer:** social media scheduling (Saturday morning content workflow)
 - **Make.com:** automation scenarios
 - **Descript:** video editing
@@ -446,23 +526,13 @@ Git config for this repo:
 
 ## Key URLs
 - Main site: rigginsstrategicsolutions.com
-- App (custom domain): app.seniorsafeapp.com
-- App landing page: seniorsafeapp.com (GHL hosted)
+- App: app.seniorsafeapp.com
+- Landing page: seniorsafeapp.com
 - Blueprint: seniortransitionblueprint.com
 - Starter Guide: rigginsstrategicsolutions.com/starterguide
 - Booking: https://api.leadconnectorhq.com/widget/booking/PEGCu2kXYDZgAPPzXGv5
 - GHL landing pages: go.rigginsstrategicsolutions.com
-
-## Landing Page (seniorsafeapp.com)
-- Hosted on GHL at seniorsafeapp.com
-- Separate from the app (app.seniorsafeapp.com)
-- Points to app signup: app.seniorsafeapp.com/signup
-- DNS for both seniorsafeapp.com domains managed via GHL
-
-## RSS / Website Integration
-- **GitHub RSS-Agent-Brain repo:** business context files used by Make.com automations
-- RSS feeds connect to NotebookLM for content generation
-- Saturday morning workflow: YouTube script → NotebookLM → 30 social posts → Buffer schedule
+- Book: Amazon (search "The Unheard Conversation Ryan Riggins")
 
 ## Contact
 - **Cell:** (336) 553-8933

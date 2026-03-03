@@ -55,7 +55,27 @@ export default function VaultPage() {
       .select('*')
       .eq('user_id', userId)
       .order('uploaded_at', { ascending: false })
-    if (!error) setDocuments(data || [])
+    if (!error && data) {
+      // Generate signed URLs for private bucket
+      const withUrls = await Promise.all(data.map(async (doc) => {
+        const storagePath = doc.file_url
+        // Skip if it looks like a full URL (legacy data) — extract path from it
+        let path = storagePath
+        if (storagePath.startsWith('http')) {
+          const marker = '/object/public/Documents/'
+          const idx = storagePath.indexOf(marker)
+          if (idx !== -1) path = decodeURIComponent(storagePath.slice(idx + marker.length))
+          else return { ...doc, signedUrl: storagePath } // fallback
+        }
+        const { data: signed } = await supabase.storage
+          .from('Documents')
+          .createSignedUrl(path, 3600) // 1 hour expiry
+        return { ...doc, signedUrl: signed?.signedUrl || '', storagePath: path }
+      }))
+      setDocuments(withUrls)
+    } else {
+      setDocuments([])
+    }
     setLoading(false)
   }
 
@@ -94,15 +114,11 @@ export default function VaultPage() {
       return
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('Documents')
-      .getPublicUrl(storagePath)
-
     const { error: dbError } = await supabase.from('documents').insert({
       user_id: user.id,
       family_name: user.user_metadata?.family_name || '',
       file_name: file.name,
-      file_url: publicUrl,
+      file_url: storagePath,
       category,
       label: label.trim(),
     })
@@ -121,16 +137,19 @@ export default function VaultPage() {
     if (!window.confirm(`Delete "${doc.label}"? This cannot be undone.`)) return
     setDeleting(doc.id)
 
-    // Extract storage path from public URL
+    // Use stored path directly (or extract from legacy full URL)
     try {
-      const url = new URL(doc.file_url)
-      const marker = '/object/public/Documents/'
-      const idx = url.pathname.indexOf(marker)
-      if (idx !== -1) {
-        const storagePath = decodeURIComponent(url.pathname.slice(idx + marker.length))
-        await supabase.storage.from('Documents').remove([storagePath])
+      const path = doc.storagePath || doc.file_url
+      if (path && !path.startsWith('http')) {
+        await supabase.storage.from('Documents').remove([path])
+      } else if (path) {
+        const marker = '/object/public/Documents/'
+        const idx = path.indexOf(marker)
+        if (idx !== -1) {
+          await supabase.storage.from('Documents').remove([decodeURIComponent(path.slice(idx + marker.length))])
+        }
       }
-    } catch (_) { /* ignore storage path errors — still delete DB row */ }
+    } catch (_) { /* ignore storage errors — still delete DB row */ }
 
     await supabase.from('documents').delete().eq('id', doc.id)
     setDocuments(prev => prev.filter(d => d.id !== doc.id))
@@ -169,7 +188,7 @@ export default function VaultPage() {
           <a href="sms:3365538933" className="w-full max-w-xs py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg text-center block">
             Text Ryan to Upgrade
           </a>
-          <p className="text-gray-400 text-sm">(336) 553-8933 · $12–25/month</p>
+          <p className="text-gray-400 text-sm">(336) 553-8933 · $14.99/month</p>
           <button onClick={() => navigate('/dashboard')} className="text-[#1B365D] text-sm underline">
             ← Back to Dashboard
           </button>
@@ -275,13 +294,13 @@ export default function VaultPage() {
                 <div key={doc.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
                   {/* Thumbnail */}
                   <a
-                    href={doc.file_url}
+                    href={doc.signedUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center"
                   >
                     {isImg ? (
-                      <img src={doc.file_url} alt={doc.label} className="w-full h-full object-cover" />
+                      <img src={doc.signedUrl} alt={doc.label} className="w-full h-full object-cover" />
                     ) : (
                       <FileText size={28} color="#9CA3AF" strokeWidth={1.5} />
                     )}
