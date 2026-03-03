@@ -88,16 +88,19 @@ serve(async (_req) => {
       const result = await response.json()
       console.log(`SMS to ${toPhone}:`, response.status, result?.sid || result?.message)
 
-      // Log so we don't send a duplicate
-      await supabase.from('reminder_logs').insert({
-        medication_id: med.id,
-        user_id: med.user_id,
-        date: todayStr,
-        scheduled_time: scheduledTime,
-        sent_at: now.toISOString(),
-      })
-
-      sent++
+      // Only log and count if Twilio actually accepted the message
+      if (response.ok) {
+        await supabase.from('reminder_logs').insert({
+          medication_id: med.id,
+          user_id: med.user_id,
+          date: todayStr,
+          scheduled_time: scheduledTime,
+          sent_at: now.toISOString(),
+        })
+        sent++
+      } else {
+        console.error(`Twilio error for med ${med.id}:`, result?.message || response.status)
+      }
     }
   }
 

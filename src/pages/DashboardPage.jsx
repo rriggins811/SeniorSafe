@@ -122,11 +122,17 @@ export default function DashboardPage() {
     }
     setCheckInStatus('loading')
 
-    await supabase.from('checkins').insert({
+    const { error: checkInError } = await supabase.from('checkins').insert({
       user_id: user.id,
       family_name: familyName,
       checked_in_at: new Date().toISOString(),
     })
+
+    if (checkInError) {
+      alert('Check-in failed: ' + checkInError.message)
+      setCheckInStatus('idle')
+      return
+    }
 
     setLastCheckIn(new Date())
     setAlreadyCheckedIn(true)
@@ -193,26 +199,42 @@ export default function DashboardPage() {
     if (helpSending || !user) return
     setHelpSending(true)
 
-    const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-    const name = seniorName || user.user_metadata?.first_name || familyName || 'Your loved one'
-    const message = `🆘 URGENT: ${name} pressed "I Need Help" at ${time}. Please check on them immediately. - SeniorSafe Alert`
+    try {
+      const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+      const name = seniorName || user.user_metadata?.first_name || familyName || 'Your loved one'
+      const message = `🆘 URGENT: ${name} pressed "I Need Help" at ${time}. Please check on them immediately. - SeniorSafe Alert`
 
-    const { data: memberProfiles } = await supabase
-      .from('user_profile')
-      .select('phone')
-      .eq('invited_by', user.id)
-      .not('phone', 'is', null)
+      const { data: memberProfiles } = await supabase
+        .from('user_profile')
+        .select('phone')
+        .eq('invited_by', user.id)
+        .not('phone', 'is', null)
 
-    if (memberProfiles?.length) {
-      await Promise.all(memberProfiles.map(m => sendSMS(m.phone, message)))
+      if (!memberProfiles?.length) {
+        alert('No family members with phone numbers found. Ask your family to add their phone number in the app.')
+        setHelpSending(false)
+        return
+      }
+
+      const results = await Promise.all(memberProfiles.map(m => sendSMS(m.phone, message)))
+      const successCount = results.filter(Boolean).length
+
+      if (successCount === 0) {
+        alert('Could not send alerts right now. Please call your family directly.')
+        setHelpSending(false)
+        return
+      }
+
+      setHelpSending(false)
+      setHelpSent(true)
+      setTimeout(() => {
+        setHelpSent(false)
+        setHelpModal(false)
+      }, 3000)
+    } catch {
+      alert('Something went wrong sending alerts. Please call your family directly.')
+      setHelpSending(false)
     }
-
-    setHelpSending(false)
-    setHelpSent(true)
-    setTimeout(() => {
-      setHelpSent(false)
-      setHelpModal(false)
-    }, 3000)
   }
 
   async function handleSignOut() {
