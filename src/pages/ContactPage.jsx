@@ -46,7 +46,7 @@ export default function ContactPage() {
 
         {/* Button 2: Book a Free Call */}
         <a
-          href="https://ryanriggins.com"
+          href="https://www.rigginsstrategicsolutions.com/work-with-ryan"
           target="_blank"
           rel="noopener noreferrer"
           className="w-full flex items-center gap-4 bg-[#D4A843] rounded-2xl px-6 py-5 shadow-sm active:opacity-90 no-underline"

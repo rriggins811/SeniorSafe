@@ -103,10 +103,9 @@ export default function DashboardPage() {
         .limit(1)
         .then(({ data }) => setNextAppt(data?.[0] || null))
 
-      // Family message count
+      // Family message count (RLS scopes to family via family_name)
       supabase.from('family_messages')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
         .then(({ count }) => setMsgCount(count || 0))
 
       setLoading(false)

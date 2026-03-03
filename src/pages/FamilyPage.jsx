@@ -375,12 +375,14 @@ export default function FamilyPage() {
               <p className="text-white/40 text-xs">{formatTs(selectedPhoto.created_at)}</p>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={() => deletePhoto(selectedPhoto)}
-                className="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold"
-              >
-                Delete
-              </button>
+              {selectedPhoto.user_id === user?.id && (
+                <button
+                  onClick={() => deletePhoto(selectedPhoto)}
+                  className="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-sm font-semibold"
+                >
+                  Delete
+                </button>
+              )}
               <button
                 onClick={() => setSelectedPhoto(null)}
                 className="px-4 py-2 rounded-xl bg-white/10 text-white text-sm font-semibold"
