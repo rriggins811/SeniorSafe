@@ -124,6 +124,7 @@ export default function OnboardingPage() {
       living_situation: answers.living_situation,
       timeline: answers.timeline,
       biggest_concern: answers.biggest_concern,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       onboarding_complete: true,
     }, { onConflict: 'user_id' })
     setSaving(false)
