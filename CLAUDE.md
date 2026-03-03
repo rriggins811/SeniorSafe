@@ -1,5 +1,107 @@
 # SeniorSafe — Claude Code Project Brief
-Last updated: March 2, 2026
+Last updated: March 3, 2026
+
+---
+
+## March 3, 2026 — Beta Launch Preparation Complete
+
+### Session Summary
+Massive security audit + feature buildout session. 50+ fixes deployed across security, family features, AI limits, and freemium enforcement. App is beta-ready for 3–5 families this week.
+
+### What's LIVE Right Now (Deployed & Working)
+- **All family features working:** Messages, photos, medications, appointments, emergency info — all visible across family members
+- **AI limits changed:** 20 messages per family per month (was 50/user/week). Shared counter on admin's profile, monthly reset.
+- **AI moved server-side:** Anthropic API key no longer in browser. All AI calls route through `ai-chat` Supabase Edge Function with SSE streaming.
+- **SPA routing fixed:** `vercel.json` rewrites prevent 404 on page refresh.
+- **Member signup bug fixed:** Members entering invite code in admin form now skip onboarding correctly.
+- **Free tier lock screens built:** AI, Family Hub, Vault, Medications, Appointments, Family Invite all show premium lock screens for free users. Emergency Info is UNLOCKED for free tier. "I Need Help" button hidden for free tier. BottomNav shows lock icons on Vault, Family, AI.
+
+### Security Fixes Deployed (11 Migrations)
+1. `lock_down_user_profile_update_policy` — prevent users from changing their own role/tier
+2. `fix_anonymous_profile_data_leak` — block anonymous access to profiles
+3. `fix_rls_infinite_recursion` — fix circular RLS policy references
+4. `family_scoped_rls_for_checkins_messages_photos` — family members see each other's data
+5. `add_storage_limits_to_documents_bucket` — 10MB file limit, restricted MIME types
+6. `add_timezone_to_user_profile` — timezone column for future use
+7. `add_indexes_on_user_id_foreign_keys` — performance indexes on all FK columns
+8. `optimize_rls_auth_uid_subselect` — faster RLS using `auth.uid()` directly
+9. `family_scope_appointments_medications_medlogs` — family visibility for meds/appts/med_logs
+10. `family_scoped_storage_select_for_photos` — storage bucket policy for family photo access
+11. `fix_storage_policy_security_definer_family_check` — `is_family_member_file()` SECURITY DEFINER function to fix one-way photo visibility
+
+### Client Code Fixes Deployed
+- **AppointmentsPage:** Removed `.eq('user_id')` filter, RLS handles family scoping, owner-only delete
+- **MedicationsPage:** Removed `.eq('user_id')` filter for meds + med_logs, family_name on med_log inserts, owner-only delete, dose toggle disabled for non-owners
+- **FamilyPage:** Storage paths use UUID-first format, signed URLs for private bucket, batch `createSignedUrls()`, full free-tier lock screen
+- **AIPage:** Server-side AI via edge function, 20/family/month limit, family counter display, free-tier lock screen
+- **DashboardPage:** "I Need Help" hidden for free tier
+- **EmergencyPage:** Free tier lock REMOVED (now available to all users)
+- **BottomNav:** Family tab marked as premium
+- **SignUpPage:** Member via admin form now creates profile + skips onboarding
+- **vercel.json:** SPA catch-all rewrite for client-side routing
+
+### Edge Functions Deployed
+- **`ai-chat`** — NEW. Handles all AI requests server-side. SSE streaming, family-level monthly limits (20/month), monthly reset, personalized system prompt with family context.
+- **`send-sms`** — Twilio REST API for outbound SMS (unchanged this session)
+- **`medication-reminders`** — Cron every 5 min for med reminder SMS (unchanged this session)
+
+### What's NOT Deployed Yet / Known Issues
+1. **Free tier locks not active** — All beta users default to `subscription_tier = 'paid'`. Lock screens are built but won't trigger until Stripe integration changes tier to 'free'.
+2. **Custom 404 page** — Vercel shows default 404 instead of custom page (cosmetic issue).
+3. **SMS not sending reliably** — Twilio A2P registration still pending carrier approval. Messages fire but may be held/filtered.
+4. **SMS daily check-in limit** — No cap on how many check-in SMS per day. Add with Stripe in Week 3–4.
+5. **Stripe not integrated** — No payment flow. Upgrade = "Text Ryan at (336) 553-8933".
+6. **Blueprint access code system** — 3 months free for Blueprint buyers not built yet.
+
+### Current Economics
+- **Anthropic API:** ~$2.46/month per active family (claude-opus-4-5 at 20 msgs/family/month)
+- **App price:** $14.99/month Premium
+- **Profit margin:** ~$12.53/family/month (before Twilio SMS costs)
+- **Action needed:** Add $100 Anthropic API credits ASAP (current balance low)
+
+### Remaining Tasks Before Beta Launch
+| Priority | Task | When |
+|---|---|---|
+| 🔴 | Add $100 Anthropic API credits | Tomorrow (March 4) |
+| 🔴 | Check Twilio balance + top up if needed | Tomorrow (March 4) |
+| 🟡 | Fix A2P SMS registration (carrier approval) | Ongoing — Twilio support |
+| 🟡 | Test full app flow with 1 family member invite | Before inviting beta families |
+| 🟢 | Deploy free tier locks with Stripe | Week 3–4 |
+| 🟢 | Add SMS daily check-in cap | Week 3–4 with Stripe |
+| 🟢 | Build custom 404 page | Polish phase |
+| 🟢 | Blueprint access code system | Post-launch |
+
+### Beta Launch Plan (This Week)
+1. **Stage 1:** Ryan tests full flow with own family (1–2 people)
+2. **Stage 2:** Invite 3–5 trusted families with direct links
+3. **Stage 3:** Gather feedback, fix issues, iterate
+4. All beta users stay on `paid` tier. No payment required during beta.
+5. Share invite links: `https://app.seniorsafeapp.com/signup?code=XXXXXX`
+
+### Storage Architecture
+- **Bucket:** `Documents` (private, 10MB limit)
+- **MIME types:** PDF, JPEG, PNG, GIF, WebP
+- **Upload path:** `{user-uuid}/family-photos/filename.ext` (UUID-first for RLS)
+- **URLs:** Signed URLs only (1-hour expiry), no public URLs
+- **RLS:** Own files + family members' `family-photos/` subfolder via `is_family_member_file()` SECURITY DEFINER function
+
+### Key Technical Patterns
+- **Family scoping:** RLS uses `family_name = get_my_family_name()` where `get_my_family_name()` is SECURITY DEFINER
+- **Admin as source of truth:** AI message count stored on admin's `user_profile.message_count`
+- **Member → admin link:** `user_profile.invited_by` points to admin's `user_id`
+- **Monthly reset:** Repurposes `message_week_start` column (checks month/year, not days)
+- **Edge function auth:** User-auth client (respects RLS) + service-role client (supabaseAdmin, bypasses RLS for writes)
+
+### Deploy Commands Reference
+```bash
+# Standard deploy (Vercel auto-deploys on push)
+git add <files> && git commit -m "description" && git push
+
+# Edge function deploy
+SUPABASE_ACCESS_TOKEN=sbp_a58ffe4beec33b3b974ef7ec617439a09adcc9a6 \
+  /c/Users/Ryanr/bin/supabase.exe functions deploy <function-name> \
+  --project-ref ynsakoxsmuvwfjgbhxky --no-verify-jwt
+```
 
 ---
 
