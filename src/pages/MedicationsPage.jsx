@@ -182,7 +182,7 @@ export default function MedicationsPage() {
           <a href="sms:3365538933" className="w-full max-w-xs py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg text-center block">
             Text Ryan to Upgrade
           </a>
-          <p className="text-gray-400 text-sm">(336) 553-8933 · $12–25/month</p>
+          <p className="text-gray-400 text-sm">(336) 553-8933 · $14.99/month</p>
           <button onClick={() => navigate('/dashboard')} className="text-[#1B365D] text-sm underline">
             ← Back to Dashboard
           </button>
