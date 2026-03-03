@@ -22,10 +22,9 @@ function getCorsHeaders(req: Request) {
 // ---------------------------------------------------------------------------
 // Limit messages
 // ---------------------------------------------------------------------------
-const FREE_LIMIT_MESSAGE =
-  "You've reached your 10 message free limit. Upgrade to SeniorSafe Premium for 50 messages per week and full access to all features. Text Ryan at (336) 553-8933 to upgrade — he'll get you set up personally."
-const PAID_LIMIT_MESSAGE =
-  "You've reached your 50 message weekly limit. Your limit resets every 7 days. For immediate personalized help, text Ryan directly at (336) 553-8933."
+const FAMILY_LIMIT = 20
+const LIMIT_MESSAGE =
+  "Your family has reached its 20 AI message limit for this month. Messages reset at the start of each month. For immediate personalized help, text Ryan directly at (336) 553-8933."
 
 // ---------------------------------------------------------------------------
 // System prompt (moved from client — no longer browser-visible)
@@ -140,45 +139,60 @@ serve(async (req) => {
       })
     }
 
-    // ---- Message limits ----
-    const tier = profile.subscription_tier || 'paid'
-    let count = profile.message_count || 0
-    const limit = tier === 'paid' ? 50 : 10
+    // ---- Family-level monthly message limit (20/family/month) ----
+    // Admin's profile is the single source of truth for the family counter.
+    // Members look up their admin via invited_by.
+    let adminUserId = user.id
+    let familyCount = profile.message_count || 0
+    let adminMonthStart = profile.message_week_start // repurposed for monthly reset
 
-    // Weekly reset for paid users
-    if (tier === 'paid') {
-      if (profile.message_week_start) {
-        const daysSince =
-          (Date.now() - new Date(profile.message_week_start).getTime()) / 86_400_000
-        if (daysSince >= 7) {
-          count = 0
-          await supabaseAdmin.from('user_profile')
-            .update({
-              message_count: 0,
-              message_week_start: new Date().toISOString().split('T')[0],
-            })
-            .eq('user_id', user.id)
-        }
-      } else {
-        await supabaseAdmin.from('user_profile')
-          .update({ message_week_start: new Date().toISOString().split('T')[0] })
-          .eq('user_id', user.id)
+    if (profile.role === 'member' && profile.invited_by) {
+      const { data: admin } = await supabaseAdmin
+        .from('user_profile')
+        .select('user_id, message_count, message_week_start')
+        .eq('user_id', profile.invited_by)
+        .single()
+      if (admin) {
+        adminUserId = admin.user_id
+        familyCount = admin.message_count || 0
+        adminMonthStart = admin.message_week_start
       }
     }
 
-    if (count >= limit) {
+    // Monthly reset: if stored month differs from current month, reset to 0
+    const now = new Date()
+    if (adminMonthStart) {
+      const start = new Date(adminMonthStart)
+      if (start.getUTCMonth() !== now.getUTCMonth() || start.getUTCFullYear() !== now.getUTCFullYear()) {
+        familyCount = 0
+        await supabaseAdmin.from('user_profile')
+          .update({
+            message_count: 0,
+            message_week_start: now.toISOString().split('T')[0],
+          })
+          .eq('user_id', adminUserId)
+      }
+    } else {
+      // First message ever — initialise the month-start marker
+      await supabaseAdmin.from('user_profile')
+        .update({ message_week_start: now.toISOString().split('T')[0] })
+        .eq('user_id', adminUserId)
+    }
+
+    if (familyCount >= FAMILY_LIMIT) {
       return new Response(JSON.stringify({
         error: 'limit_reached',
-        message: tier === 'paid' ? PAID_LIMIT_MESSAGE : FREE_LIMIT_MESSAGE,
-        count, limit, tier,
+        message: LIMIT_MESSAGE,
+        count: familyCount,
+        limit: FAMILY_LIMIT,
       }), { status: 429, headers: jsonHeaders })
     }
 
-    // Increment
-    const newCount = count + 1
+    // Increment family counter (always on admin's profile)
+    const newCount = familyCount + 1
     await supabaseAdmin.from('user_profile')
       .update({ message_count: newCount })
-      .eq('user_id', user.id)
+      .eq('user_id', adminUserId)
 
     // ---- Parse body ----
     const { messages } = await req.json()
@@ -230,7 +244,7 @@ serve(async (req) => {
     ;(async () => {
       try {
         // Meta event — client uses this to update counter
-        await write('meta', { count: newCount, limit, tier })
+        await write('meta', { count: newCount, limit: FAMILY_LIMIT })
 
         const reader = anthropicRes.body!.getReader()
         const dec = new TextDecoder()
