@@ -281,11 +281,30 @@ export default function SignUpPage() {
       },
     })
 
-    setLoading(false)
-
     if (signUpError) {
       setError(signUpError.message)
+      setLoading(false)
+    } else if (role === 'member') {
+      // Member via invite code in admin form — create profile, skip onboarding
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('user_profile').upsert({
+          user_id: user.id,
+          family_name: resolvedFamilyName,
+          first_name: form.firstName.trim(),
+          last_name: form.lastName.trim(),
+          phone: form.phone.trim() || null,
+          role: 'member',
+          invited_by,
+          family_code: null,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          onboarding_complete: true,
+        }, { onConflict: 'user_id' })
+      }
+      setLoading(false)
+      navigate('/dashboard')
     } else {
+      setLoading(false)
       navigate('/onboarding')
     }
   }
