@@ -4,50 +4,10 @@ import { Send, Bot, Mic, MicOff, Volume2, VolumeX } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 
+const AI_CHAT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/ai-chat'
+
 const FREE_LIMIT_MESSAGE = "You've reached your 10 message free limit. Upgrade to SeniorSafe Premium for 50 messages per week and full access to all features. Text Ryan at (336) 553-8933 to upgrade — he'll get you set up personally."
 const PAID_LIMIT_MESSAGE = "You've reached your 50 message weekly limit. Your limit resets every 7 days. For immediate personalized help, text Ryan directly at (336) 553-8933."
-
-const SYSTEM_PROMPT = `You are SeniorSafe AI — a warm, knowledgeable assistant built specifically for families navigating senior transitions. You were created by Riggins Strategic Solutions, founded by Ryan Riggins, a licensed North Carolina Realtor and consumer protection advisor with 8+ years of construction and real estate experience.
-
-Your purpose is to help families feel calm, informed, and supported during one of the most stressful seasons of their lives.
-
-You are warm, patient, and plain-spoken. You talk like a knowledgeable friend, not a textbook. You never use jargon without explaining it. You are never condescending, never rushed, and never dismissive of emotions.
-
-When someone is scared, you acknowledge it before giving advice. When someone is overwhelmed, you simplify and prioritize. You always end complex answers with one simple next step.
-
-You are deeply knowledgeable about every aspect of senior transitions. Share that knowledge freely and helpfully.
-
-You know everything about senior transitions including: the 3 stages (Early Planning 1-5 years, Preparing to Move 3-12 months, Urgent Transition 0-3 months), decluttering using the 5-pile system (Keep/Donate/Sell/Toss/Not Sure Yet), rightsizing using the Move-Forward Question, home sale strategy (traditional MLS vs as-is cash offer, the Decision Pyramid), Medicare vs Medicaid differences, the 5 essential legal documents (Financial POA, Healthcare POA, Living Will, Will/Trust, HIPAA Authorization), senior community types and red flags, caregiver burnout warning signs, family meeting frameworks, and move coordination.
-
-For home sales: always warn families about predatory cash buyers who lowball and pressure. Always recommend getting 3+ offers. Always suggest having a real estate professional review contracts.
-
-When to refer to Ryan: specific real estate decisions, evaluating cash offers, complex Medicaid planning, or when the family needs personalized guidance. Ryan can be reached by text at (336) 553-8933.
-
-You give guidance, not legal or medical advice. You care deeply about every family you talk to.
-
----
-BLUEPRINT MODULE REFERENCE (when someone mentions a module number, respond with that content):
-Module 1: Starting Point — transition stages, timeline assessment, where they are in the process
-Module 2: Decluttering — the 5-pile system (Keep/Donate/Sell/Toss/Not Sure Yet), two-bag daily tidy method, building momentum
-Module 3: Sorting & Categorizing — room by room plan, paperwork 3-folder system, tracking progress
-Module 4: Rightsizing — the Move-Forward Question, sentimental items 3-path system, new home space planning
-Module 5: Safety & Repairs — safety walkthrough, repair priority assessment, the $5,000 smart prep budget, contractor bid comparison
-Module 6: Financial & Legal Preparation — essential legal documents (Financial POA, Healthcare POA, Living Will, Will/Trust, HIPAA Authorization), Medicare vs Medicaid assessment, transition cost estimator, financial exploitation prevention
-Module 7: Senior Community Exploration — community types (Independent Living, Assisted Living, Memory Care, SNF), monthly cost comparison, 10 essential tour questions, red flags to watch for
-Module 8: Estate Planning — the 5 essential documents, digital asset inventory, choosing decision makers, asset inventory for attorney
-Module 9: Home Sale Strategy — traditional listing vs cash offer decision, the Decision Pyramid, net proceeds comparison, predatory buyer warning signs
-Module 10: Move Management — 4-week move timeline, address change checklist, utility transfer, move day essentials box
-Module 11: Final Move-Out — final walkthrough, closing day documents, post-closing tasks
-Module 12: Settling In — first 72 hours priority setup, new routine builder, 30-60-90 day check-in, adjustment warning signs
-Module 13: Family Communication — family meeting agenda, conflict de-escalation scripts, task division planner, caregiver burnout warning signs
-Module 14: Aging in Place — cost calculator, home modification assessment, Plan B timeline
-Module 15: LTC Insurance — decision guide, policy comparison, affordability calculator
-Module 16: Medicare & Medicaid — coverage gap analysis, VA benefits eligibility, Medicaid spend-down strategy, benefits coordination
-Module 17: Advanced Estate Planning — trust selection guide, estate tax calculation, beneficiary designation audit
-Module 18: Caregiver Survival — burnout assessment, respite care planning, caregiver information sheet
-Module 19: Strategy Session — monthly strategy session prep, pre-consultation intake
-
-When someone mentions "module 6" or "module 3" etc, immediately provide helpful content from that module. Just be helpful and knowledgeable.`
 
 const STARTER_QUESTIONS = [
   'What documents do we need before a move?',
@@ -71,25 +31,12 @@ function pickVoice() {
   return voices.find(v => v.lang.startsWith('en')) || null
 }
 
-function buildSystemPrompt(profile) {
-  if (!profile?.senior_name) return SYSTEM_PROMPT
-  const { senior_name, senior_age, living_situation, timeline, biggest_concern, family_name } = profile
-  let ctx = `\n\n---\nCURRENT FAMILY CONTEXT:\nThe family you are helping right now is the ${family_name || 'this'} Family.`
-  ctx += ` Their loved one's name is ${senior_name}`
-  if (senior_age) ctx += `, and they are ${senior_age} years old`
-  ctx += '.'
-  if (living_situation) ctx += ` ${senior_name} is currently living in: ${living_situation}.`
-  if (timeline) ctx += ` Their timeline for this transition is: ${timeline}.`
-  if (biggest_concern) ctx += ` Their biggest concern right now is: ${biggest_concern}.`
-  ctx += `\n\nUse ${senior_name}'s name naturally in your responses when appropriate. Tailor all guidance directly to their situation — their timeline, living situation, and primary concern. This family is counting on you.`
-  return SYSTEM_PROMPT + ctx
-}
-
 export default function AIPage() {
   const navigate = useNavigate()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [streaming, setStreaming] = useState(false)
   const [listening, setListening] = useState(false)
   const [soundOn, setSoundOn] = useState(true)
   const [voiceSupported, setVoiceSupported] = useState(true)
@@ -103,16 +50,13 @@ export default function AIPage() {
   const inputRef = useRef(null)
   const recognitionRef = useRef(null)
   const soundOnRef = useRef(true)
-  const profileRef = useRef(null)
   const msgCountRef = useRef(0)
   const msgLimitRef = useRef(50)
-  const userIdRef = useRef(null)
   const tierRef = useRef('paid')
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
-      userIdRef.current = user.id
       supabase
         .from('user_profile')
         .select('*')
@@ -120,31 +64,18 @@ export default function AIPage() {
         .single()
         .then(({ data }) => {
           setProfile(data)
-          profileRef.current = data
 
           const tier = data?.subscription_tier || 'paid'
           setSubscriptionTier(tier)
           tierRef.current = tier
 
           let count = data?.message_count || 0
-          let limit = tier === 'paid' ? 50 : 10
+          const limit = tier === 'paid' ? 50 : 10
 
-          // Weekly reset for paid users
-          if (tier === 'paid') {
-            if (data?.message_week_start) {
-              const weekStart = new Date(data.message_week_start)
-              const daysSince = (Date.now() - weekStart.getTime()) / (1000 * 60 * 60 * 24)
-              if (daysSince >= 7) {
-                count = 0
-                supabase.from('user_profile')
-                  .update({ message_count: 0, message_week_start: new Date().toISOString().split('T')[0] })
-                  .eq('user_id', user.id)
-              }
-            } else {
-              supabase.from('user_profile')
-                .update({ message_week_start: new Date().toISOString().split('T')[0] })
-                .eq('user_id', user.id)
-            }
+          // Weekly reset display (server also enforces)
+          if (tier === 'paid' && data?.message_week_start) {
+            const daysSince = (Date.now() - new Date(data.message_week_start).getTime()) / 86_400_000
+            if (daysSince >= 7) count = 0
           }
 
           setMsgCount(count)
@@ -227,7 +158,7 @@ export default function AIPage() {
     setMessages(newMessages)
     setInput('')
 
-    // Check message limit
+    // Optimistic limit check (server enforces authoritatively)
     if (msgCountRef.current >= msgLimitRef.current) {
       const limitMsg = tierRef.current === 'paid' ? PAID_LIMIT_MESSAGE : FREE_LIMIT_MESSAGE
       setMessages(prev => [...prev, { role: 'assistant', content: limitMsg }])
@@ -237,48 +168,103 @@ export default function AIPage() {
 
     setLoading(true)
 
-    // Increment message count
-    const newCount = msgCountRef.current + 1
-    msgCountRef.current = newCount
-    setMsgCount(newCount)
-    if (userIdRef.current) {
-      supabase.from('user_profile')
-        .update({ message_count: newCount })
-        .eq('user_id', userIdRef.current)
-    }
-
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not logged in')
+
+      const response = await fetch(AI_CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({
-          model: 'claude-opus-4-5',
-          max_tokens: 1024,
-          system: buildSystemPrompt(profileRef.current),
-          messages: newMessages,
-        }),
+        body: JSON.stringify({ messages: newMessages }),
       })
 
+      // Non-streaming error responses (401, 429, 500, etc.)
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
-        throw new Error(err?.error?.message || `API error ${response.status}`)
+        if (err.error === 'limit_reached') {
+          setMsgCount(err.count)
+          setMsgLimit(err.limit)
+          msgCountRef.current = err.count
+          msgLimitRef.current = err.limit
+          tierRef.current = err.tier
+          setMessages(prev => [...prev, { role: 'assistant', content: err.message }])
+          speakText(err.message)
+          return
+        }
+        throw new Error(err.error || `Error ${response.status}`)
       }
 
-      const data = await response.json()
-      const aiText = data.content?.[0]?.text ?? "Sorry, I didn't get a response. Please try again."
+      // ---- Parse SSE stream ----
+      setStreaming(true)
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let aiText = ''
 
-      setMessages(prev => [...prev, { role: 'assistant', content: aiText }])
+      // Add empty assistant bubble that we'll fill progressively
+      setMessages(prev => [...prev, { role: 'assistant', content: '' }])
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
+
+        for (const part of parts) {
+          const lines = part.split('\n')
+          let eventType = ''
+          let eventData = ''
+
+          for (const line of lines) {
+            if (line.startsWith('event: ')) eventType = line.slice(7)
+            if (line.startsWith('data: ')) eventData = line.slice(6)
+          }
+
+          if (eventType === 'meta') {
+            const meta = JSON.parse(eventData)
+            setMsgCount(meta.count)
+            setMsgLimit(meta.limit)
+            setSubscriptionTier(meta.tier)
+            msgCountRef.current = meta.count
+            msgLimitRef.current = meta.limit
+            tierRef.current = meta.tier
+          } else if (eventType === 'text') {
+            const { text: chunk } = JSON.parse(eventData)
+            aiText += chunk
+            setMessages(prev => {
+              const updated = [...prev]
+              updated[updated.length - 1] = { role: 'assistant', content: aiText }
+              return updated
+            })
+          } else if (eventType === 'error') {
+            const { error } = JSON.parse(eventData)
+            throw new Error(error)
+          }
+          // 'done' event — nothing extra needed
+        }
+      }
+
       speakText(aiText)
     } catch (err) {
       const errMsg = `Something went wrong: ${err.message}. Please try again.`
-      setMessages(prev => [...prev, { role: 'assistant', content: errMsg }])
+      setMessages(prev => {
+        // Replace empty assistant bubble if it exists, otherwise append
+        if (prev.length > 0 && prev[prev.length - 1].role === 'assistant' && prev[prev.length - 1].content === '') {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: errMsg }
+          return updated
+        }
+        return [...prev, { role: 'assistant', content: errMsg }]
+      })
     } finally {
       setLoading(false)
+      setStreaming(false)
       inputRef.current?.focus()
     }
   }
@@ -391,8 +377,8 @@ export default function AIPage() {
             </div>
           ))}
 
-          {/* Loading dots */}
-          {loading && (
+          {/* Loading dots — only before stream starts */}
+          {loading && !streaming && (
             <div className="flex justify-start">
               <div className="w-7 h-7 rounded-full bg-[#D4A843] flex items-center justify-center flex-shrink-0 mt-1 mr-2">
                 <Bot size={14} color="#1B365D" strokeWidth={2} />
