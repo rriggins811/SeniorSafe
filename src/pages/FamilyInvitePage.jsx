@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Users, Copy, CheckCircle, UserMinus, Share2, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { generateFamilyCode } from '../lib/familyCode'
 
 export default function FamilyInvitePage() {
   const navigate = useNavigate()
@@ -20,7 +21,7 @@ export default function FamilyInvitePage() {
         .then(async ({ data: p }) => {
           // If admin has no family_code, generate one now (handles pre-feature accounts)
           if (p && p.role !== 'member' && !p.family_code) {
-            const newCode = Math.random().toString(36).substr(2, 6).toUpperCase()
+            const newCode = await generateFamilyCode()
             await supabase.from('user_profile')
               .update({ family_code: newCode, role: 'admin' })
               .eq('user_id', user.id)

@@ -2,10 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Shield } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-
-function generateFamilyCode() {
-  return Math.random().toString(36).substr(2, 6).toUpperCase()
-}
+import { generateFamilyCode } from '../lib/familyCode'
 
 // ─── Member signup (invited via URL ?code=XXXXXX) ─────────────────────────
 function MemberSignup({ urlCode }) {
@@ -244,7 +241,7 @@ export default function SignUpPage() {
     setLoading(true)
 
     let role = 'admin'
-    let family_code = generateFamilyCode()
+    let family_code = await generateFamilyCode()
     let invited_by = null
     let resolvedFamilyName = form.familyName.trim()
 
