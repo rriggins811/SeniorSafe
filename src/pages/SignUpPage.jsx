@@ -32,12 +32,11 @@ function MemberSignup({ urlCode }) {
 
     const code = form.inviteCode.trim().toUpperCase()
 
-    // Validate invite code
-    const { data: adminProfile, error: lookupErr } = await supabase
-      .from('user_profile')
-      .select('user_id, family_name')
-      .eq('family_code', code)
-      .single()
+    // Validate invite code (secure RPC — no anon access to user_profile)
+    const { data: lookupRows, error: lookupErr } = await supabase
+      .rpc('lookup_invite_code', { invite_code: code })
+
+    const adminProfile = lookupRows?.[0] ?? null
 
     if (lookupErr || !adminProfile) {
       setError('Invite code not found. Double-check the code and try again.')
@@ -248,13 +247,12 @@ export default function SignUpPage() {
     let invited_by = null
     let resolvedFamilyName = form.familyName.trim()
 
-    // Validate invite code if provided
+    // Validate invite code if provided (secure RPC — no anon access to user_profile)
     if (hasInvite) {
-      const { data: adminProfile, error: lookupErr } = await supabase
-        .from('user_profile')
-        .select('user_id, family_name, family_code')
-        .eq('family_code', form.inviteCode.trim().toUpperCase())
-        .single()
+      const { data: lookupRows, error: lookupErr } = await supabase
+        .rpc('lookup_invite_code', { invite_code: form.inviteCode.trim() })
+
+      const adminProfile = lookupRows?.[0] ?? null
 
       if (lookupErr || !adminProfile) {
         setError('Invite code not found. Double-check the code and try again.')
