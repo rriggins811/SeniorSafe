@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
 import WelcomePage from './pages/WelcomePage'
@@ -56,6 +56,15 @@ export default function App() {
         <Route path="/profile"       element={<P><ProfilePage /></P>} />
         <Route path="/terms"         element={<TermsPage />} />
         <Route path="/privacy"       element={<PrivacyPage />} />
+        <Route path="*" element={
+          <div className="min-h-screen bg-[#F5F5F5] flex flex-col items-center justify-center px-6 text-center gap-4">
+            <p className="text-6xl font-bold text-[#1B365D]">404</p>
+            <p className="text-gray-500 text-lg">Page not found</p>
+            <Link to="/dashboard" className="mt-2 px-6 py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold">
+              Go to Dashboard
+            </Link>
+          </div>
+        } />
       </Routes>
     </BrowserRouter>
   )

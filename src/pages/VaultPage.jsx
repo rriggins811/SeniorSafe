@@ -56,22 +56,42 @@ export default function VaultPage() {
       .eq('user_id', userId)
       .order('uploaded_at', { ascending: false })
     if (!error && data) {
-      // Generate signed URLs for private bucket
-      const withUrls = await Promise.all(data.map(async (doc) => {
+      // Resolve storage paths for each doc (handle legacy full URLs)
+      const docsWithPaths = data.map(doc => {
         const storagePath = doc.file_url
-        // Skip if it looks like a full URL (legacy data) — extract path from it
         let path = storagePath
+        let isLegacyUrl = false
         if (storagePath.startsWith('http')) {
           const marker = '/object/public/Documents/'
           const idx = storagePath.indexOf(marker)
           if (idx !== -1) path = decodeURIComponent(storagePath.slice(idx + marker.length))
-          else return { ...doc, signedUrl: storagePath } // fallback
+          else isLegacyUrl = true
         }
-        const { data: signed } = await supabase.storage
+        return { ...doc, storagePath: path, isLegacyUrl }
+      })
+
+      // Batch signed URL request (single network call instead of N)
+      const pathsToSign = docsWithPaths
+        .filter(d => !d.isLegacyUrl)
+        .map(d => d.storagePath)
+
+      let signedMap = new Map()
+      if (pathsToSign.length) {
+        const { data: signedUrls } = await supabase.storage
           .from('Documents')
-          .createSignedUrl(path, 3600) // 1 hour expiry
-        return { ...doc, signedUrl: signed?.signedUrl || '', storagePath: path }
-      }))
+          .createSignedUrls(pathsToSign, 3600)
+        if (signedUrls) {
+          signedUrls.forEach(s => {
+            if (s.signedUrl) signedMap.set(s.path, s.signedUrl)
+          })
+        }
+      }
+
+      const withUrls = docsWithPaths.map(doc =>
+        doc.isLegacyUrl
+          ? { ...doc, signedUrl: doc.file_url }
+          : { ...doc, signedUrl: signedMap.get(doc.storagePath) || '' }
+      )
       setDocuments(withUrls)
     } else {
       setDocuments([])

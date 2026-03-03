@@ -6,6 +6,12 @@ function normalizePhone(raw: string): string {
   return digits.startsWith('1') ? `+${digits}` : `+1${digits}`
 }
 
+// Mask phone for logging: +1336553XXXX → +1336***XXXX
+function maskPhone(phone: string): string {
+  if (phone.length <= 6) return '***'
+  return phone.slice(0, 4) + '***' + phone.slice(-4)
+}
+
 // Convert UTC "now" to user's local time using Intl
 function getLocalTime(tz: string): { hour: number; min: number } {
   const now = new Date()
@@ -122,7 +128,7 @@ serve(async (_req) => {
         )
 
         const result = await response.json()
-        console.log(`SMS to ${toPhone} (tz=${userTz}):`, response.status, result?.sid || result?.message)
+        console.log(`SMS to ${maskPhone(toPhone)} (tz=${userTz}):`, response.status, result?.sid || result?.message)
 
         // Only log and count if Twilio actually accepted the message
         if (response.ok) {
