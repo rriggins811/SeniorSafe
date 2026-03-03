@@ -35,10 +35,10 @@ function downloadIcs(appt) {
   const endH = String(sh + 1).padStart(2, '0')
   const endTime = `${endH}:${String(sm).padStart(2, '0')}`
 
-  const toIcsDate = (d, t) => {
-    const dt = new Date(`${d}T${t}:00`)
-    return dt.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')
-  }
+  // Format as ICS local time (no Z suffix = "floating" time in user's timezone)
+  // Avoids Date parsing issues that cause UTC conversion errors
+  const toIcsDate = (d, t) =>
+    d.replace(/-/g, '') + 'T' + t.replace(/:/g, '') + '00'
 
   const lines = [
     'BEGIN:VCALENDAR',

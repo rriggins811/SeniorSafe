@@ -148,8 +148,6 @@ export default function MedicationsPage() {
     setMedications(prev => prev.filter(m => m.id !== id))
   }
 
-  const medsLogs = todayLogs.filter(l => true)
-
   if (subscriptionTier === 'free') {
     return (
       <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
@@ -237,7 +235,7 @@ export default function MedicationsPage() {
             </div>
           ) : (
             medications.map(med => {
-              const medLogs = medsLogs.filter(l => l.medication_id === med.id)
+              const medLogs = todayLogs.filter(l => l.medication_id === med.id)
               return (
                 <div key={med.id} className="bg-white rounded-2xl overflow-hidden shadow-sm">
                   {/* Med header */}
