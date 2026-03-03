@@ -55,14 +55,17 @@ export default function AIPage() {
   const tierRef = useRef('paid')
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
+    supabase.auth.getUser().then(({ data: { user }, error: authErr }) => {
+      if (authErr || !user) { navigate('/signin'); return }
       supabase
         .from('user_profile')
         .select('*')
         .eq('user_id', user.id)
         .single()
-        .then(({ data }) => {
+        .then(({ data, error: profileErr }) => {
+          if (profileErr) {
+            console.error('Failed to load AI profile:', profileErr.message)
+          }
           setProfile(data)
 
           const tier = data?.subscription_tier || 'paid'
@@ -84,7 +87,7 @@ export default function AIPage() {
           msgLimitRef.current = limit
         })
     })
-  }, [])
+  }, [navigate])
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition

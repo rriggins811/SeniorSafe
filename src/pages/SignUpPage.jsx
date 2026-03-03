@@ -73,6 +73,7 @@ function MemberSignup({ urlCode }) {
       role: 'member',
       invited_by: adminProfile.user_id,
       family_code: null,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       onboarding_complete: true,
     }, { onConflict: 'user_id' })
 
