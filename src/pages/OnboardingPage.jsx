@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle, ChevronLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { generateFamilyCode } from '../lib/familyCode'
 
 const STEPS = [
   {
@@ -108,7 +109,7 @@ export default function OnboardingPage() {
     // Always ensure admins have a family_code — generate one if metadata didn't carry it
     const family_code = role === 'member'
       ? null
-      : (meta.family_code || Math.random().toString(36).substr(2, 6).toUpperCase())
+      : (meta.family_code || await generateFamilyCode())
     const { error } = await supabase.from('user_profile').upsert({
       user_id: user.id,
       family_name: familyName,
