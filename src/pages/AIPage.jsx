@@ -6,8 +6,7 @@ import BottomNav from '../components/BottomNav'
 
 const AI_CHAT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/ai-chat'
 
-const FREE_LIMIT_MESSAGE = "You've reached your 10 message free limit. Upgrade to SeniorSafe Premium for 50 messages per week and full access to all features. Text Ryan at (336) 553-8933 to upgrade — he'll get you set up personally."
-const PAID_LIMIT_MESSAGE = "You've reached your 50 message weekly limit. Your limit resets every 7 days. For immediate personalized help, text Ryan directly at (336) 553-8933."
+const LIMIT_MESSAGE = "Your family has reached its 20 AI message limit for this month. Messages reset at the start of each month. For immediate personalized help, text Ryan directly at (336) 553-8933."
 
 const STARTER_QUESTIONS = [
   'What documents do we need before a move?',
@@ -42,7 +41,7 @@ export default function AIPage() {
   const [voiceSupported, setVoiceSupported] = useState(true)
   const [profile, setProfile] = useState(null)
   const [msgCount, setMsgCount] = useState(0)
-  const [msgLimit, setMsgLimit] = useState(50)
+  const [msgLimit, setMsgLimit] = useState(20)
   const [subscriptionTier, setSubscriptionTier] = useState('paid')
   const [voiceUnlocked, setVoiceUnlocked] = useState(false)
 
@@ -51,7 +50,7 @@ export default function AIPage() {
   const recognitionRef = useRef(null)
   const soundOnRef = useRef(true)
   const msgCountRef = useRef(0)
-  const msgLimitRef = useRef(50)
+  const msgLimitRef = useRef(20)
   const tierRef = useRef('paid')
 
   useEffect(() => {
@@ -62,7 +61,7 @@ export default function AIPage() {
         .select('*')
         .eq('user_id', user.id)
         .single()
-        .then(({ data, error: profileErr }) => {
+        .then(async ({ data, error: profileErr }) => {
           if (profileErr) {
             console.error('Failed to load AI profile:', profileErr.message)
           }
@@ -72,13 +71,38 @@ export default function AIPage() {
           setSubscriptionTier(tier)
           tierRef.current = tier
 
-          let count = data?.message_count || 0
-          const limit = tier === 'paid' ? 50 : 10
+          const limit = 20
+          let count = 0
 
-          // Weekly reset display (server also enforces)
-          if (tier === 'paid' && data?.message_week_start) {
-            const daysSince = (Date.now() - new Date(data.message_week_start).getTime()) / 86_400_000
-            if (daysSince >= 7) count = 0
+          // Family-level monthly count: admin's profile is source of truth
+          if (data?.role === 'member' && data?.invited_by) {
+            // Member — look up admin's count
+            const { data: admin } = await supabase
+              .from('user_profile')
+              .select('message_count, message_week_start')
+              .eq('user_id', data.invited_by)
+              .single()
+            if (admin) {
+              count = admin.message_count || 0
+              // Monthly reset display (server also enforces)
+              if (admin.message_week_start) {
+                const start = new Date(admin.message_week_start)
+                const now = new Date()
+                if (start.getUTCMonth() !== now.getUTCMonth() || start.getUTCFullYear() !== now.getUTCFullYear()) {
+                  count = 0
+                }
+              }
+            }
+          } else {
+            // Admin (or no role) — use own count
+            count = data?.message_count || 0
+            if (data?.message_week_start) {
+              const start = new Date(data.message_week_start)
+              const now = new Date()
+              if (start.getUTCMonth() !== now.getUTCMonth() || start.getUTCFullYear() !== now.getUTCFullYear()) {
+                count = 0
+              }
+            }
           }
 
           setMsgCount(count)
@@ -163,9 +187,8 @@ export default function AIPage() {
 
     // Optimistic limit check (server enforces authoritatively)
     if (msgCountRef.current >= msgLimitRef.current) {
-      const limitMsg = tierRef.current === 'paid' ? PAID_LIMIT_MESSAGE : FREE_LIMIT_MESSAGE
-      setMessages(prev => [...prev, { role: 'assistant', content: limitMsg }])
-      speakText(limitMsg)
+      setMessages(prev => [...prev, { role: 'assistant', content: LIMIT_MESSAGE }])
+      speakText(LIMIT_MESSAGE)
       return
     }
 
@@ -457,7 +480,7 @@ export default function AIPage() {
 
         {/* Message counter */}
         <p className={`text-center text-xs mt-2 max-w-lg mx-auto ${counterColor}`}>
-          {msgCount} of {msgLimit} {subscriptionTier === 'paid' ? 'weekly' : 'free'} messages used
+          Your family has used {msgCount} of {msgLimit} AI messages this month
         </p>
         <p className="text-center text-xs text-gray-400 mt-0.5 max-w-lg mx-auto">
           Not legal or medical advice. For personalized guidance, text Ryan at (336) 553-8933.
