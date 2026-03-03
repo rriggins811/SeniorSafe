@@ -1,5 +1,5 @@
 # SeniorSafe — Claude Code Project Brief
-Last updated: February 28, 2026
+Last updated: March 2, 2026
 
 ---
 
@@ -19,7 +19,7 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 
 ## Revenue Streams
 1. **$47** — Senior Transition Blueprint (19 modules, 90+ tools) at seniortransitionblueprint.com
-2. **$12–25/month** — SeniorSafe App subscription (beta is free)
+2. **$14.99/month** — SeniorSafe App subscription (beta users default to paid tier)
 3. **$1,500–2,500** — Strategy Consultations
 4. **$1,875–5,000** — National Referral Fees
 5. **$7,500–10,500** — Local Real Estate Listings
@@ -31,8 +31,8 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 - **Title:** "The Unheard Conversation: How to Talk to Your Aging Parents About What's Next—Without Starting a War"
 - **Author:** Ryan Riggins
 - Formatted for Amazon KDP 6x9 paperback
-- Will be published on KDP and Gumroad as a tripwire product
-- Referenced in email nurture sequences as "coming soon"
+- Published on KDP and available on Gumroad as a tripwire product
+- Referenced in email nurture sequences and used as a lead magnet
 
 ---
 
@@ -46,10 +46,12 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 ---
 
 ## SeniorSafe App
-- **Live URL:** https://senior-safe-hazel.vercel.app
+- **Live URL:** https://app.seniorsafeapp.com (custom domain → Vercel)
+- **Vercel URL:** https://senior-safe-hazel.vercel.app (still works)
 - **GitHub:** https://github.com/rriggins811/SeniorSafe (PUBLIC repo)
 - **Local dev path:** C:\Users\Ryanr\seniorsafe
 - **Hosting:** Vercel (auto-deploys on `git push` to `main`)
+- **Custom domain:** app.seniorsafeapp.com — configured in Vercel project settings, DNS via GHL
 - **Beta:** All beta users default to 'paid' tier. Free tier built in code but not exposed yet.
 
 ---
@@ -179,9 +181,9 @@ TWILIO_PHONE_NUMBER  +13365536225
 File: `supabase/functions/medication-reminders/index.ts`
 **Cron:** every 5 minutes — set in Supabase Dashboard → Edge Functions → Schedule → `*/5 * * * *`
 
-Flow: query medications with `reminder_enabled=true` → check ±5 min window → skip if taken → skip if reminder_logs exists → send SMS → log to `reminder_logs`
+Flow: query medications with `reminder_enabled=true` → check ±5 min window → skip if taken → skip if reminder_logs exists → send SMS via Twilio → log to `reminder_logs`
 
-⚠️ **KNOWN ISSUE:** This function still uses the old GHL endpoint — needs updating to use Twilio (same pattern as send-sms).
+Uses Twilio REST API directly (same credentials as send-sms: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER).
 
 ### Deploy command
 ```bash
@@ -309,6 +311,7 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 
 ### DashboardPage — role-based
 - **Admin view:** "I'm Okay Today" button → inserts checkin → daily limit (once per day, `alreadyCheckedIn` state) → paid tier sends SMS to family + confirmation to senior; free tier records in app only
+- **"I Need Help" button:** Red emergency button below I'm Okay → confirmation modal ("Are you sure?") → sends urgent SMS to all family members with phone → auto-closes to success state after 3 seconds
 - **Member view:** shows admin's check-in status; yellow warning banner if no check-in by 10am; "Send them a reminder" button → SMS to admin's phone
 - Header icons (admin): Family Invite, Profile, Emergency, Contact Ryan, Sign Out
 - Bottom nav: Home / Vault / Family / AI
@@ -358,7 +361,7 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 
 ## Family Invite System
 - Admin generates unique 6-char uppercase `family_code` (stored in `user_profile`)
-- Share link: `https://senior-safe-hazel.vercel.app/signup?code=XXXXXX`
+- Share link: `https://app.seniorsafeapp.com/signup?code=XXXXXX`
 - Member lands on simplified join form → profile created with `role='member'`, `invited_by=admin.user_id`
 - family_code generation: SignUpPage → stored in user_metadata → OnboardingPage reads metadata OR generates inline → FamilyInvitePage auto-generates if still null (3 layers of safety)
 
@@ -385,11 +388,17 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 - **Stripe:** not yet integrated — upgrade by texting Ryan (336) 553-8933
 
 ## Known Issues / Pending Work
-1. **medication-reminders edge fn** uses old GHL endpoint — needs updating to Twilio
-2. **A2P SMS registration** may be pending — carrier-dependent
-3. **Stripe** not integrated — upgrade manually via text to Ryan
-4. **Blueprint access codes** system not built
+
+### 🔴 High Priority
+1. **Stripe** not integrated — upgrade manually via text to Ryan (336) 553-8933
+2. **Cron schedule** for medication-reminders: confirm `*/5 * * * *` is set in Supabase Dashboard → Edge Functions → medication-reminders → Schedule
+
+### 🟡 Medium Priority
+3. **A2P SMS registration** may be pending — carrier-dependent, texts fire but may be held
+4. **Blueprint access codes** system not built (Blueprint buyers get 3 months free)
 5. **Anthropic key** is browser-exposed (`VITE_` prefix) — move to edge function post-beta
+
+### 🟢 Low Priority / SQL
 6. **Pending SQL** if not yet applied in Supabase:
    ```sql
    ALTER TABLE user_profile
@@ -399,7 +408,6 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
      ADD COLUMN IF NOT EXISTS subscription_tier text DEFAULT 'paid',
      ADD COLUMN IF NOT EXISTS message_week_start date;
    ```
-7. **Cron schedule** for medication-reminders: set `*/5 * * * *` in Supabase Dashboard → Edge Functions → medication-reminders → Schedule
 
 ---
 
@@ -438,11 +446,23 @@ Git config for this repo:
 
 ## Key URLs
 - Main site: rigginsstrategicsolutions.com
+- App (custom domain): app.seniorsafeapp.com
+- App landing page: seniorsafeapp.com (GHL hosted)
 - Blueprint: seniortransitionblueprint.com
 - Starter Guide: rigginsstrategicsolutions.com/starterguide
 - Booking: https://api.leadconnectorhq.com/widget/booking/PEGCu2kXYDZgAPPzXGv5
-- App: senior-safe-hazel.vercel.app
 - GHL landing pages: go.rigginsstrategicsolutions.com
+
+## Landing Page (seniorsafeapp.com)
+- Hosted on GHL at seniorsafeapp.com
+- Separate from the app (app.seniorsafeapp.com)
+- Points to app signup: app.seniorsafeapp.com/signup
+- DNS for both seniorsafeapp.com domains managed via GHL
+
+## RSS / Website Integration
+- **GitHub RSS-Agent-Brain repo:** business context files used by Make.com automations
+- RSS feeds connect to NotebookLM for content generation
+- Saturday morning workflow: YouTube script → NotebookLM → 30 social posts → Buffer schedule
 
 ## Contact
 - **Cell:** (336) 553-8933
