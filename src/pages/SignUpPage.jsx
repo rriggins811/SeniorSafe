@@ -210,9 +210,7 @@ export default function SignUpPage() {
   const [searchParams] = useSearchParams()
   const urlCode = searchParams.get('code')?.toUpperCase() || ''
 
-  // If URL has invite code, show member flow
-  if (urlCode) return <MemberSignup urlCode={urlCode} />
-
+  // All hooks must be called before any conditional return
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -224,6 +222,9 @@ export default function SignUpPage() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // If URL has invite code, show member flow (after all hooks)
+  if (urlCode) return <MemberSignup urlCode={urlCode} />
 
   const hasInvite = form.inviteCode.trim().length > 0
 
