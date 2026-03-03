@@ -30,30 +30,30 @@ export default function FamilyPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       setUser(user)
-      fetchMessages(user.id)
-      fetchPhotos(user.id)
+      fetchMessages()
+      fetchPhotos()
       supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
         .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'paid'))
     })
   }, [])
 
-  async function fetchMessages(uid) {
+  async function fetchMessages() {
     setMsgLoading(true)
+    // No user_id filter — RLS policy scopes to family via family_name
     const { data } = await supabase
       .from('family_messages')
       .select('*')
-      .eq('user_id', uid)
       .order('created_at', { ascending: false })
     setMessages(data || [])
     setMsgLoading(false)
   }
 
-  async function fetchPhotos(uid) {
+  async function fetchPhotos() {
     setPhotoLoading(true)
+    // No user_id filter — RLS policy scopes to family via family_name
     const { data } = await supabase
       .from('family_photos')
       .select('*')
-      .eq('user_id', uid)
       .order('created_at', { ascending: false })
     setPhotos(data || [])
     setPhotoLoading(false)
@@ -99,7 +99,7 @@ export default function FamilyPage() {
       setNewMsg('')
       if (msgPhoto?.previewUrl) URL.revokeObjectURL(msgPhoto.previewUrl)
       setMsgPhoto(null)
-      fetchMessages(user.id)
+      fetchMessages()
     }
   }
 
@@ -126,7 +126,7 @@ export default function FamilyPage() {
     })
     setUploading(false)
     e.target.value = ''
-    fetchPhotos(user.id)
+    fetchPhotos()
   }
 
   async function deletePhoto(photo) {

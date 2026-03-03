@@ -1,11 +1,13 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Home, FolderLock, Users, Bot } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Home, FolderLock, Users, Bot, Lock } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const NAV_TABS = [
-  { label: 'Home',   icon: Home,       path: '/dashboard' },
-  { label: 'Vault',  icon: FolderLock, path: '/vault'     },
-  { label: 'Family', icon: Users,      path: '/family'    },
-  { label: 'AI',     icon: Bot,        path: '/ai'        },
+  { label: 'Home',   icon: Home,       path: '/dashboard', premium: false },
+  { label: 'Vault',  icon: FolderLock, path: '/vault',     premium: true  },
+  { label: 'Family', icon: Users,      path: '/family',    premium: false },
+  { label: 'AI',     icon: Bot,        path: '/ai',        premium: true  },
 ]
 
 // inline=true: renders as a normal flow element (use inside h-screen flex-col layouts)
@@ -13,6 +15,17 @@ const NAV_TABS = [
 export default function BottomNav({ inline = false }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const [tier, setTier] = useState('paid')
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
+        .then(({ data }) => setTier(data?.subscription_tier || 'paid'))
+    })
+  }, [])
+
+  const isFree = tier === 'free'
 
   const wrapClass = inline
     ? 'bg-white border-t border-gray-200 flex-shrink-0'
@@ -21,8 +34,9 @@ export default function BottomNav({ inline = false }) {
   return (
     <nav className={wrapClass}>
       <div className="flex max-w-lg mx-auto">
-        {NAV_TABS.map(({ label, icon: Icon, path }) => {
+        {NAV_TABS.map(({ label, icon: Icon, path, premium }) => {
           const active = pathname === path
+          const locked = isFree && premium
           return (
             <button
               key={path}
@@ -31,7 +45,12 @@ export default function BottomNav({ inline = false }) {
                 active ? 'text-[#1B365D]' : 'text-gray-400'
               }`}
             >
-              <Icon size={22} strokeWidth={active ? 2.5 : 1.5} />
+              <div className="relative">
+                <Icon size={22} strokeWidth={active ? 2.5 : 1.5} />
+                {locked && (
+                  <Lock size={10} strokeWidth={2.5} className="absolute -top-1 -right-2.5 text-[#D4A843]" />
+                )}
+              </div>
               <span className="text-xs font-medium">{label}</span>
             </button>
           )
