@@ -37,6 +37,16 @@ export default function FamilyPage() {
     })
   }, [])
 
+  // Resolve a photo_url to a viewable URL (handles both legacy full URLs and storage paths)
+  async function resolvePhotoUrl(storedUrl) {
+    if (!storedUrl) return ''
+    // Legacy full URL — already viewable (or broken if bucket went private)
+    if (storedUrl.startsWith('http')) return storedUrl
+    // Storage path — generate a signed URL (1 hour expiry)
+    const { data } = await supabase.storage.from('Documents').createSignedUrl(storedUrl, 3600)
+    return data?.signedUrl || ''
+  }
+
   async function fetchMessages() {
     setMsgLoading(true)
     // No user_id filter — RLS policy scopes to family via family_name
@@ -44,7 +54,18 @@ export default function FamilyPage() {
       .from('family_messages')
       .select('*')
       .order('created_at', { ascending: false })
-    setMessages(data || [])
+    const msgs = data || []
+    // Resolve photo URLs for messages that have attached photos
+    const photoPaths = msgs.filter(m => m.photo_url && !m.photo_url.startsWith('http')).map(m => m.photo_url)
+    let signedMap = new Map()
+    if (photoPaths.length) {
+      const { data: signed } = await supabase.storage.from('Documents').createSignedUrls(photoPaths, 3600)
+      if (signed) signed.forEach(s => { if (s.signedUrl) signedMap.set(s.path, s.signedUrl) })
+    }
+    setMessages(msgs.map(m => {
+      if (!m.photo_url || m.photo_url.startsWith('http')) return m
+      return { ...m, photo_url: signedMap.get(m.photo_url) || m.photo_url }
+    }))
     setMsgLoading(false)
   }
 
@@ -55,7 +76,18 @@ export default function FamilyPage() {
       .from('family_photos')
       .select('*')
       .order('created_at', { ascending: false })
-    setPhotos(data || [])
+    const pics = data || []
+    // Batch-resolve storage paths to signed URLs
+    const paths = pics.filter(p => p.photo_url && !p.photo_url.startsWith('http')).map(p => p.photo_url)
+    let signedMap = new Map()
+    if (paths.length) {
+      const { data: signed } = await supabase.storage.from('Documents').createSignedUrls(paths, 3600)
+      if (signed) signed.forEach(s => { if (s.signedUrl) signedMap.set(s.path, s.signedUrl) })
+    }
+    setPhotos(pics.map(p => {
+      if (!p.photo_url || p.photo_url.startsWith('http')) return p
+      return { ...p, photo_url: signedMap.get(p.photo_url) || p.photo_url }
+    }))
     setPhotoLoading(false)
   }
 
@@ -78,11 +110,12 @@ export default function FamilyPage() {
     let photoUrl = null
     if (msgPhoto) {
       const ext = msgPhoto.file.name.split('.').pop()
-      const path = `family-photos/${user.id}/msg-${Date.now()}.${ext}`
+      // UUID-first path satisfies storage RLS: auth.uid() = foldername[1]
+      const path = `${user.id}/family-photos/msg-${Date.now()}.${ext}`
       const { error: storageErr } = await supabase.storage.from('Documents').upload(path, msgPhoto.file)
       if (!storageErr) {
-        const { data: { publicUrl } } = supabase.storage.from('Documents').getPublicUrl(path)
-        photoUrl = publicUrl
+        // Store the raw storage path — signed URLs are generated on fetch
+        photoUrl = path
       }
     }
 
@@ -105,6 +138,11 @@ export default function FamilyPage() {
 
   async function deleteMessage(id) {
     if (!window.confirm('Delete this message?')) return
+    // Find the message to check for attached photo (need original DB path, not signed URL)
+    const { data: msg } = await supabase.from('family_messages').select('photo_url').eq('id', id).single()
+    if (msg?.photo_url && !msg.photo_url.startsWith('http')) {
+      await supabase.storage.from('Documents').remove([msg.photo_url])
+    }
     await supabase.from('family_messages').delete().eq('id', id)
     setMessages(prev => prev.filter(m => m.id !== id))
   }
@@ -114,15 +152,16 @@ export default function FamilyPage() {
     if (!file || !user) return
     setUploading(true)
     const ext = file.name.split('.').pop()
-    const path = `family-photos/${user.id}/${Date.now()}.${ext}`
+    // UUID-first path satisfies storage RLS: auth.uid() = foldername[1]
+    const path = `${user.id}/family-photos/${Date.now()}.${ext}`
     const { error: storageErr } = await supabase.storage.from('Documents').upload(path, file)
     if (storageErr) { alert('Upload failed: ' + storageErr.message); setUploading(false); return }
-    const { data: { publicUrl } } = supabase.storage.from('Documents').getPublicUrl(path)
+    // Store the raw storage path — signed URLs are generated on fetch
     await supabase.from('family_photos').insert({
       user_id: user.id,
       family_name: user.user_metadata?.family_name || '',
       uploaded_by: authorName(),
-      photo_url: publicUrl,
+      photo_url: path,
     })
     setUploading(false)
     e.target.value = ''
@@ -131,15 +170,21 @@ export default function FamilyPage() {
 
   async function deletePhoto(photo) {
     if (!window.confirm('Delete this photo?')) return
-    try {
-      const url = new URL(photo.photo_url)
-      const marker = '/object/public/Documents/'
-      const idx = url.pathname.indexOf(marker)
-      if (idx !== -1) {
-        const storagePath = decodeURIComponent(url.pathname.slice(idx + marker.length))
-        await supabase.storage.from('Documents').remove([storagePath])
-      }
-    } catch (_) {}
+    // Determine storage path: new format stores raw path, legacy stores full URL
+    let storagePath = null
+    if (photo.photo_url && !photo.photo_url.startsWith('http')) {
+      // New format — photo_url IS the storage path
+      storagePath = photo.photo_url
+    } else {
+      // Legacy format — extract path from full URL
+      try {
+        const url = new URL(photo.photo_url)
+        const marker = '/object/public/Documents/'
+        const idx = url.pathname.indexOf(marker)
+        if (idx !== -1) storagePath = decodeURIComponent(url.pathname.slice(idx + marker.length))
+      } catch (_) {}
+    }
+    if (storagePath) await supabase.storage.from('Documents').remove([storagePath])
     await supabase.from('family_photos').delete().eq('id', photo.id)
     setPhotos(prev => prev.filter(p => p.id !== photo.id))
     if (selectedPhoto?.id === photo.id) setSelectedPhoto(null)
