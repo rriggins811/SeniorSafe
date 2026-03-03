@@ -65,7 +65,7 @@ export default function MedicationsPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       setUser(user)
-      fetchAll(user.id)
+      fetchAll()
       // Fetch user's phone + subscription tier
       supabase.from('user_profile').select('phone, subscription_tier').eq('user_id', user.id).single()
         .then(({ data }) => {
@@ -76,11 +76,12 @@ export default function MedicationsPage() {
     })
   }, [])
 
-  async function fetchAll(uid) {
+  async function fetchAll() {
     setLoading(true)
+    // No user_id filter — RLS scopes to family via family_name
     const [{ data: meds }, { data: logs }] = await Promise.all([
-      supabase.from('medications').select('*').eq('user_id', uid).eq('active', true).order('created_at'),
-      supabase.from('med_logs').select('id, medication_id, scheduled_time').eq('user_id', uid).eq('date', todayStr()),
+      supabase.from('medications').select('*').eq('active', true).order('created_at'),
+      supabase.from('med_logs').select('id, medication_id, scheduled_time, user_id').eq('date', todayStr()),
     ])
     setMedications(meds || [])
     setTodayLogs(logs || [])
@@ -118,7 +119,7 @@ export default function MedicationsPage() {
     if (error) { alert('Error: ' + error.message); return }
     setShowForm(false)
     setForm({ med_name: '', dosage: '', frequency: 'Once daily', times: ['08:00'], reminder_enabled: false, reminder_phone: '' })
-    fetchAll(user.id)
+    fetchAll()
   }
 
   async function toggleDose(med, time) {
@@ -132,6 +133,7 @@ export default function MedicationsPage() {
     } else {
       const { data } = await supabase.from('med_logs').insert({
         user_id: user.id,
+        family_name: user.user_metadata?.family_name || '',
         medication_id: med.id,
         taken_at: new Date().toISOString(),
         scheduled_time: time,
@@ -246,9 +248,11 @@ export default function MedicationsPage() {
                         {med.dosage && `${med.dosage} · `}{med.frequency}
                       </p>
                     </div>
-                    <button onClick={() => deleteMed(med.id)} className="p-2 text-gray-300 hover:text-red-500">
-                      <Trash2 size={18} />
-                    </button>
+                    {med.user_id === user?.id && (
+                      <button onClick={() => deleteMed(med.id)} className="p-2 text-gray-300 hover:text-red-500">
+                        <Trash2 size={18} />
+                      </button>
+                    )}
                   </div>
 
                   {/* Dose checkboxes */}
@@ -260,12 +264,13 @@ export default function MedicationsPage() {
                     med.times?.map((time, i) => {
                       const status = getDoseStatus(time, medLogs)
                       const key = `${med.id}-${time}`
+                      const isOwner = med.user_id === user?.id
                       return (
                         <button
                           key={i}
-                          onClick={() => toggleDose(med, time)}
-                          disabled={toggling === key}
-                          className={`w-full flex items-center gap-4 px-4 py-3.5 border-b last:border-b-0 border-gray-50 transition-colors ${STATUS_STYLES[status]}`}
+                          onClick={() => isOwner && toggleDose(med, time)}
+                          disabled={!isOwner || toggling === key}
+                          className={`w-full flex items-center gap-4 px-4 py-3.5 border-b last:border-b-0 border-gray-50 transition-colors ${STATUS_STYLES[status]} ${!isOwner ? 'cursor-default' : ''}`}
                         >
                           {/* Checkbox */}
                           <div className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center flex-shrink-0 ${

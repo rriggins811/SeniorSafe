@@ -84,18 +84,18 @@ export default function AppointmentsPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       setUser(user)
-      fetchAppointments(user.id)
+      fetchAppointments()
       supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
         .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'paid'))
     })
   }, [])
 
-  async function fetchAppointments(uid) {
+  async function fetchAppointments() {
     setLoading(true)
+    // No user_id filter — RLS scopes to family via family_name
     const { data } = await supabase
       .from('appointments')
       .select('*')
-      .eq('user_id', uid)
       .order('appointment_date', { ascending: true })
       .order('appointment_time', { ascending: true })
     setAppointments(data || [])
@@ -121,7 +121,7 @@ export default function AppointmentsPage() {
     if (error) { alert('Error: ' + error.message); return }
     setShowForm(false)
     setForm({ title: '', provider_name: '', appointment_type: 'Medical', appointment_date: '', appointment_time: '', location: '', notes: '' })
-    fetchAppointments(user.id)
+    fetchAppointments()
   }
 
   async function handleDelete(id) {
@@ -195,13 +195,15 @@ export default function AppointmentsPage() {
                 <p className="text-gray-500 text-sm mt-0.5">with {appt.provider_name}</p>
               )}
             </div>
-            <button
-              onClick={() => handleDelete(appt.id)}
-              disabled={deleting === appt.id}
-              className="p-1.5 text-gray-300 hover:text-red-500 flex-shrink-0"
-            >
-              <Trash2 size={17} />
-            </button>
+            {appt.user_id === user?.id && (
+              <button
+                onClick={() => handleDelete(appt.id)}
+                disabled={deleting === appt.id}
+                className="p-1.5 text-gray-300 hover:text-red-500 flex-shrink-0"
+              >
+                <Trash2 size={17} />
+              </button>
+            )}
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2 items-center">
