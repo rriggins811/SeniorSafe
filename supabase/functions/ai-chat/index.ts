@@ -107,10 +107,17 @@ serve(async (req) => {
       })
     }
 
+    // User-auth client: for reading profile (respects RLS)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: authHeader } } },
+    )
+
+    // Service-role client: for updating protected columns (message_count, etc.)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
@@ -145,7 +152,7 @@ serve(async (req) => {
           (Date.now() - new Date(profile.message_week_start).getTime()) / 86_400_000
         if (daysSince >= 7) {
           count = 0
-          await supabase.from('user_profile')
+          await supabaseAdmin.from('user_profile')
             .update({
               message_count: 0,
               message_week_start: new Date().toISOString().split('T')[0],
@@ -153,7 +160,7 @@ serve(async (req) => {
             .eq('user_id', user.id)
         }
       } else {
-        await supabase.from('user_profile')
+        await supabaseAdmin.from('user_profile')
           .update({ message_week_start: new Date().toISOString().split('T')[0] })
           .eq('user_id', user.id)
       }
@@ -169,7 +176,7 @@ serve(async (req) => {
 
     // Increment
     const newCount = count + 1
-    await supabase.from('user_profile')
+    await supabaseAdmin.from('user_profile')
       .update({ message_count: newCount })
       .eq('user_id', user.id)
 
