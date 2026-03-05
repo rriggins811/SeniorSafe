@@ -1,5 +1,5 @@
 # SeniorSafe — Claude Code Project Brief
-Last updated: March 2, 2026
+Last updated: March 2026
 
 ---
 
@@ -17,29 +17,48 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 
 ---
 
-## Revenue Streams
-1. **$47** — Senior Transition Blueprint (19 modules, 90+ tools) at seniortransitionblueprint.com
-2. **$14.99/month** — SeniorSafe App Premium subscription (free tier available)
-3. **$1,500–2,500** — Strategy Consultations
-4. **$1,875–5,000** — National Referral Fees
-5. **$7,500–10,500** — Local Real Estate Listings
-- Blueprint buyers get 3 months free SeniorSafe Premium access (access code system not yet built)
+## Revenue Streams (Updated March 2026)
+
+### Tier 1: Digital Products (80% of focus)
+1. **FREE** — Simple Blueprint (primary lead magnet, email capture via GHL at rigginsstrategicsolutions.com/simpleblueprint)
+2. **$47** — Senior Transition Blueprint Core (19 modules, 90+ tools) at seniortransitionblueprint.com
+3. **$297** — Senior Transition Blueprint Premium (Core + AI-personalized plan + 60-min coaching call + 90 days email support)
+4. **$15/month** — SeniorSafe App subscription (currently free beta)
+5. **~$15** — Books on Amazon KDP (2 published — see Books section)
+
+### Tier 2: Real Estate (15% — bonus income, not primary focus)
+* **$1,875–5,000** — National Referral Fees
+* **$7,500–10,500** — Occasional Local Listings (Greensboro/Triad)
+
+### Tier 3: Speaking (5% — growth channel)
+* Consulting is being **phased out** — replaced by Premium Blueprint ($297)
+* Speaking engagements ($5K-10K/event at scale)
+
+* Blueprint buyers get 3 months free SeniorSafe access (access code system not yet built)
 
 ---
 
-## Book
-- **Title:** "The Unheard Conversation: How to Talk to Your Aging Parents About What's Next—Without Starting a War"
-- **Author:** Ryan Riggins
-- **Status:** Published on Amazon KDP (ebook + 6x9 paperback)
-- Gumroad version formatted but not published yet
-- Referenced in email nurture sequences
+## Books
+
+### Book #1 (Published)
+* **Title:** "The Unheard Conversation: How to Talk to Your Aging Parents About What's Next—Without Starting a War"
+* Published on Amazon KDP
+* Covers the emotional side of senior transitions
+
+### Book #2 (Publishing March 2026)
+* **Title:** "The Other Side of the Conversation: The Complete Family Playbook for Senior Transitions"
+* Publishing on Amazon KDP
+* Covers the practical/tactical side — home sale strategies, predatory investor playbook, renovation traps, financial planning
+
+Both books drive readers to rigginsstrategicsolutions.com/bookresources for email capture.
 
 ---
 
 ## Ryan's Working Style
 - Has ADHD — keep things simple, actionable, direct
 - Prefers copy-paste ready outputs over complex technical explanations
-- Guiding question: "Does this move me toward 2-3 advisory calls per day?"
+- Guiding question: "Does this help sell more Blueprints, grow the email list, or increase YouTube audience?"
+- The app stays SIMPLE — no new features for 12+ months. Fix bugs, connect Stripe, that's it.
 - Manual simple processes over complex automations
 - Saturday morning content workflow: paste YouTube scripts → generate 30 posts → schedule in Buffer
 
@@ -482,12 +501,14 @@ When published, add to main nav as: "SeniorSafe App"
 5. **Blueprint access code system** — 3 months free for Blueprint buyers not built
 6. **A2P SMS registration** — pending carrier approval (Twilio configured, messages fire but may be held)
 7. **Terms & Privacy pages** — routes exist but content not written
+8. **Supabase → GHL webhook** — when a new user signs up in SeniorSafe, their email needs to auto-sync to GHL and trigger a workflow (tag: "SeniorSafe-Free" or "SeniorSafe-Paid")
+9. **SeniorSafe GHL workflows** — need Free User onboarding sequence and Paid User onboarding + testimonial request sequence
 
 ### 🟢 POLISH (Can Do After Launch)
-8. **Message limit enforcement** — weekly reset logic exists but needs testing
-9. **Medication reminders cron verification** — confirm 5-minute schedule fires correctly
-10. **Mobile responsiveness testing** — all pages need phone/tablet verification
-11. **Family invite flow testing** — confirm invite codes work end-to-end
+10. **Message limit enforcement** — weekly reset logic exists but needs testing
+11. **Medication reminders cron verification** — confirm 5-minute schedule fires correctly
+12. **Mobile responsiveness testing** — all pages need phone/tablet verification
+13. **Family invite flow testing** — confirm invite codes work end-to-end
 
 ---
 
@@ -525,14 +546,15 @@ Git config for this repo:
 - **GitHub RSS-Agent-Brain repo:** business context files for Make.com automations
 
 ## Key URLs
-- Main site: rigginsstrategicsolutions.com
-- App: app.seniorsafeapp.com
-- Landing page: seniorsafeapp.com
-- Blueprint: seniortransitionblueprint.com
-- Starter Guide: rigginsstrategicsolutions.com/starterguide
-- Booking: https://api.leadconnectorhq.com/widget/booking/PEGCu2kXYDZgAPPzXGv5
-- GHL landing pages: go.rigginsstrategicsolutions.com
-- Book: Amazon (search "The Unheard Conversation Ryan Riggins")
+
+* Main site: rigginsstrategicsolutions.com
+* Simple Blueprint (lead magnet): rigginsstrategicsolutions.com/simpleblueprint
+* Book Resources (email capture): rigginsstrategicsolutions.com/bookresources
+* Blueprint purchase: seniortransitionblueprint.com
+* Starter Guide: rigginsstrategicsolutions.com/starterguide
+* Booking: https://api.leadconnectorhq.com/widget/booking/PEGCu2kXYDZgAPPzXGv5
+* App: senior-safe-hazel.vercel.app
+* GHL landing pages: go.rigginsstrategicsolutions.com
 
 ## Contact
 - **Cell:** (336) 553-8933
