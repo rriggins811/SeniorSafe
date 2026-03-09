@@ -139,21 +139,41 @@ export default function DashboardPage() {
 
     // Only send SMS for paid tier
     if (subscriptionTier === 'paid') {
+      // DEBUG: log the admin user.id being used for the query
+      console.log('🔍 [CHECK-IN] Admin user.id:', user.id)
+      console.log('🔍 [CHECK-IN] subscriptionTier:', subscriptionTier)
+
       // Notify all family members who have a phone number
-      const { data: memberProfiles } = await supabase
+      const { data: memberProfiles, error: memberErr } = await supabase
         .from('user_profile')
-        .select('phone, first_name')
+        .select('phone, first_name, user_id, invited_by, role')
         .eq('invited_by', user.id)
         .not('phone', 'is', null)
+
+      console.log('🔍 [CHECK-IN] Query: user_profile WHERE invited_by =', user.id, 'AND phone IS NOT NULL')
+      console.log('🔍 [CHECK-IN] memberProfiles result:', JSON.stringify(memberProfiles, null, 2))
+      console.log('🔍 [CHECK-IN] memberProfiles error:', memberErr)
+      console.log('🔍 [CHECK-IN] Members found:', memberProfiles?.length || 0)
+
+      // DEBUG: also query ALL profiles with this family_code to see what's in the DB
+      const { data: allFamily } = await supabase
+        .from('user_profile')
+        .select('user_id, first_name, phone, role, invited_by, family_code')
+        .or(`invited_by.eq.${user.id},user_id.eq.${user.id}`)
+      console.log('🔍 [CHECK-IN] ALL family profiles (admin + members):', JSON.stringify(allFamily, null, 2))
 
       const senderName = user.user_metadata?.first_name || familyName || 'Your loved one'
 
       if (memberProfiles?.length) {
+        console.log('🔍 [CHECK-IN] Sending SMS to these phones:', memberProfiles.map(m => m.phone))
         await Promise.all(
-          memberProfiles.map(m =>
-            sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today.`)
-          )
+          memberProfiles.map(m => {
+            console.log('🔍 [CHECK-IN] → Sending to', m.first_name, 'at', m.phone)
+            return sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today.`)
+          })
         )
+      } else {
+        console.warn('⚠️ [CHECK-IN] No family members found with phones! SMS only going to senior.')
       }
 
       // Also confirm to the senior's own phone
@@ -163,9 +183,13 @@ export default function DashboardPage() {
         .eq('user_id', user.id)
         .single()
 
+      console.log('🔍 [CHECK-IN] Senior own phone:', ownProfile?.phone)
+
       if (ownProfile?.phone) {
         await sendSMS(ownProfile.phone, `✅ Your I'm Okay check-in was recorded and your family has been notified - SeniorSafe`)
       }
+    } else {
+      console.log('🔍 [CHECK-IN] Skipping SMS — subscriptionTier:', subscriptionTier)
     }
 
     setTimeout(() => setCheckInStatus('idle'), 3000)
@@ -203,19 +227,38 @@ export default function DashboardPage() {
       const name = seniorName || user.user_metadata?.first_name || familyName || 'Your loved one'
       const message = `🆘 URGENT: ${name} pressed "I Need Help" at ${time}. Please check on them immediately. - SeniorSafe Alert`
 
-      const { data: memberProfiles } = await supabase
+      // DEBUG: log the admin user.id being used for the query
+      console.log('🔍 [HELP-ALERT] Admin user.id:', user.id)
+
+      const { data: memberProfiles, error: memberErr } = await supabase
         .from('user_profile')
-        .select('phone')
+        .select('phone, first_name, user_id, invited_by, role')
         .eq('invited_by', user.id)
         .not('phone', 'is', null)
 
+      console.log('🔍 [HELP-ALERT] Query: user_profile WHERE invited_by =', user.id, 'AND phone IS NOT NULL')
+      console.log('🔍 [HELP-ALERT] memberProfiles result:', JSON.stringify(memberProfiles, null, 2))
+      console.log('🔍 [HELP-ALERT] memberProfiles error:', memberErr)
+      console.log('🔍 [HELP-ALERT] Members found:', memberProfiles?.length || 0)
+
+      // DEBUG: also dump all profiles to see what invited_by values exist
+      const { data: allProfiles } = await supabase
+        .from('user_profile')
+        .select('user_id, first_name, phone, role, invited_by, family_code')
+      console.log('🔍 [HELP-ALERT] ALL user_profile rows:', JSON.stringify(allProfiles, null, 2))
+
       if (!memberProfiles?.length) {
+        console.warn('⚠️ [HELP-ALERT] No family members found! Check invited_by values in user_profile table.')
         alert('No family members with phone numbers found. Ask your family to add their phone number in the app.')
         setHelpSending(false)
         return
       }
 
-      const results = await Promise.all(memberProfiles.map(m => sendSMS(m.phone, message)))
+      console.log('🔍 [HELP-ALERT] Sending SMS to these phones:', memberProfiles.map(m => m.phone))
+      const results = await Promise.all(memberProfiles.map(m => {
+        console.log('🔍 [HELP-ALERT] → Sending to', m.first_name, 'at', m.phone)
+        return sendSMS(m.phone, message)
+      }))
       const successCount = results.filter(Boolean).length
 
       if (successCount === 0) {
