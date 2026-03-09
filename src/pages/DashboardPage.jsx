@@ -195,8 +195,9 @@ export default function DashboardPage() {
     setTimeout(() => setCheckInStatus('idle'), 3000)
   }
 
-  async function sendAdminReminder() {
+  async function sendNudge() {
     if (!profile?.invited_by || reminding) return
+    if (subscriptionTier !== 'paid') return // Nudge is paid-only
     setReminding(true)
 
     const { data: adminProfile } = await supabase
@@ -206,10 +207,10 @@ export default function DashboardPage() {
       .single()
 
     if (adminProfile?.phone) {
-      const senderName = user.user_metadata?.first_name || 'Your family'
+      const senderName = user.user_metadata?.first_name || profile?.first_name || 'Your family'
       await sendSMS(
         adminProfile.phone,
-        `👋 ${senderName} is checking on you via SeniorSafe. Tap "I'm Okay Today" when you get a chance!`
+        `${senderName} is thinking of you — just tap I'm Okay when you get a chance! — SeniorSafe`
       )
     } else {
       alert("No phone number on file for this account holder — they can add one in Settings.")
@@ -370,13 +371,22 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <button
-              onClick={sendAdminReminder}
-              disabled={reminding}
-              className="w-full py-3 rounded-xl bg-yellow-400 text-yellow-900 font-semibold text-sm disabled:opacity-60"
-            >
-              {reminding ? 'Sending...' : '📱 Send them a reminder'}
-            </button>
+            {subscriptionTier === 'paid' ? (
+              <button
+                onClick={sendNudge}
+                disabled={reminding}
+                className="w-full py-3 rounded-xl bg-yellow-400 text-yellow-900 font-semibold text-sm disabled:opacity-60"
+              >
+                {reminding ? 'Sending...' : '💛 Send a Nudge'}
+              </button>
+            ) : (
+              <div className="w-full py-3 rounded-xl bg-gray-100 text-center">
+                <p className="text-gray-500 text-sm">
+                  💛 Nudge available on{' '}
+                  <button onClick={() => navigate('/upgrade')} className="text-[#1B365D] underline font-semibold">Premium</button>
+                </p>
+              </div>
+            )}
           </div>
         )}
 

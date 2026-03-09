@@ -20,7 +20,7 @@ const PAID_FEATURES = [
   { icon: Heart,      text: 'Everything in Free, plus:' },
   { icon: Heart,      text: 'I\'m Okay check-in with SMS to family' },
   { icon: Users,      text: 'Unlimited family members' },
-  { icon: Bot,        text: 'Unlimited AI messages' },
+  { icon: Bot,        text: '2,000 AI messages per month' },
   { icon: FolderLock, text: 'Document Vault' },
   { icon: Pill,       text: 'Medication tracking & reminders' },
   { icon: Clock,      text: '30-day check-in history' },
