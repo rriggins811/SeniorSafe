@@ -6,8 +6,8 @@ import { supabase } from '../lib/supabase'
 const NAV_TABS = [
   { label: 'Home',   icon: Home,       path: '/dashboard', premium: false },
   { label: 'Vault',  icon: FolderLock, path: '/vault',     premium: true  },
-  { label: 'Family', icon: Users,      path: '/family',    premium: true  },
-  { label: 'AI',     icon: Bot,        path: '/ai',        premium: true  },
+  { label: 'Family', icon: Users,      path: '/family',    premium: false },
+  { label: 'AI',     icon: Bot,        path: '/ai',        premium: false },
 ]
 
 // inline=true: renders as a normal flow element (use inside h-screen flex-col layouts)

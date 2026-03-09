@@ -20,11 +20,11 @@ function getCorsHeaders(req: Request) {
 }
 
 // ---------------------------------------------------------------------------
-// Limit messages
+// Limit messages — tier-aware
 // ---------------------------------------------------------------------------
-const FAMILY_LIMIT = 20
-const LIMIT_MESSAGE =
-  "Your family has reached its 20 AI message limit for this month. Messages reset at the start of each month. For immediate personalized help, text Ryan directly at (336) 553-8933."
+const FREE_LIMIT = 10
+const FREE_LIMIT_MESSAGE =
+  "You've reached your 10 AI message limit for this month. Upgrade to Premium for unlimited AI messages, or text Ryan directly at (336) 553-8933 for personalized help."
 
 // ---------------------------------------------------------------------------
 // System prompt (moved from client — no longer browser-visible)
@@ -139,23 +139,26 @@ serve(async (req) => {
       })
     }
 
-    // ---- Family-level monthly message limit (20/family/month) ----
+    // ---- Family-level message limit (tier-aware) ----
     // Admin's profile is the single source of truth for the family counter.
     // Members look up their admin via invited_by.
+    // Free tier: 10 messages/month | Paid tier: unlimited
     let adminUserId = user.id
     let familyCount = profile.message_count || 0
     let adminMonthStart = profile.message_week_start // repurposed for monthly reset
+    let adminTier = profile.subscription_tier || 'paid'
 
     if (profile.role === 'member' && profile.invited_by) {
       const { data: admin } = await supabaseAdmin
         .from('user_profile')
-        .select('user_id, message_count, message_week_start')
+        .select('user_id, message_count, message_week_start, subscription_tier')
         .eq('user_id', profile.invited_by)
         .single()
       if (admin) {
         adminUserId = admin.user_id
         familyCount = admin.message_count || 0
         adminMonthStart = admin.message_week_start
+        adminTier = admin.subscription_tier || 'paid'
       }
     }
 
@@ -179,12 +182,15 @@ serve(async (req) => {
         .eq('user_id', adminUserId)
     }
 
-    if (familyCount >= FAMILY_LIMIT) {
+    // Only enforce limit for free tier — paid is unlimited
+    const effectiveLimit = adminTier === 'free' ? FREE_LIMIT : Infinity
+    if (familyCount >= effectiveLimit) {
       return new Response(JSON.stringify({
         error: 'limit_reached',
-        message: LIMIT_MESSAGE,
+        message: FREE_LIMIT_MESSAGE,
         count: familyCount,
-        limit: FAMILY_LIMIT,
+        limit: FREE_LIMIT,
+        tier: adminTier,
       }), { status: 429, headers: jsonHeaders })
     }
 
@@ -244,7 +250,11 @@ serve(async (req) => {
     ;(async () => {
       try {
         // Meta event — client uses this to update counter
-        await write('meta', { count: newCount, limit: FAMILY_LIMIT })
+        await write('meta', {
+          count: newCount,
+          limit: adminTier === 'free' ? FREE_LIMIT : 999999,
+          tier: adminTier,
+        })
 
         const reader = anthropicRes.body!.getReader()
         const dec = new TextDecoder()

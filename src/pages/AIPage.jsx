@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Send, Bot, Mic, MicOff, Volume2, VolumeX, Lock } from 'lucide-react'
+import { Send, Bot, Mic, MicOff, Volume2, VolumeX } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 
 const AI_CHAT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/ai-chat'
 
-const LIMIT_MESSAGE = "Your family has reached its 20 AI message limit for this month. Messages reset at the start of each month. For immediate personalized help, text Ryan directly at (336) 553-8933."
+const FREE_LIMIT_MESSAGE = "You've reached your 10 AI message limit for this month. Upgrade to Premium for unlimited AI messages, or text Ryan directly at (336) 553-8933 for personalized help."
+const PAID_LIMIT_MESSAGE = "Your family has reached its AI message limit for this month. Messages reset at the start of each month. For immediate personalized help, text Ryan directly at (336) 553-8933."
 
 const STARTER_QUESTIONS = [
   'What documents do we need before a move?',
@@ -71,7 +72,8 @@ export default function AIPage() {
           setSubscriptionTier(tier)
           tierRef.current = tier
 
-          const limit = 20
+          // Free: 10/month | Paid: unlimited (use 999999 as "unlimited")
+          const limit = tier === 'free' ? 10 : 999999
           let count = 0
 
           // Family-level monthly count: admin's profile is source of truth
@@ -186,9 +188,10 @@ export default function AIPage() {
     setInput('')
 
     // Optimistic limit check (server enforces authoritatively)
-    if (msgCountRef.current >= msgLimitRef.current) {
-      setMessages(prev => [...prev, { role: 'assistant', content: LIMIT_MESSAGE }])
-      speakText(LIMIT_MESSAGE)
+    // Only check for free tier — paid has unlimited
+    if (tierRef.current === 'free' && msgCountRef.current >= msgLimitRef.current) {
+      setMessages(prev => [...prev, { role: 'assistant', content: FREE_LIMIT_MESSAGE }])
+      speakText(FREE_LIMIT_MESSAGE)
       return
     }
 
@@ -297,9 +300,10 @@ export default function AIPage() {
 
   const showChips = messages.length === 0
 
-  // Counter color thresholds (proportional)
-  const ratio = msgLimit > 0 ? msgCount / msgLimit : 0
-  const counterColor = ratio >= 0.95 ? 'text-red-500' : ratio >= 0.80 ? 'text-yellow-500' : 'text-gray-400'
+  // Counter color thresholds (proportional) — only for free tier
+  const isPaid = subscriptionTier === 'paid'
+  const ratio = !isPaid && msgLimit > 0 ? msgCount / msgLimit : 0
+  const counterColor = !isPaid && ratio >= 0.95 ? 'text-red-500' : !isPaid && ratio >= 0.80 ? 'text-yellow-500' : 'text-gray-400'
 
   // iOS voice unlock
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
@@ -309,42 +313,7 @@ export default function AIPage() {
     setVoiceUnlocked(true)
   }
 
-  if (subscriptionTier === 'free') {
-    return (
-      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
-        <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
-          <div className="max-w-lg mx-auto flex items-center gap-3">
-            <div className="bg-[#D4A843] rounded-xl p-2">
-              <Bot size={22} color="#1B365D" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h1 className="text-white text-xl font-bold leading-tight">SeniorSafe AI</h1>
-              <p className="text-white/60 text-sm">Senior transition guidance</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center gap-5">
-          <div className="bg-[#1B365D] rounded-2xl p-5">
-            <Lock size={40} color="#D4A843" strokeWidth={1.5} />
-          </div>
-          <div>
-            <h2 className="text-[#1B365D] text-xl font-bold mb-2">Premium Feature</h2>
-            <p className="text-gray-500 text-base leading-relaxed max-w-xs">
-              SeniorSafe AI is available on Premium. Get personalized senior transition guidance powered by AI.
-            </p>
-          </div>
-          <button onClick={() => navigate('/upgrade')} className="w-full max-w-xs py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-lg">
-            Upgrade to Premium
-          </button>
-          <p className="text-gray-400 text-sm">Starting at $11.99/month</p>
-          <button onClick={() => navigate('/dashboard')} className="text-[#1B365D] text-sm underline">
-            ← Back to Dashboard
-          </button>
-        </div>
-        <BottomNav inline />
-      </div>
-    )
-  }
+  // AI is accessible to all tiers — free gets 10 messages/month, paid gets unlimited
 
   return (
     <div className="h-screen bg-[#F5F5F5] flex flex-col overflow-hidden">
@@ -517,7 +486,15 @@ export default function AIPage() {
 
         {/* Message counter */}
         <p className={`text-center text-xs mt-2 max-w-lg mx-auto ${counterColor}`}>
-          Your family has used {msgCount} of {msgLimit} AI messages this month
+          {isPaid
+            ? 'Unlimited AI messages'
+            : `${msgCount} of ${msgLimit} free AI messages used this month`
+          }
+          {!isPaid && msgCount >= msgLimit && (
+            <span className="block mt-0.5">
+              <button onClick={() => navigate('/upgrade')} className="text-[#D4A843] underline font-semibold">Upgrade for unlimited</button>
+            </span>
+          )}
         </p>
         <p className="text-center text-xs text-gray-400 mt-0.5 max-w-lg mx-auto">
           Not legal or medical advice. For personalized guidance, text Ryan at (336) 553-8933.

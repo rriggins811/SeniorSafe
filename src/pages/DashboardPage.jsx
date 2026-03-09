@@ -425,15 +425,13 @@ export default function DashboardPage() {
                 : 'No check-in today yet'}
             </p>
 
-            {/* I Need Help button — paid tier only */}
-            {subscriptionTier === 'paid' && (
-              <button
-                onClick={() => setHelpModal(true)}
-                className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 bg-red-600 shadow-sm active:scale-[0.98] transition-all"
-              >
-                <span className="text-white font-semibold" style={{ fontSize: '17px' }}>🆘 I Need Help</span>
-              </button>
-            )}
+            {/* I Need Help button — available to all tiers */}
+            <button
+              onClick={() => setHelpModal(true)}
+              className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 bg-red-600 shadow-sm active:scale-[0.98] transition-all"
+            >
+              <span className="text-white font-semibold" style={{ fontSize: '17px' }}>🆘 I Need Help</span>
+            </button>
           </div>
         )}
 
