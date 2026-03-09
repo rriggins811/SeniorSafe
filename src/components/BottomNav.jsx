@@ -21,7 +21,7 @@ export default function BottomNav({ inline = false }) {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
-        .then(({ data }) => setTier(data?.subscription_tier || 'paid'))
+        .then(({ data }) => setTier(data?.subscription_tier || 'free'))
     })
   }, [])
 

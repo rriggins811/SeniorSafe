@@ -152,7 +152,7 @@ serve(async (req) => {
     let adminUserId = user.id
     let familyCount = profile.message_count || 0
     let adminMonthStart = profile.message_week_start // repurposed for monthly reset
-    let adminTier = profile.subscription_tier || 'paid'
+    let adminTier = profile.subscription_tier || 'free'
 
     if (profile.role === 'member' && profile.invited_by) {
       const { data: admin } = await supabaseAdmin
@@ -164,7 +164,7 @@ serve(async (req) => {
         adminUserId = admin.user_id
         familyCount = admin.message_count || 0
         adminMonthStart = admin.message_week_start
-        adminTier = admin.subscription_tier || 'paid'
+        adminTier = admin.subscription_tier || 'free'
       }
     }
 

@@ -72,7 +72,7 @@ export default function AIPage() {
           }
           setProfile(data)
 
-          const tier = data?.subscription_tier || 'paid'
+          const tier = data?.subscription_tier || 'free'
           setSubscriptionTier(tier)
           tierRef.current = tier
 

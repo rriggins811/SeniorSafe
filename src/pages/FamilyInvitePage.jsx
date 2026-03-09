@@ -73,7 +73,7 @@ export default function FamilyInvitePage() {
   }
 
   const isAdmin = profile?.role === 'admin'
-  const subscriptionTier = profile?.subscription_tier || 'paid'
+  const subscriptionTier = profile?.subscription_tier || 'free'
 
   const FREE_MEMBER_LIMIT = 1
   const atFreeLimit = subscriptionTier === 'free' && members.length >= FREE_MEMBER_LIMIT

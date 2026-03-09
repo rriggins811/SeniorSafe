@@ -45,7 +45,7 @@ export default function DashboardPage() {
         .then(({ data: p }) => {
           setProfile(p)
           setSeniorName(p?.senior_name || '')
-          setSubscriptionTier(p?.subscription_tier || 'paid')
+          setSubscriptionTier(p?.subscription_tier || 'free')
 
           // If member, check if admin has checked in today
           if (p?.invited_by) {

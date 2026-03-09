@@ -71,7 +71,7 @@ export default function MedicationsPage() {
         .then(({ data }) => {
           const phone = data?.phone || user.user_metadata?.phone || ''
           setUserPhone(phone)
-          setSubscriptionTier(data?.subscription_tier || 'paid')
+          setSubscriptionTier(data?.subscription_tier || 'free')
         })
     })
   }, [])
