@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, ImagePlus, Send, Trash2, X } from 'lucide-react'
+import { Users, ImagePlus, Send, Trash2, X, Lock, CheckCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 
@@ -8,7 +8,7 @@ export default function FamilyPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [subscriptionTier, setSubscriptionTier] = useState('paid')
-  const [tab, setTab] = useState('messages') // 'messages' | 'photos'
+  const [tab, setTab] = useState('messages') // 'messages' | 'photos' | 'history'
 
   // Messages
   const [messages, setMessages] = useState([])
@@ -23,6 +23,10 @@ export default function FamilyPage() {
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [uploading, setUploading] = useState(false)
 
+  // Check-in history
+  const [checkins, setCheckins] = useState([])
+  const [checkinLoading, setCheckinLoading] = useState(true)
+
   const msgPhotoRef = useRef(null)
   const photoUploadRef = useRef(null)
 
@@ -32,6 +36,7 @@ export default function FamilyPage() {
       setUser(user)
       fetchMessages()
       fetchPhotos()
+      fetchCheckins(user.id)
       supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
         .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'paid'))
     })
@@ -89,6 +94,30 @@ export default function FamilyPage() {
       return { ...p, photo_url: signedMap.get(p.photo_url) || p.photo_url }
     }))
     setPhotoLoading(false)
+  }
+
+  async function fetchCheckins(uid) {
+    setCheckinLoading(true)
+    // Determine admin user_id (member looks up via invited_by)
+    const { data: prof } = await supabase
+      .from('user_profile')
+      .select('role, invited_by')
+      .eq('user_id', uid)
+      .single()
+    const adminId = prof?.role === 'member' ? prof.invited_by : uid
+
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const { data } = await supabase
+      .from('checkins')
+      .select('checked_in_at')
+      .eq('user_id', adminId)
+      .gte('checked_in_at', thirtyDaysAgo.toISOString())
+      .order('checked_in_at', { ascending: false })
+
+    setCheckins(data || [])
+    setCheckinLoading(false)
   }
 
   function authorName() {
@@ -213,12 +242,12 @@ export default function FamilyPage() {
             </div>
             <div>
               <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Family Hub</h1>
-              <p className="text-white/60 text-sm">Messages &amp; Photos</p>
+              <p className="text-white/60 text-sm">Messages, Photos &amp; History</p>
             </div>
           </div>
           {/* Tabs */}
           <div className="flex gap-1">
-            {['messages', 'photos'].map(t => (
+            {['messages', 'photos', 'history'].map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -374,6 +403,71 @@ export default function FamilyPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── HISTORY TAB ── */}
+      {tab === 'history' && (
+        <div className="flex-1 overflow-y-auto">
+          {subscriptionTier !== 'paid' ? (
+            /* Free tier lock screen */
+            <div className="flex flex-col items-center justify-center px-6 py-16 text-center gap-5">
+              <div className="bg-[#1B365D] rounded-2xl p-5">
+                <Lock size={40} color="#D4A843" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h2 className="text-[#1B365D] text-xl font-bold mb-2">Premium Feature</h2>
+                <p className="text-gray-500 text-base leading-relaxed max-w-xs">
+                  30-day check-in history is available on SeniorSafe Premium. See when your loved one checked in each day.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/upgrade')}
+                className="w-full max-w-xs py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-lg"
+              >
+                Upgrade to Premium
+              </button>
+              <p className="text-gray-400 text-sm">Starting at $11.99/month</p>
+            </div>
+          ) : (
+            /* Paid tier: 30-day check-in history */
+            <div className="max-w-lg mx-auto px-4 py-4">
+              {checkinLoading ? (
+                <p className="text-center text-gray-400 py-16 text-base">Loading...</p>
+              ) : checkins.length === 0 ? (
+                <div className="flex flex-col items-center py-16 text-center gap-3">
+                  <div className="bg-gray-100 rounded-2xl p-5">
+                    <CheckCircle size={44} color="#9CA3AF" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-gray-600 font-semibold text-lg">No check-ins yet</p>
+                  <p className="text-gray-400 text-base">Check-ins from the last 30 days will appear here.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {checkins.map((c, i) => {
+                    const d = new Date(c.checked_in_at)
+                    const dateStr = d.toLocaleDateString('en-US', {
+                      weekday: 'short', month: 'short', day: 'numeric',
+                    })
+                    const timeStr = d.toLocaleTimeString('en-US', {
+                      hour: 'numeric', minute: '2-digit', hour12: true,
+                    })
+                    return (
+                      <div key={i} className="bg-white rounded-xl p-3 flex items-center gap-3 shadow-sm">
+                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle size={20} color="#16A34A" strokeWidth={2} />
+                        </div>
+                        <div>
+                          <p className="text-[#1B365D] font-semibold text-sm">{dateStr}</p>
+                          <p className="text-gray-400 text-xs">{timeStr}</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

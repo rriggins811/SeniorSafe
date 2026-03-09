@@ -6,8 +6,12 @@ import BottomNav from '../components/BottomNav'
 
 const AI_CHAT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/ai-chat'
 
-const FREE_LIMIT_MESSAGE = "You've reached your 10 AI message limit for this month. Upgrade to Premium for unlimited AI messages, or text Ryan directly at (336) 553-8933 for personalized help."
-const PAID_LIMIT_MESSAGE = "Your family has reached its AI message limit for this month. Messages reset at the start of each month. For immediate personalized help, text Ryan directly at (336) 553-8933."
+function getLimitMessage(limit) {
+  const now = new Date()
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const resetDate = nextMonth.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+  return `You've used all ${limit.toLocaleString()} of your AI messages for this month. Your messages will refresh on ${resetDate}. For help, contact support@seniorsafeapp.com.`
+}
 
 const STARTER_QUESTIONS = [
   'What documents do we need before a move?',
@@ -72,8 +76,8 @@ export default function AIPage() {
           setSubscriptionTier(tier)
           tierRef.current = tier
 
-          // Free: 10/month | Paid: unlimited (use 999999 as "unlimited")
-          const limit = tier === 'free' ? 10 : 999999
+          // Free: 10/month | Paid: 2000/month
+          const limit = tier === 'free' ? 10 : 2000
           let count = 0
 
           // Family-level monthly count: admin's profile is source of truth
@@ -188,10 +192,10 @@ export default function AIPage() {
     setInput('')
 
     // Optimistic limit check (server enforces authoritatively)
-    // Only check for free tier — paid has unlimited
-    if (tierRef.current === 'free' && msgCountRef.current >= msgLimitRef.current) {
-      setMessages(prev => [...prev, { role: 'assistant', content: FREE_LIMIT_MESSAGE }])
-      speakText(FREE_LIMIT_MESSAGE)
+    if (msgCountRef.current >= msgLimitRef.current) {
+      const limitMsg = getLimitMessage(msgLimitRef.current)
+      setMessages(prev => [...prev, { role: 'assistant', content: limitMsg }])
+      speakText(limitMsg)
       return
     }
 
@@ -300,10 +304,10 @@ export default function AIPage() {
 
   const showChips = messages.length === 0
 
-  // Counter color thresholds (proportional) — only for free tier
+  // Counter color thresholds (proportional)
   const isPaid = subscriptionTier === 'paid'
-  const ratio = !isPaid && msgLimit > 0 ? msgCount / msgLimit : 0
-  const counterColor = !isPaid && ratio >= 0.95 ? 'text-red-500' : !isPaid && ratio >= 0.80 ? 'text-yellow-500' : 'text-gray-400'
+  const ratio = msgLimit > 0 ? msgCount / msgLimit : 0
+  const counterColor = ratio >= 0.95 ? 'text-red-500' : ratio >= 0.80 ? 'text-yellow-500' : 'text-gray-400'
 
   // iOS voice unlock
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
@@ -487,12 +491,15 @@ export default function AIPage() {
         {/* Message counter */}
         <p className={`text-center text-xs mt-2 max-w-lg mx-auto ${counterColor}`}>
           {isPaid
-            ? 'Unlimited AI messages'
-            : `${msgCount} of ${msgLimit} free AI messages used this month`
+            ? `${msgCount.toLocaleString()} of 2,000 AI messages used this month`
+            : `${msgCount} of 10 free AI messages used this month`
           }
-          {!isPaid && msgCount >= msgLimit && (
+          {msgCount >= msgLimit && (
             <span className="block mt-0.5">
-              <button onClick={() => navigate('/upgrade')} className="text-[#D4A843] underline font-semibold">Upgrade for unlimited</button>
+              {!isPaid && (
+                <button onClick={() => navigate('/upgrade')} className="text-[#D4A843] underline font-semibold">Upgrade to Premium</button>
+              )}
+              <span className="block text-gray-400 mt-0.5">contact support@seniorsafeapp.com for help</span>
             </span>
           )}
         </p>

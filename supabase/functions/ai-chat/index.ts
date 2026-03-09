@@ -23,8 +23,14 @@ function getCorsHeaders(req: Request) {
 // Limit messages — tier-aware
 // ---------------------------------------------------------------------------
 const FREE_LIMIT = 10
-const FREE_LIMIT_MESSAGE =
-  "You've reached your 10 AI message limit for this month. Upgrade to Premium for unlimited AI messages, or text Ryan directly at (336) 553-8933 for personalized help."
+const PAID_LIMIT = 2000
+
+function getLimitMessage(limit: number): string {
+  const now = new Date()
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const resetDate = nextMonth.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+  return `You've used all ${limit.toLocaleString()} of your AI messages for this month. Your messages will refresh on ${resetDate}. For help, contact support@seniorsafeapp.com.`
+}
 
 // ---------------------------------------------------------------------------
 // System prompt (moved from client — no longer browser-visible)
@@ -182,14 +188,14 @@ serve(async (req) => {
         .eq('user_id', adminUserId)
     }
 
-    // Only enforce limit for free tier — paid is unlimited
-    const effectiveLimit = adminTier === 'free' ? FREE_LIMIT : Infinity
+    // Enforce tier-aware limits
+    const effectiveLimit = adminTier === 'free' ? FREE_LIMIT : PAID_LIMIT
     if (familyCount >= effectiveLimit) {
       return new Response(JSON.stringify({
         error: 'limit_reached',
-        message: FREE_LIMIT_MESSAGE,
+        message: getLimitMessage(effectiveLimit),
         count: familyCount,
-        limit: FREE_LIMIT,
+        limit: effectiveLimit,
         tier: adminTier,
       }), { status: 429, headers: jsonHeaders })
     }
@@ -252,7 +258,7 @@ serve(async (req) => {
         // Meta event — client uses this to update counter
         await write('meta', {
           count: newCount,
-          limit: adminTier === 'free' ? FREE_LIMIT : 999999,
+          limit: adminTier === 'free' ? FREE_LIMIT : PAID_LIMIT,
           tier: adminTier,
         })
 
