@@ -38,7 +38,7 @@ export default function FamilyPage() {
       fetchPhotos()
       fetchCheckins(user.id)
       supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
-        .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'paid'))
+        .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
     })
   }, [])
 
