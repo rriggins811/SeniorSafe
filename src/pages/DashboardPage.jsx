@@ -28,6 +28,14 @@ export default function DashboardPage() {
   const [helpModal, setHelpModal] = useState(false)
   const [helpSending, setHelpSending] = useState(false)
   const [helpSent, setHelpSent] = useState(false)
+  const [nudgeCount, setNudgeCount] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('nudge_count') || '{}')
+      const today = new Date().toISOString().split('T')[0]
+      return stored.date === today ? stored.count : 0
+    } catch { return 0 }
+  })
+  const [nudgeWarning, setNudgeWarning] = useState('')
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -198,6 +206,7 @@ export default function DashboardPage() {
   async function sendNudge() {
     if (!profile?.invited_by || reminding) return
     if (subscriptionTier !== 'paid') return // Nudge is paid-only
+    if (nudgeCount >= 2) return // Daily limit reached
     setReminding(true)
 
     const { data: adminProfile } = await supabase
@@ -214,6 +223,20 @@ export default function DashboardPage() {
       )
     } else {
       alert("No phone number on file for this account holder — they can add one in Settings.")
+      setReminding(false)
+      return
+    }
+
+    const newCount = nudgeCount + 1
+    setNudgeCount(newCount)
+    const today = new Date().toISOString().split('T')[0]
+    localStorage.setItem('nudge_count', JSON.stringify({ date: today, count: newCount }))
+
+    const name = seniorName || 'your loved one'
+    if (newCount === 2) {
+      setNudgeWarning(
+        `You\u2019ve sent 2 nudges today. If you\u2019re worried about ${name}, it may be time to give them a call or ask someone nearby to check in on them.`
+      )
     }
 
     setReminding(false)
@@ -372,13 +395,30 @@ export default function DashboardPage() {
               </div>
             </div>
             {subscriptionTier === 'paid' ? (
-              <button
-                onClick={sendNudge}
-                disabled={reminding}
-                className="w-full py-3 rounded-xl bg-yellow-400 text-yellow-900 font-semibold text-sm disabled:opacity-60"
-              >
-                {reminding ? 'Sending...' : '💛 Send a Nudge'}
-              </button>
+              nudgeCount >= 2 ? (
+                <div className="w-full py-3 px-4 rounded-xl bg-yellow-50 border border-yellow-300 text-center">
+                  <p className="text-yellow-800 text-sm leading-relaxed">
+                    You&apos;ve reached your nudge limit for today. If you haven&apos;t heard from{' '}
+                    <span className="font-semibold">{seniorName || 'your loved one'}</span>, please
+                    reach out directly or contact someone who can check on them in person.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={sendNudge}
+                    disabled={reminding}
+                    className="w-full py-3 rounded-xl bg-yellow-400 text-yellow-900 font-semibold text-sm disabled:opacity-60"
+                  >
+                    {reminding ? 'Sending...' : '💛 Send a Nudge'}
+                  </button>
+                  {nudgeWarning && (
+                    <p className="text-yellow-700 text-sm mt-1 leading-relaxed px-1">
+                      {nudgeWarning}
+                    </p>
+                  )}
+                </>
+              )
             ) : (
               <div className="w-full py-3 rounded-xl bg-gray-100 text-center">
                 <p className="text-gray-500 text-sm">
