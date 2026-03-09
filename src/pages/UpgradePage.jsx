@@ -9,15 +9,16 @@ import { supabase } from '../lib/supabase'
 const CHECKOUT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/create-checkout'
 
 const FREE_FEATURES = [
-  { icon: Heart,  text: 'Daily "I\'m Okay" check-in with SMS' },
+  { icon: Heart,  text: 'Daily "I\'m Okay" check-in' },
   { icon: Bell,   text: '"I Need Help" emergency SMS alerts' },
-  { icon: Users,  text: 'Up to 3 family members' },
+  { icon: Users,  text: '1 family member' },
   { icon: Bot,    text: '10 AI messages per month' },
   { icon: Shield, text: 'Emergency Info card' },
 ]
 
 const PAID_FEATURES = [
   { icon: Heart,      text: 'Everything in Free, plus:' },
+  { icon: Heart,      text: 'I\'m Okay check-in with SMS to family' },
   { icon: Users,      text: 'Unlimited family members' },
   { icon: Bot,        text: 'Unlimited AI messages' },
   { icon: FolderLock, text: 'Document Vault' },
