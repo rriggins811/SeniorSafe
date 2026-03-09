@@ -179,10 +179,10 @@ export default function MedicationsPage() {
               Medication tracking and SMS reminders are available on SeniorSafe Premium.
             </p>
           </div>
-          <a href="sms:3365538933" className="w-full max-w-xs py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg text-center block">
-            Text Ryan to Upgrade
-          </a>
-          <p className="text-gray-400 text-sm">(336) 553-8933 · $14.99/month</p>
+          <button onClick={() => navigate('/upgrade')} className="w-full max-w-xs py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-lg">
+            Upgrade to Premium
+          </button>
+          <p className="text-gray-400 text-sm">Starting at $11.99/month</p>
           <button onClick={() => navigate('/dashboard')} className="text-[#1B365D] text-sm underline">
             ← Back to Dashboard
           </button>
