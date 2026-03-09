@@ -28,13 +28,7 @@ export default function DashboardPage() {
   const [helpModal, setHelpModal] = useState(false)
   const [helpSending, setHelpSending] = useState(false)
   const [helpSent, setHelpSent] = useState(false)
-  const [nudgeCount, setNudgeCount] = useState(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('nudge_count') || '{}')
-      const today = new Date().toISOString().split('T')[0]
-      return stored.date === today ? stored.count : 0
-    } catch { return 0 }
-  })
+  const [nudgeCount, setNudgeCount] = useState(0)
   const [nudgeWarning, setNudgeWarning] = useState('')
 
   useEffect(() => {
@@ -65,6 +59,13 @@ export default function DashboardPage() {
                 setAdminCheckIn(data?.[0] || null)
                 setAdminCheckInLoaded(true)
               })
+
+            // Fetch today's nudge count from database
+            supabase.from('nudge_logs')
+              .select('id', { count: 'exact', head: true })
+              .eq('sent_by', user.id)
+              .eq('date', todayStr)
+              .then(({ count }) => setNudgeCount(count || 0))
           } else {
             setAdminCheckInLoaded(true)
           }
@@ -227,10 +228,14 @@ export default function DashboardPage() {
       return
     }
 
+    // Log nudge to database (date defaults to CURRENT_DATE server-side)
+    await supabase.from('nudge_logs').insert({
+      admin_id: profile.invited_by,
+      sent_by: user.id,
+    })
+
     const newCount = nudgeCount + 1
     setNudgeCount(newCount)
-    const today = new Date().toISOString().split('T')[0]
-    localStorage.setItem('nudge_count', JSON.stringify({ date: today, count: newCount }))
 
     const name = seniorName || 'your loved one'
     if (newCount === 2) {
