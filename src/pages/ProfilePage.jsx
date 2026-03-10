@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Settings, Clock, Lock, Trash2, AlertTriangle, Phone, Plus, X, Pencil } from 'lucide-react'
+import { ArrowLeft, Settings, Clock, Lock, Trash2, AlertTriangle, Phone, Plus, X, Pencil, Mail, LogOut, CreditCard } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+
+const SUPABASE_FN_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1'
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -29,6 +31,14 @@ export default function ProfilePage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteText, setDeleteText] = useState('')
   const [deleting, setDeleting] = useState(false)
+
+  // Leave family state (members only)
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [leaving, setLeaving] = useState(false)
+
+  // Cancel subscription state
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelledAt, setCancelledAt] = useState(null) // ISO string if cancellation pending
 
   // Quick dial contacts state
   const [quickDialContacts, setQuickDialContacts] = useState([])
@@ -132,13 +142,76 @@ export default function ProfilePage() {
     if (deleteText !== 'DELETE') return
     setDeleting(true)
 
-    // Sign out first, then let them know to contact support
-    // Full account deletion requires a service-role call or admin action
-    // For safety, we sign them out and show a confirmation
-    await supabase.auth.signOut()
-    navigate('/signin')
-    // NOTE: In production, this should call a server-side function to fully delete user data.
-    // For now, signing out + displaying the confirmation is the safe approach.
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${SUPABASE_FN_URL}/delete-account`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Deletion failed')
+      }
+
+      // Account deleted server-side — sign out locally and redirect
+      await supabase.auth.signOut()
+      navigate('/signin')
+    } catch (err) {
+      setDeleting(false)
+      alert('Error deleting account: ' + err.message)
+    }
+  }
+
+  async function handleLeaveFamily() {
+    setLeaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${SUPABASE_FN_URL}/leave-family`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to leave family')
+      }
+
+      // Refresh — navigate to dashboard with clean state
+      navigate('/dashboard')
+    } catch (err) {
+      setLeaving(false)
+      alert('Error: ' + err.message)
+    }
+  }
+
+  async function handleCancelSubscription() {
+    setCancelling(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`${SUPABASE_FN_URL}/cancel-subscription`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Cancellation failed')
+
+      setCancelledAt(result.cancel_at)
+      setCancelling(false)
+    } catch (err) {
+      setCancelling(false)
+      alert('Error: ' + err.message)
+    }
   }
 
   async function fetchQuickDial() {
@@ -177,7 +250,15 @@ export default function ProfilePage() {
   }
 
   const isAdmin = profile?.role === 'admin'
+  const isMember = profile?.role === 'member'
   const isPaid = profile?.subscription_tier === 'paid'
+  const hasStripeSubscription = !!profile?.stripe_subscription_id
+
+  // Billing display
+  const billingInterval = profile?.subscription_interval === 'year' ? 'Annual' : 'Monthly'
+  const periodEnd = profile?.subscription_period_end
+    ? new Date(profile.subscription_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : null
 
   // Generate time options (every 30 minutes)
   const timeOptions = []
@@ -392,9 +473,15 @@ export default function ProfilePage() {
                 <p className="text-gray-700 text-sm mt-1">
                   <span className="text-gray-500">Plan: </span>
                   <span className={isPaid ? 'text-green-600 font-medium' : 'text-gray-600'}>
-                    {isPaid ? 'Premium' : 'Free'}
+                    {isPaid ? `Premium (${billingInterval})` : 'Free'}
                   </span>
                 </p>
+                {isPaid && periodEnd && (
+                  <p className="text-gray-700 text-sm mt-1">
+                    <span className="text-gray-500">{cancelledAt ? 'Access until: ' : 'Next billing: '}</span>
+                    {periodEnd}
+                  </p>
+                )}
               </div>
 
               {/* Save button */}
@@ -453,13 +540,44 @@ export default function ProfilePage() {
             {/* ───────── Subscription Management (paid users) ───────── */}
             {isPaid && (
               <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-4">Subscription</p>
-                <p className="text-sm text-gray-700 mb-3">
-                  You&rsquo;re on the <span className="font-semibold text-green-600">Premium</span> plan.
+                <div className="flex items-center gap-2 mb-4">
+                  <CreditCard size={14} className="text-gray-400" />
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Subscription</p>
+                </div>
+                <p className="text-sm text-gray-700 mb-1">
+                  You&rsquo;re on the <span className="font-semibold text-green-600">Premium ({billingInterval})</span> plan.
                 </p>
-                <p className="text-xs text-gray-400 mb-4">
-                  To manage your subscription, change your plan, or cancel, please contact us:
-                </p>
+                {periodEnd && (
+                  <p className="text-xs text-gray-500 mb-3">
+                    {cancelledAt
+                      ? `Your plan will end on ${periodEnd}. You'll keep Premium access until then.`
+                      : `Next billing date: ${periodEnd}`
+                    }
+                  </p>
+                )}
+                {!periodEnd && (
+                  <p className="text-xs text-gray-400 mb-3">
+                    Billing information will appear after your first renewal.
+                  </p>
+                )}
+
+                {hasStripeSubscription && !cancelledAt ? (
+                  <button
+                    type="button"
+                    onClick={handleCancelSubscription}
+                    disabled={cancelling}
+                    className="w-full py-3 rounded-xl border border-red-300 text-red-600 font-semibold text-sm disabled:opacity-40 mb-3"
+                  >
+                    {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
+                  </button>
+                ) : cancelledAt ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-3">
+                    <p className="text-yellow-800 text-xs font-medium">
+                      Cancellation scheduled. Premium access continues until {periodEnd || 'your billing period ends'}.
+                    </p>
+                  </div>
+                ) : null}
+
                 <a
                   href="sms:+13365538933?body=Hi%20Ryan%2C%20I%27d%20like%20to%20manage%20my%20SeniorSafe%20subscription."
                   className="block w-full text-center py-3 rounded-xl border border-[#1B365D] text-[#1B365D] font-semibold text-sm"
@@ -472,6 +590,83 @@ export default function ProfilePage() {
                 >
                   Or email support@seniorsafeapp.com
                 </a>
+              </div>
+            )}
+
+            {/* ───────── Help & Support (ALL users) ───────── */}
+            <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <Mail size={14} className="text-gray-400" />
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Help &amp; Support</p>
+              </div>
+              <a
+                href="mailto:support@seniorsafeapp.com?subject=SeniorSafe%20Support%20Request"
+                className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <Mail size={18} className="text-[#1B365D] flex-shrink-0" />
+                <div>
+                  <p className="text-[#1B365D] font-semibold text-sm">Email Support</p>
+                  <p className="text-gray-400 text-xs">support@seniorsafeapp.com</p>
+                </div>
+              </a>
+              <a
+                href="sms:+13365538933?body=Hi%20Ryan%2C%20I%20need%20help%20with%20SeniorSafe."
+                className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors mt-2"
+              >
+                <Phone size={18} className="text-[#1B365D] flex-shrink-0" />
+                <div>
+                  <p className="text-[#1B365D] font-semibold text-sm">Text Ryan</p>
+                  <p className="text-gray-400 text-xs">(336) 553-8933</p>
+                </div>
+              </a>
+            </div>
+
+            {/* ───────── Leave Family (members only) ───────── */}
+            {isMember && profile?.invited_by && (
+              <div className="bg-white rounded-2xl px-4 py-5 shadow-sm border border-orange-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <LogOut size={14} className="text-orange-400" />
+                  <p className="text-xs font-bold uppercase tracking-wide text-orange-400">Family Group</p>
+                </div>
+                {!showLeaveConfirm ? (
+                  <>
+                    <p className="text-xs text-gray-400 mb-3">
+                      Leave the family group. You&rsquo;ll lose access to shared family features and be moved to the Free plan.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowLeaveConfirm(true)}
+                      className="w-full py-3 rounded-xl border border-orange-300 text-orange-600 font-semibold text-sm"
+                    >
+                      Leave This Family
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-3">
+                      <p className="text-orange-800 text-xs">
+                        Are you sure? You&rsquo;ll lose access to family check-ins, messages, and shared data. The admin will be notified.
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowLeaveConfirm(false)}
+                        className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-600 font-semibold text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={leaving}
+                        onClick={handleLeaveFamily}
+                        className="flex-1 py-3 rounded-xl bg-orange-500 text-white font-semibold text-sm disabled:opacity-40"
+                      >
+                        {leaving ? 'Leaving...' : 'Yes, Leave'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
