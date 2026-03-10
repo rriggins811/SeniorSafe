@@ -18,6 +18,7 @@ import ProfilePage from './pages/ProfilePage'
 import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import UpgradePage from './pages/UpgradePage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 
 function ProtectedRoute({ children }) {
   const [session, setSession] = useState(undefined)
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/family-invite" element={<P><FamilyInvitePage /></P>} />
         <Route path="/profile"       element={<P><ProfilePage /></P>} />
         <Route path="/upgrade"       element={<P><UpgradePage /></P>} />
+        <Route path="/reset-password"  element={<ResetPasswordPage />} />
         <Route path="/terms"         element={<TermsPage />} />
         <Route path="/privacy"       element={<PrivacyPage />} />
         <Route path="*" element={
