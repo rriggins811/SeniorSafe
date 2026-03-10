@@ -111,7 +111,7 @@ serve(async (_req) => {
 
         const toPhone   = normalizePhone(med.reminder_phone)
         const medDisplay = med.dosage ? `${med.med_name} ${med.dosage}` : med.med_name
-        const message   = `💊 Medication reminder: Time to take your ${medDisplay}. — SeniorSafe`
+        const message   = `💊 Medication reminder: Time to take your ${medDisplay}. — SeniorSafe. Reply STOP to opt out`
 
         // Send SMS via Twilio
         const body = new URLSearchParams({ To: toPhone, From: FROM_NUMBER, Body: message })

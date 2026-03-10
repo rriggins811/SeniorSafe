@@ -121,7 +121,7 @@ serve(async (_req) => {
       }
 
       const seniorName = admin.senior_name || admin.first_name || 'Your loved one'
-      const message = `${seniorName} hasn't checked in today. — SeniorSafe`
+      const message = `${seniorName} hasn't checked in today. — SeniorSafe. Reply STOP to opt out`
 
       // Send SMS to each family member
       for (const member of members) {
