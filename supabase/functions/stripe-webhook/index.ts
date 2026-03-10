@@ -34,15 +34,18 @@ async function updateUserTier(
   if (periodEnd !== undefined) update.subscription_period_end = periodEnd
   if (interval !== undefined) update.subscription_interval = interval
 
-  const { error } = await supabaseAdmin
+  const { error, data } = await supabaseAdmin
     .from('user_profile')
     .update(update)
     .eq('user_id', userId)
+    .select('user_id, subscription_tier')
 
   if (error) {
-    console.error(`Failed to update user ${userId} to ${tier}:`, error.message)
+    console.error(`❌ Failed to update user ${userId} to ${tier}:`, error.message)
+  } else if (!data || data.length === 0) {
+    console.error(`❌ Update returned no rows — user_id "${userId}" may not exist in user_profile`)
   } else {
-    console.log(`✅ User ${userId} → subscription_tier = '${tier}'`)
+    console.log(`✅ User ${userId} → subscription_tier = '${data[0]?.subscription_tier}'`)
   }
   return error
 }
