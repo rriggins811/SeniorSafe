@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, Pill, X, Check, Lock } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Pill, X, Check, Lock, Calendar } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { googleCalendarUrl, addMinutes } from '../lib/calendar'
 
 const FREQUENCIES = ['Once daily', 'Twice daily', 'Three times daily', 'As needed']
 
@@ -294,6 +295,23 @@ export default function MedicationsPage() {
                           }`}>
                             {status === 'taken' ? 'Taken' : status === 'overdue' ? 'Overdue' : 'Upcoming'}
                           </span>
+                          {status !== 'taken' && (
+                            <a
+                              href={googleCalendarUrl(
+                                `Take ${med.med_name}${med.dosage ? ` (${med.dosage})` : ''}`,
+                                `${new Date().toISOString().split('T')[0]}T${time}`,
+                                `${new Date().toISOString().split('T')[0]}T${addMinutes(time, 15)}`,
+                                'Medication reminder — SeniorSafe'
+                              )}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              className="ml-1 text-gray-300 hover:text-[#1B365D] flex-shrink-0"
+                              title="Add to Google Calendar"
+                            >
+                              <Calendar size={14} />
+                            </a>
+                          )}
                         </button>
                       )
                     })
