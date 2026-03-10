@@ -40,9 +40,11 @@ export default function DashboardPage() {
   const [noteSaving, setNoteSaving] = useState(false)
   const [noteSaved, setNoteSaved] = useState(false)
   const [lastCheckinId, setLastCheckinId] = useState(null)
+  // Daily quote/joke state
+  const [dailyQuote, setDailyQuote] = useState(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
       setUser(user)
       setFamilyName(user.user_metadata?.family_name || '')
@@ -157,6 +159,25 @@ export default function DashboardPage() {
         .order('sort_order', { ascending: true })
         .limit(4)
         .then(({ data }) => setQuickDialContacts(data || []))
+
+      // Fetch today's daily quote/joke (cycles by day of year)
+      // Goal: expand daily_quotes table to 365 entries over time
+      const now = new Date()
+      const startOfYear = new Date(now.getFullYear(), 0, 0)
+      const dayOfYear = Math.floor((now - startOfYear) / 86400000)
+      const { count: quoteCount } = await supabase
+        .from('daily_quotes')
+        .select('id', { count: 'exact', head: true })
+      if (quoteCount && quoteCount > 0) {
+        const idx = dayOfYear % quoteCount
+        const { data: qRow } = await supabase
+          .from('daily_quotes')
+          .select('content, type, author')
+          .order('id')
+          .range(idx, idx)
+          .single()
+        if (qRow) setDailyQuote(qRow)
+      }
 
       setLoading(false)
     })
@@ -664,6 +685,33 @@ export default function DashboardPage() {
                   📝 Add a note with your check-in —{' '}
                   <button onClick={() => navigate('/upgrade')} className="text-[#D4A843] underline font-medium">
                     Premium feature
+                  </button>
+                </p>
+              </div>
+            )}
+
+            {/* Daily quote/joke — paid tier */}
+            {alreadyCheckedIn && subscriptionTier === 'paid' && dailyQuote && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
+                <p className="text-amber-700 text-xs font-bold uppercase tracking-wide text-center mb-3">
+                  {dailyQuote.type === 'quote' ? '💡 Daily Inspiration' : '😄 Daily Laugh'}
+                </p>
+                <p className="text-gray-700 text-base italic leading-relaxed text-center">
+                  &ldquo;{dailyQuote.content}&rdquo;
+                </p>
+                {dailyQuote.author && (
+                  <p className="text-gray-400 text-sm text-right mt-2">— {dailyQuote.author}</p>
+                )}
+              </div>
+            )}
+
+            {/* Daily quote teaser — free tier */}
+            {alreadyCheckedIn && subscriptionTier !== 'paid' && (
+              <div className="bg-white rounded-2xl px-4 py-3 shadow-sm">
+                <p className="text-gray-400 text-sm text-center">
+                  ✨ Upgrade to Premium for a daily dose of inspiration —{' '}
+                  <button onClick={() => navigate('/upgrade')} className="text-[#D4A843] underline font-medium">
+                    Upgrade
                   </button>
                 </p>
               </div>
