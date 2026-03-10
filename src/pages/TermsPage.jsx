@@ -35,11 +35,15 @@ const SECTIONS = [
     body: 'Riggins Strategic Solutions shall not be liable for any indirect, incidental, or consequential damages arising from your use of SeniorSafe.',
   },
   {
-    title: '9. Changes to Terms',
+    title: '9. Subscriptions and Billing',
+    body: 'Paid subscriptions renew automatically at the end of each billing period. You may cancel at any time through your account settings or by contacting us at support@seniorsafeapp.com. Cancellations take effect at the end of the current billing period — no refunds for partial periods.',
+  },
+  {
+    title: '10. Changes to Terms',
     body: 'We may update these terms at any time. Continued use of SeniorSafe after changes constitutes acceptance of the new terms.',
   },
   {
-    title: '10. Contact',
+    title: '11. Contact',
     body: 'Questions? Text or call Ryan Riggins at (336) 553-8933 or email ryan@rigginsstrategicsolutions.com.',
   },
 ]
@@ -64,7 +68,7 @@ export default function TermsPage() {
             </div>
             <div>
               <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Terms of Service</h1>
-              <p className="text-white/60 text-sm">Last updated: February 27, 2026</p>
+              <p className="text-white/60 text-sm">Last updated: March 10, 2026</p>
             </div>
           </div>
         </div>

@@ -96,7 +96,7 @@ export default function OnboardingPage() {
 
       // Send SMS invite
       const firstName = user.user_metadata?.first_name || user.user_metadata?.family_name || 'Someone'
-      const smsBody = `${firstName} invited you to SeniorSafe! Join the family at app.seniorsafeapp.com/signup?code=${code}`
+      const smsBody = `${firstName} invited you to SeniorSafe! Join the family at app.seniorsafeapp.com/signup?code=${code} Reply STOP to opt out`
 
       const sent = await sendSMS(invitePhone.trim(), smsBody)
       if (!sent) throw new Error('SMS failed to send')

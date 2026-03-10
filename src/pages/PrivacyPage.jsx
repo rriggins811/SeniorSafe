@@ -12,7 +12,7 @@ const SECTIONS = [
   },
   {
     title: "What We Don't Do",
-    body: 'We do not sell your personal information. We do not share your data with advertisers. We do not share health or family information with third parties except our technology providers Supabase and Anthropic.',
+    body: 'We do not sell your personal information. We do not share your data with advertisers. We do not share health or family information with third parties except our technology providers: Supabase (database), Anthropic (AI assistant), Twilio (SMS notifications), and Stripe (payment processing).',
   },
   {
     title: 'SMS Notifications',
@@ -56,7 +56,7 @@ export default function PrivacyPage() {
             </div>
             <div>
               <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Privacy Policy</h1>
-              <p className="text-white/60 text-sm">Last updated: February 27, 2026</p>
+              <p className="text-white/60 text-sm">Last updated: March 10, 2026</p>
             </div>
           </div>
         </div>

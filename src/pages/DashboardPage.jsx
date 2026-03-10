@@ -222,7 +222,7 @@ export default function DashboardPage() {
         await Promise.all(
           memberProfiles.map(m => {
             console.log('🔍 [CHECK-IN] → Sending to', m.first_name, 'at', m.phone)
-            return sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today.`)
+            return sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today. Reply STOP to opt out`)
           })
         )
       } else {
@@ -239,7 +239,7 @@ export default function DashboardPage() {
       console.log('🔍 [CHECK-IN] Senior own phone:', ownProfile?.phone)
 
       if (ownProfile?.phone) {
-        await sendSMS(ownProfile.phone, `✅ Your I'm Okay check-in was recorded and your family has been notified - SeniorSafe`)
+        await sendSMS(ownProfile.phone, `✅ Your I'm Okay check-in was recorded and your family has been notified - SeniorSafe. Reply STOP to opt out`)
       }
     } else {
       console.log('🔍 [CHECK-IN] Skipping SMS — subscriptionTier:', subscriptionTier)
@@ -277,7 +277,7 @@ export default function DashboardPage() {
     if (memberProfiles?.length) {
       await Promise.all(
         memberProfiles.map(m =>
-          sendSMS(m.phone, `${senderName} checked in at ${time} — "${checkinNote.trim()}" — SeniorSafe`)
+          sendSMS(m.phone, `${senderName} checked in at ${time} — "${checkinNote.trim()}" — SeniorSafe. Reply STOP to opt out`)
         )
       )
     }
@@ -304,7 +304,7 @@ export default function DashboardPage() {
       const senderName = user.user_metadata?.first_name || profile?.first_name || 'Your family'
       await sendSMS(
         adminProfile.phone,
-        `${senderName} is thinking of you — just tap I'm Okay when you get a chance! — SeniorSafe`
+        `${senderName} is thinking of you — just tap I'm Okay when you get a chance! — SeniorSafe. Reply STOP to opt out`
       )
     } else {
       alert("No phone number on file for this account holder — they can add one in Settings.")
@@ -338,7 +338,7 @@ export default function DashboardPage() {
     try {
       const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
       const name = seniorName || user.user_metadata?.first_name || familyName || 'Your loved one'
-      const message = `🆘 URGENT: ${name} pressed "I Need Help" at ${time}. Please check on them immediately. - SeniorSafe Alert`
+      const message = `🆘 URGENT: ${name} pressed "I Need Help" at ${time}. Please check on them immediately. - SeniorSafe Alert. Reply STOP to opt out`
 
       // DEBUG: log the admin user.id being used for the query
       console.log('🔍 [HELP-ALERT] Admin user.id:', user.id)
