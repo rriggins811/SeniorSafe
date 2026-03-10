@@ -34,12 +34,30 @@ export default function UpgradePage() {
   const [loading, setLoading] = useState(false)
   const [tier, setTier] = useState(null)
   const [error, setError] = useState('')
+  const [isMember, setIsMember] = useState(false)
+  const [adminUserId, setAdminUserId] = useState(null)
+  const [adminSeniorName, setAdminSeniorName] = useState('')
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { navigate('/signin'); return }
-      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
-        .then(({ data }) => setTier(data?.subscription_tier || 'free'))
+      supabase.from('user_profile').select('subscription_tier, role, invited_by').eq('user_id', user.id).single()
+        .then(async ({ data }) => {
+          if (data?.role === 'member' && data?.invited_by) {
+            setIsMember(true)
+            setAdminUserId(data.invited_by)
+            // Load admin's profile for display + tier check
+            const { data: adminProfile } = await supabase
+              .from('user_profile')
+              .select('senior_name, subscription_tier')
+              .eq('user_id', data.invited_by)
+              .single()
+            setAdminSeniorName(adminProfile?.senior_name || '')
+            setTier(adminProfile?.subscription_tier || 'free')
+          } else {
+            setTier(data?.subscription_tier || 'free')
+          }
+        })
     })
   }, [navigate])
 
@@ -58,7 +76,7 @@ export default function UpgradePage() {
           'Authorization': `Bearer ${session.access_token}`,
           'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, ...(isMember && adminUserId ? { admin_user_id: adminUserId } : {}) }),
       })
 
       const data = await res.json()
@@ -117,8 +135,16 @@ export default function UpgradePage() {
             <ArrowLeft size={22} />
           </button>
           <div>
-            <h1 className="text-white text-xl font-bold leading-tight">Upgrade to Premium</h1>
-            <p className="text-white/60 text-sm">Unlock everything for your family</p>
+            <h1 className="text-white text-xl font-bold leading-tight">
+              {isMember && adminSeniorName
+                ? `Upgrade ${adminSeniorName}'s Plan`
+                : 'Upgrade to Premium'}
+            </h1>
+            <p className="text-white/60 text-sm">
+              {isMember
+                ? 'Give your family SMS alerts and full access'
+                : 'Unlock everything for your family'}
+            </p>
           </div>
         </div>
       </div>

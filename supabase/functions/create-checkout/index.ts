@@ -62,13 +62,39 @@ serve(async (req: Request) => {
     }
 
     // ---- Parse body ----
-    const { plan } = await req.json() // 'monthly' or 'annual'
+    const { plan, admin_user_id } = await req.json() // plan: 'monthly'|'annual', admin_user_id: optional
     const priceId = PRICE_MAP[plan]
     if (!priceId) {
       return new Response(JSON.stringify({ error: 'Invalid plan. Use "monthly" or "annual".' }), {
         status: 400,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
+    }
+
+    // ---- Determine whose plan to upgrade ----
+    let targetUserId = user.id
+
+    if (admin_user_id) {
+      // A family member is paying for their admin's plan.
+      // Verify the requesting user is actually a member of that admin.
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      )
+      const { data: memberProfile } = await supabaseAdmin
+        .from('user_profile')
+        .select('invited_by')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!memberProfile || memberProfile.invited_by !== admin_user_id) {
+        return new Response(JSON.stringify({ error: 'Not authorized to upgrade this account' }), {
+          status: 403,
+          headers: { ...cors, 'Content-Type': 'application/json' },
+        })
+      }
+      targetUserId = admin_user_id
+      console.log(`👨‍👩‍👧 Member ${user.id} upgrading admin ${admin_user_id}`)
     }
 
     // ---- Determine return URL (use origin of request) ----
@@ -82,11 +108,12 @@ serve(async (req: Request) => {
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: user.email,
-      client_reference_id: user.id,  // links Stripe session back to Supabase user
+      client_reference_id: targetUserId,  // links Stripe session back to admin's Supabase user
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
-        supabase_user_id: user.id,
+        supabase_user_id: targetUserId,
+        paid_by: user.id,
         plan: plan,
       },
     })
