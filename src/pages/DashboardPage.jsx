@@ -772,13 +772,12 @@ export default function DashboardPage() {
               </div>
               <div className="flex-1">
                 <p className="text-[#1B365D] font-semibold text-sm">Speed Dial Contacts</p>
-                <p className="text-gray-400 text-xs mt-0.5">Upgrade to add speed dial contacts.</p>
-                <a
-                  href="sms:+13365538933?body=I%27d%20like%20to%20upgrade%20my%20SeniorSafe%20account"
+                <Link
+                  to="/upgrade"
                   className="text-[#D4A843] text-xs font-semibold mt-1 inline-block"
                 >
-                  Text Ryan to Upgrade →
-                </a>
+                  Upgrade to add speed dial contacts →
+                </Link>
               </div>
             </div>
           )

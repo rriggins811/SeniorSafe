@@ -408,12 +408,12 @@ export default function ProfilePage() {
                     <Lock size={18} color="#9CA3AF" />
                     <div>
                       <p className="text-gray-500 text-sm">Speed dial is a Premium feature.</p>
-                      <a
-                        href="sms:+13365538933?body=I%27d%20like%20to%20upgrade%20my%20SeniorSafe%20account"
-                        className="text-[#D4A843] text-xs font-semibold mt-1 inline-block"
+                      <button
+                        onClick={() => navigate('/upgrade')}
+                        className="text-[#D4A843] text-xs font-semibold mt-1 inline-block cursor-pointer bg-transparent border-none p-0"
                       >
-                        Text Ryan to Upgrade →
-                      </a>
+                        Upgrade to add speed dial contacts →
+                      </button>
                     </div>
                   </div>
                 ) : qdLoading ? (
