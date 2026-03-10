@@ -20,6 +20,16 @@ function getCorsHeaders(req: Request) {
 }
 
 // ---------------------------------------------------------------------------
+// Module-scope admin client (service role — bypasses RLS)
+// Created once at module level with proper serverless options
+// ---------------------------------------------------------------------------
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  { auth: { persistSession: false, autoRefreshToken: false } },
+)
+
+// ---------------------------------------------------------------------------
 // Limit messages — tier-aware
 // ---------------------------------------------------------------------------
 const FREE_LIMIT = 10
@@ -132,11 +142,7 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     )
 
-    // Service-role client: for updating protected columns (message_count, etc.)
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    )
+    // supabaseAdmin is module-scope (see top of file)
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) {
@@ -183,22 +189,23 @@ serve(async (req) => {
 
     // Monthly reset: if stored month differs from current month, reset to 0
     const now = new Date()
+    const todayStr = now.toISOString().split('T')[0]
+
     if (adminMonthStart) {
       const start = new Date(adminMonthStart)
       if (start.getUTCMonth() !== now.getUTCMonth() || start.getUTCFullYear() !== now.getUTCFullYear()) {
         familyCount = 0
-        await supabaseAdmin.from('user_profile')
-          .update({
-            message_count: 0,
-            message_week_start: now.toISOString().split('T')[0],
-          })
+        const { error: resetErr } = await supabaseAdmin.from('user_profile')
+          .update({ message_count: 0, message_week_start: todayStr })
           .eq('user_id', adminUserId)
+        if (resetErr) console.error('[ai-chat] Monthly reset failed:', resetErr.message)
       }
     } else {
       // First message ever — initialise the month-start marker
-      await supabaseAdmin.from('user_profile')
-        .update({ message_week_start: now.toISOString().split('T')[0] })
+      const { error: initErr } = await supabaseAdmin.from('user_profile')
+        .update({ message_week_start: todayStr })
         .eq('user_id', adminUserId)
+      if (initErr) console.error('[ai-chat] Init month-start failed:', initErr.message)
     }
 
     // Enforce tier-aware limits
@@ -215,9 +222,10 @@ serve(async (req) => {
 
     // Increment family counter (always on admin's profile)
     const newCount = familyCount + 1
-    await supabaseAdmin.from('user_profile')
-      .update({ message_count: newCount })
+    const { error: incErr } = await supabaseAdmin.from('user_profile')
+      .update({ message_count: newCount, message_week_start: todayStr })
       .eq('user_id', adminUserId)
+    if (incErr) console.error('[ai-chat] Increment message_count failed:', incErr.message, '| adminUserId:', adminUserId, '| newCount:', newCount)
 
     // ---- Parse body ----
     const { messages } = await req.json()
