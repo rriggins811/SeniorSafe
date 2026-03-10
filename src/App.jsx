@@ -24,6 +24,21 @@ function ProtectedRoute({ children }) {
   const [session, setSession] = useState(undefined)
 
   useEffect(() => {
+    // "Remember me" session cleanup — if user unchecked "Remember me",
+    // sign out when they close and reopen the browser.
+    // sessionStorage clears on browser close; localStorage persists.
+    const sessionOnly = localStorage.getItem('seniorsafe_session_only')
+    const activeTab = sessionStorage.getItem('seniorsafe_active_tab')
+    if (sessionOnly && !activeTab) {
+      localStorage.removeItem('seniorsafe_session_only')
+      supabase.auth.signOut()
+      return
+    }
+    // Mark this tab as active (persists until browser closes)
+    if (sessionOnly) {
+      sessionStorage.setItem('seniorsafe_active_tab', 'true')
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSession(session))
     return () => subscription.unsubscribe()

@@ -44,7 +44,30 @@ export default function DashboardPage() {
 
       // Load profile (includes role + invited_by)
       supabase.from('user_profile').select('*').eq('user_id', user.id).single()
-        .then(({ data: p }) => {
+        .then(async ({ data: p }) => {
+          // OAuth user with no profile — create minimal record and redirect to onboarding
+          if (!p) {
+            const meta = user.user_metadata || {}
+            const fullName = meta.full_name || meta.name || ''
+            await supabase.from('user_profile').insert({
+              user_id: user.id,
+              first_name: fullName.split(' ')[0] || '',
+              last_name: fullName.split(' ').slice(1).join(' ') || '',
+              role: 'admin',
+              subscription_tier: 'free',
+              onboarding_complete: false,
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            })
+            navigate('/onboarding')
+            return
+          }
+
+          // Profile exists but onboarding not complete — redirect
+          if (!p.onboarding_complete) {
+            navigate('/onboarding')
+            return
+          }
+
           setProfile(p)
           setSeniorName(p?.senior_name || '')
           setSubscriptionTier(p?.subscription_tier || 'free')
