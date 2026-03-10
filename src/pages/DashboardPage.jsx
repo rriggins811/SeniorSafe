@@ -479,6 +479,14 @@ export default function DashboardPage() {
                 ? `Last check-in: ${formatCheckIn(lastCheckIn)}`
                 : 'No check-in today yet'}
             </p>
+            {alreadyCheckedIn && subscriptionTier !== 'paid' && (
+              <p className="text-center text-sm text-gray-400">
+                ✓ Family can see this in the app.{' '}
+                <button onClick={() => navigate('/upgrade')} className="text-[#D4A843] underline font-medium">
+                  Upgrade to also send them a text.
+                </button>
+              </p>
+            )}
 
             {/* I Need Help button — available to all tiers */}
             <button

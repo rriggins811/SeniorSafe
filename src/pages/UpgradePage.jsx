@@ -18,14 +18,14 @@ const FREE_FEATURES = [
 
 const PAID_FEATURES = [
   { icon: Heart,      text: 'Everything in Free, plus:' },
-  { icon: Heart,      text: 'I\'m Okay check-in with SMS to family' },
-  { icon: Users,      text: 'Unlimited family members' },
-  { icon: Bot,        text: '2,000 AI messages per month' },
-  { icon: FolderLock, text: 'Document Vault' },
-  { icon: Pill,       text: 'Medication tracking & reminders' },
-  { icon: Clock,      text: '30-day check-in history' },
-  { icon: Bell,       text: 'Missed check-in alerts' },
-  { icon: Users,      text: 'Family nudge button' },
+  { icon: Heart,      text: 'Family gets a text every time your loved one checks in — no app required' },
+  { icon: Bell,       text: 'If your loved one hasn\'t checked in by their set time, every family member gets an automatic text alert' },
+  { icon: Users,      text: 'Send a gentle reminder text to your loved one directly from the app — with a built-in daily limit so it never feels like nagging' },
+  { icon: Clock,      text: 'See a full month of daily check-ins at a glance — know the pattern, spot the gaps' },
+  { icon: Users,      text: 'Add every sibling, every caregiver — everyone stays in the loop automatically' },
+  { icon: Bot,        text: 'Ask anything, anytime — senior transitions, caregiving, legal prep, or just a friendly conversation' },
+  { icon: FolderLock, text: 'Store wills, insurance policies, and medical records securely — accessible to family the moment they\'re needed' },
+  { icon: Pill,       text: 'Automated SMS reminders so your loved one never misses a dose' },
 ]
 
 export default function UpgradePage() {
