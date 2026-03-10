@@ -18,17 +18,21 @@ const supabaseAdmin = createClient(
 )
 
 // ---------------------------------------------------------------------------
-// Helper: update a user's tier + Stripe IDs
+// Helper: update a user's tier + Stripe IDs + billing info
 // ---------------------------------------------------------------------------
 async function updateUserTier(
   userId: string,
   tier: 'free' | 'paid',
   stripeCustomerId?: string,
   stripeSubscriptionId?: string,
+  periodEnd?: string,
+  interval?: string,
 ) {
   const update: Record<string, unknown> = { subscription_tier: tier }
   if (stripeCustomerId) update.stripe_customer_id = stripeCustomerId
   if (stripeSubscriptionId) update.stripe_subscription_id = stripeSubscriptionId
+  if (periodEnd !== undefined) update.subscription_period_end = periodEnd
+  if (interval !== undefined) update.subscription_interval = interval
 
   const { error } = await supabaseAdmin
     .from('user_profile')
@@ -41,6 +45,44 @@ async function updateUserTier(
     console.log(`✅ User ${userId} → subscription_tier = '${tier}'`)
   }
   return error
+}
+
+// ---------------------------------------------------------------------------
+// Helper: normalize phone number
+// ---------------------------------------------------------------------------
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  return digits.startsWith('1') ? `+${digits}` : `+1${digits}`
+}
+
+// ---------------------------------------------------------------------------
+// Helper: send SMS via Twilio
+// ---------------------------------------------------------------------------
+async function sendTwilioSMS(to: string, message: string) {
+  const ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID')
+  const AUTH_TOKEN  = Deno.env.get('TWILIO_AUTH_TOKEN')
+  const FROM_NUMBER = Deno.env.get('TWILIO_PHONE_NUMBER')
+
+  if (!ACCOUNT_SID || !AUTH_TOKEN || !FROM_NUMBER) {
+    console.error('Twilio credentials not configured')
+    return false
+  }
+
+  const credentials = btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`)
+  const body = new URLSearchParams({ To: to, From: FROM_NUMBER, Body: message })
+
+  const response = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+    }
+  )
+  return response.ok
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +149,20 @@ serve(async (req: Request) => {
         break
       }
 
-      await updateUserTier(userId, 'paid', customerId, subscriptionId)
+      // Fetch subscription details for billing info
+      let periodEnd: string | undefined
+      let interval: string | undefined
+      if (subscriptionId) {
+        try {
+          const sub = await stripe.subscriptions.retrieve(subscriptionId)
+          periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+          interval = sub.items?.data?.[0]?.price?.recurring?.interval || undefined
+        } catch (subErr) {
+          console.error('Could not fetch subscription details:', subErr.message)
+        }
+      }
+
+      await updateUserTier(userId, 'paid', customerId, subscriptionId, periodEnd, interval)
 
       // Also update any family members (invited_by this admin) to 'paid'
       const { data: members } = await supabaseAdmin
@@ -138,7 +193,9 @@ serve(async (req: Request) => {
 
       // Active or trialing = paid; anything else = free
       if (status === 'active' || status === 'trialing') {
-        await updateUserTier(userId, 'paid', customerId, subscription.id)
+        const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
+        const interval = subscription.items?.data?.[0]?.price?.recurring?.interval || undefined
+        await updateUserTier(userId, 'paid', customerId, subscription.id, periodEnd, interval)
       } else if (status === 'past_due' || status === 'unpaid') {
         // Give a grace period — don't downgrade immediately on past_due
         // Stripe will retry payment. Only downgrade on explicit cancel/expire.
@@ -199,11 +256,44 @@ serve(async (req: Request) => {
       const invoice = event.data.object as Stripe.Invoice
       const customerId = invoice.customer as string
 
-      // Only downgrade if this is a subscription invoice and final attempt
-      if (invoice.billing_reason === 'subscription_cycle' || invoice.billing_reason === 'subscription_update') {
-        // Check attempt count — Stripe retries up to 4 times by default
-        // We'll log but not downgrade; subscription.updated/deleted handles the final state
-        console.log(`⚠️ Payment failed for customer ${customerId} — Stripe will retry. Attempt: ${invoice.attempt_count}`)
+      console.log(`⚠️ Payment failed for customer ${customerId} — attempt: ${invoice.attempt_count}`)
+
+      const userId = await getUserIdByStripeCustomer(customerId)
+      if (!userId) break
+
+      // Flip admin to free tier
+      await updateUserTier(userId, 'free', customerId)
+
+      // Downgrade family members too
+      const { data: members } = await supabaseAdmin
+        .from('user_profile')
+        .select('user_id')
+        .eq('invited_by', userId)
+
+      if (members?.length) {
+        for (const m of members) {
+          await updateUserTier(m.user_id, 'free')
+        }
+        console.log(`⬇️ Downgraded ${members.length} family member(s) to free`)
+      }
+
+      // Send SMS notification to admin about payment failure
+      const { data: adminProfile } = await supabaseAdmin
+        .from('user_profile')
+        .select('phone, senior_name, first_name')
+        .eq('user_id', userId)
+        .single()
+
+      if (adminProfile?.phone) {
+        const toPhone = normalizePhone(adminProfile.phone)
+        const name = adminProfile.senior_name || adminProfile.first_name || 'Your'
+        const sent = await sendTwilioSMS(
+          toPhone,
+          `Your SeniorSafe payment could not be processed. ${name}'s Premium features are paused. Update payment at app.seniorsafeapp.com/upgrade — SeniorSafe. Reply STOP to opt out`
+        )
+        if (sent) {
+          console.log(`📱 Payment failure SMS sent to ${toPhone}`)
+        }
       }
 
       break
