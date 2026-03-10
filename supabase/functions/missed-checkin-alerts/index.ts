@@ -28,6 +28,68 @@ function getLocalTime(tz: string): { hour: number; min: number } {
 }
 
 // ---------------------------------------------------------------------------
+// Fallback: send alert email when SMS fails (via Resend API)
+// Set RESEND_API_KEY in Supabase secrets:
+//   supabase secrets set RESEND_API_KEY=re_xxxxxxxxx
+// ---------------------------------------------------------------------------
+async function sendFailureAlertEmail(
+  familyName: string,
+  phone: string,
+  seniorName: string,
+  errorDetail: string,
+): Promise<boolean> {
+  const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+
+  const body = [
+    `MISSED CHECK-IN SMS FAILED`,
+    ``,
+    `Senior: ${seniorName}`,
+    `Family: ${familyName || 'Unknown'}`,
+    `Failed phone: ${phone}`,
+    `Error: ${errorDetail}`,
+    `Time: ${new Date().toISOString()}`,
+    ``,
+    `The family member above did NOT receive a missed check-in alert.`,
+    `Please follow up manually.`,
+  ].join('\n')
+
+  // If Resend is not configured, log prominently so Supabase log dashboard catches it
+  if (!RESEND_API_KEY) {
+    console.error(`🚨 SMS_FAILURE_ALERT — No RESEND_API_KEY configured. Details:\n${body}`)
+    return false
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'SeniorSafe Alerts <alerts@seniorsafeapp.com>',
+        to: ['support@seniorsafeapp.com'],
+        subject: 'ALERT: Missed check-in SMS failed',
+        text: body,
+      }),
+    })
+    if (res.ok) {
+      console.log(`📧 Failure alert email sent for ${phone}`)
+      return true
+    }
+    const errText = await res.text()
+    console.error(`📧 Resend email failed (${res.status}):`, errText)
+    // Still log the full alert so Supabase dashboard has it
+    console.error(`🚨 SMS_FAILURE_ALERT:\n${body}`)
+    return false
+  } catch (emailErr) {
+    console.error('📧 Resend email error:', emailErr)
+    console.error(`🚨 SMS_FAILURE_ALERT:\n${body}`)
+    return false
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main handler — runs as cron every 30 minutes
 // ---------------------------------------------------------------------------
 serve(async (_req) => {
@@ -124,6 +186,14 @@ serve(async (_req) => {
       const message = `${seniorName} hasn't checked in today. — SeniorSafe. Reply STOP to opt out`
 
       // Send SMS to each family member
+      // Fetch admin's family_name for failure alerts
+      const { data: adminProfile } = await supabase
+        .from('user_profile')
+        .select('family_name')
+        .eq('user_id', admin.user_id)
+        .single()
+      const familyLabel = adminProfile?.family_name || seniorName
+
       for (const member of members) {
         try {
           const toPhone = normalizePhone(member.phone)
@@ -149,11 +219,16 @@ serve(async (_req) => {
             totalSent++
             console.log(`✅ Missed check-in SMS sent to ${member.first_name} (${toPhone}) for admin ${admin.user_id}`)
           } else {
-            const err = await response.text()
-            console.error(`❌ Twilio error for ${toPhone}:`, err)
+            const errText = await response.text()
+            console.error(`❌ Twilio error for ${toPhone}:`, errText)
+            // CRITICAL SAFETY FALLBACK — alert support that a check-in SMS failed
+            await sendFailureAlertEmail(familyLabel, toPhone, seniorName, `Twilio HTTP ${response.status}: ${errText}`)
           }
         } catch (smsErr) {
           console.error(`SMS error for member ${member.first_name}:`, smsErr)
+          const toPhone = member.phone ? normalizePhone(member.phone) : 'unknown'
+          // CRITICAL SAFETY FALLBACK — alert support that a check-in SMS failed
+          await sendFailureAlertEmail(familyLabel, toPhone, seniorName, `Exception: ${smsErr}`)
         }
       }
 

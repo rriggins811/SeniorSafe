@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const [helpModal, setHelpModal] = useState(false)
   const [helpSending, setHelpSending] = useState(false)
   const [helpSent, setHelpSent] = useState(false)
+  const [helpFailed, setHelpFailed] = useState(false)
   const [nudgeCount, setNudgeCount] = useState(0)
   const [nudgeWarning, setNudgeWarning] = useState('')
   const [showCallMenu, setShowCallMenu] = useState(false)
@@ -375,16 +376,16 @@ export default function DashboardPage() {
       const successCount = results.filter(Boolean).length
 
       if (successCount === 0) {
-        alert('Could not send alerts right now. Please call your family directly.')
         setHelpSending(false)
+        setHelpFailed(true)
         return
       }
 
       setHelpSending(false)
       setHelpSent(true)
     } catch {
-      alert('Something went wrong sending alerts. Please call your family directly.')
       setHelpSending(false)
+      setHelpFailed(true)
     }
   }
 
@@ -820,7 +821,30 @@ export default function DashboardPage() {
       {helpModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-6">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col gap-5 shadow-xl">
-            {helpSent ? (
+            {helpFailed ? (
+              /* ---- SMS FAILED — critical safety fallback screen ---- */
+              <div className="flex flex-col items-center gap-4 py-4 text-center">
+                <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertTriangle size={30} color="#DC2626" strokeWidth={2} />
+                </div>
+                <p className="text-red-700 font-bold text-lg">Text alert failed</p>
+                <p className="text-gray-600 text-base leading-relaxed">
+                  Please call your family directly to let them know you need help.
+                </p>
+                <a
+                  href="tel:911"
+                  className="w-full py-4 rounded-xl bg-red-600 text-white font-bold text-lg text-center block"
+                >
+                  📞 Call 911
+                </a>
+                <button
+                  onClick={() => { setHelpFailed(false); setHelpModal(false) }}
+                  className="w-full py-4 rounded-xl bg-gray-200 text-gray-600 font-semibold text-base"
+                >
+                  Close
+                </button>
+              </div>
+            ) : helpSent ? (
               <div className="flex flex-col items-center gap-4 py-4 text-center">
                 <CheckCircle size={48} color="#16A34A" strokeWidth={1.5} />
                 <p className="text-green-700 font-bold text-lg">Your family has been alerted.</p>
