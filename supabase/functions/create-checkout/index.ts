@@ -25,9 +25,10 @@ function getCorsHeaders(req: Request) {
 // ---------------------------------------------------------------------------
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2023-10-16' })
 
+// Read price IDs from Supabase secrets, trim whitespace for safety
 const PRICE_MAP: Record<string, string> = {
-  monthly: Deno.env.get('STRIPE_PRICE_MONTHLY') || 'price_1T99bMFoeumweL6DaO2yam4h',
-  annual:  Deno.env.get('STRIPE_PRICE_ANNUAL')  || 'price_1T99e4FoeumweL6DuVorGKRY',
+  monthly: (Deno.env.get('STRIPE_PRICE_MONTHLY')?.trim()) || 'price_REPLACE_ME_MONTHLY',
+  annual:  (Deno.env.get('STRIPE_PRICE_ANNUAL')?.trim())  || 'price_REPLACE_ME_ANNUAL',
 }
 
 serve(async (req: Request) => {
