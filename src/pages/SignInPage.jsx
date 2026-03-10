@@ -54,7 +54,7 @@ export default function SignInPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: 'https://app.seniorsafeapp.com/dashboard',
       },
     })
     if (error) {
@@ -73,7 +73,7 @@ export default function SignInPage() {
     }
     setResetLoading(true)
     const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: 'https://app.seniorsafeapp.com/reset-password',
     })
     setResetLoading(false)
     if (error) {
