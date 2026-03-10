@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   Shield, CheckCircle, Pill, Calendar, MessageCircle,
-  Phone, Heart, LogOut, ChevronRight, Users, AlertTriangle, Settings,
+  Phone, Heart, LogOut, ChevronRight, Users, AlertTriangle, Settings, Lock,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { sendSMS } from '../lib/sms'
@@ -30,6 +30,8 @@ export default function DashboardPage() {
   const [helpSent, setHelpSent] = useState(false)
   const [nudgeCount, setNudgeCount] = useState(0)
   const [nudgeWarning, setNudgeWarning] = useState('')
+  const [showCallMenu, setShowCallMenu] = useState(false)
+  const [quickDialContacts, setQuickDialContacts] = useState([])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -116,6 +118,14 @@ export default function DashboardPage() {
       supabase.from('family_messages')
         .select('id', { count: 'exact', head: true })
         .then(({ count }) => setMsgCount(count || 0))
+
+      // Quick dial contacts (up to 4)
+      supabase.from('quick_dial_contacts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('sort_order', { ascending: true })
+        .limit(4)
+        .then(({ data }) => setQuickDialContacts(data || []))
 
       setLoading(false)
     })
@@ -298,10 +308,6 @@ export default function DashboardPage() {
 
       setHelpSending(false)
       setHelpSent(true)
-      setTimeout(() => {
-        setHelpSent(false)
-        setHelpModal(false)
-      }, 3000)
     } catch {
       alert('Something went wrong sending alerts. Please call your family directly.')
       setHelpSending(false)
@@ -321,6 +327,13 @@ export default function DashboardPage() {
 
   function formatApptDate(dateStr) {
     return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  function formatTelHref(phone) {
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length === 10) return `tel:+1${digits}`
+    if (digits.length === 11 && digits.startsWith('1')) return `tel:+${digits}`
+    return `tel:${digits}`
   }
 
   const isMember = profile?.role === 'member'
@@ -367,13 +380,38 @@ export default function DashboardPage() {
             >
               <Heart size={17} color="#EF4444" strokeWidth={0} fill="#EF4444" />
             </button>
-            <button
-              onClick={() => navigate('/contact')}
-              className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center"
-              title="Contact Ryan"
-            >
-              <Phone size={17} color="white" strokeWidth={1.5} />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowCallMenu(!showCallMenu)}
+                className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center"
+                title="Call"
+              >
+                <Phone size={17} color="white" strokeWidth={1.5} />
+              </button>
+              {showCallMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowCallMenu(false)} />
+                  <div className="absolute top-12 right-0 z-50 bg-white rounded-xl shadow-lg py-2 w-48">
+                    <a
+                      href="tel:911"
+                      className="flex items-center gap-3 px-4 py-3 text-red-600 font-bold text-base hover:bg-red-50"
+                      onClick={() => setShowCallMenu(false)}
+                    >
+                      <Phone size={16} strokeWidth={2} />
+                      Call 911
+                    </a>
+                    <div className="border-t border-gray-100" />
+                    <button
+                      onClick={() => { setShowCallMenu(false); navigate('/contact') }}
+                      className="flex items-center gap-3 px-4 py-3 text-[#1B365D] font-semibold text-base hover:bg-gray-50 w-full text-left"
+                    >
+                      <MessageCircle size={16} strokeWidth={1.5} />
+                      Contact Ryan
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <button
               onClick={handleSignOut}
               className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center"
@@ -498,6 +536,63 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ── Speed Dial Contacts ── */}
+        {isAdmin && (
+          subscriptionTier === 'paid' ? (
+            quickDialContacts.length > 0 ? (
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1">
+                  Speed Dial
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {quickDialContacts.map(c => (
+                    <a
+                      key={c.id}
+                      href={formatTelHref(c.phone)}
+                      className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm active:opacity-80"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+                        <Phone size={18} color="#16A34A" strokeWidth={2} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[#1B365D] font-bold text-sm truncate">{c.label}</p>
+                        <p className="text-gray-400 text-xs truncate">{c.name}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl p-5 text-center shadow-sm">
+                <Phone size={24} color="#D1D5DB" strokeWidth={1.5} className="mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">No speed dial contacts yet.</p>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="text-[#1B365D] text-sm font-semibold underline mt-1"
+                >
+                  Add contacts in Settings
+                </button>
+              </div>
+            )
+          ) : (
+            <div className="bg-white rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <Lock size={22} color="#9CA3AF" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[#1B365D] font-semibold text-sm">Speed Dial Contacts</p>
+                <p className="text-gray-400 text-xs mt-0.5">Upgrade to add speed dial contacts.</p>
+                <a
+                  href="sms:+13365538933?body=I%27d%20like%20to%20upgrade%20my%20SeniorSafe%20account"
+                  className="text-[#D4A843] text-xs font-semibold mt-1 inline-block"
+                >
+                  Text Ryan to Upgrade →
+                </a>
+              </div>
+            </div>
+          )
+        )}
+
         {/* ── Today at a glance ── */}
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1">
@@ -584,9 +679,24 @@ export default function DashboardPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-6">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col gap-5 shadow-xl">
             {helpSent ? (
-              <div className="flex flex-col items-center gap-3 py-4 text-center">
+              <div className="flex flex-col items-center gap-4 py-4 text-center">
                 <CheckCircle size={48} color="#16A34A" strokeWidth={1.5} />
-                <p className="text-green-700 font-bold text-lg">Help alert sent to your family!</p>
+                <p className="text-green-700 font-bold text-lg">Your family has been alerted.</p>
+                <p className="text-gray-500 text-base leading-relaxed">
+                  Do you also need emergency services?
+                </p>
+                <a
+                  href="tel:911"
+                  className="w-full py-4 rounded-xl bg-red-600 text-white font-bold text-lg text-center block"
+                >
+                  📞 Call 911
+                </a>
+                <button
+                  onClick={() => { setHelpSent(false); setHelpModal(false) }}
+                  className="w-full py-4 rounded-xl bg-gray-200 text-gray-600 font-semibold text-base"
+                >
+                  I don&apos;t need 911 — go back home
+                </button>
               </div>
             ) : (
               <>

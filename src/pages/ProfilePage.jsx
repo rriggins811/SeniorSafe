@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Settings, Clock, Lock, Trash2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Settings, Clock, Lock, Trash2, AlertTriangle, Phone, Plus, X, Pencil } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function ProfilePage() {
@@ -30,6 +30,12 @@ export default function ProfilePage() {
   const [deleteText, setDeleteText] = useState('')
   const [deleting, setDeleting] = useState(false)
 
+  // Quick dial contacts state
+  const [quickDialContacts, setQuickDialContacts] = useState([])
+  const [qdLoading, setQdLoading] = useState(true)
+  const [editingContact, setEditingContact] = useState(null) // null or { id?, label, name, phone }
+  const [qdSaving, setQdSaving] = useState(false)
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
@@ -46,6 +52,14 @@ export default function ProfilePage() {
           })
           setLoading(false)
         })
+
+      // Load quick dial contacts
+      supabase.from('quick_dial_contacts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('sort_order', { ascending: true })
+        .limit(4)
+        .then(({ data }) => { setQuickDialContacts(data || []); setQdLoading(false) })
     })
   }, [])
 
@@ -125,6 +139,41 @@ export default function ProfilePage() {
     navigate('/signin')
     // NOTE: In production, this should call a server-side function to fully delete user data.
     // For now, signing out + displaying the confirmation is the safe approach.
+  }
+
+  async function fetchQuickDial() {
+    if (!user) return
+    const { data } = await supabase.from('quick_dial_contacts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('sort_order', { ascending: true })
+      .limit(4)
+    setQuickDialContacts(data || [])
+  }
+
+  async function saveQuickDialContact() {
+    if (!editingContact || !user) return
+    setQdSaving(true)
+    const { label, name, phone, id } = editingContact
+
+    if (id) {
+      await supabase.from('quick_dial_contacts')
+        .update({ label: label.trim(), name: name.trim(), phone: phone.trim() })
+        .eq('id', id)
+    } else {
+      await supabase.from('quick_dial_contacts')
+        .insert({ user_id: user.id, label: label.trim(), name: name.trim(), phone: phone.trim(), sort_order: quickDialContacts.length })
+    }
+
+    setQdSaving(false)
+    setEditingContact(null)
+    await fetchQuickDial()
+  }
+
+  async function deleteQuickDialContact(id) {
+    if (!confirm('Remove this speed dial contact?')) return
+    await supabase.from('quick_dial_contacts').delete().eq('id', id)
+    await fetchQuickDial()
   }
 
   const isAdmin = profile?.role === 'admin'
@@ -265,6 +314,74 @@ export default function ProfilePage() {
                   </div>
                 </div>
               )}
+
+              {/* ── Quick Dial Contacts ── */}
+              <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <Phone size={14} className="text-gray-400" />
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Speed Dial Contacts</p>
+                </div>
+
+                {!isPaid ? (
+                  <div className="flex items-center gap-3 py-2">
+                    <Lock size={18} color="#9CA3AF" />
+                    <div>
+                      <p className="text-gray-500 text-sm">Speed dial is a Premium feature.</p>
+                      <a
+                        href="sms:+13365538933?body=I%27d%20like%20to%20upgrade%20my%20SeniorSafe%20account"
+                        className="text-[#D4A843] text-xs font-semibold mt-1 inline-block"
+                      >
+                        Text Ryan to Upgrade →
+                      </a>
+                    </div>
+                  </div>
+                ) : qdLoading ? (
+                  <p className="text-gray-400 text-sm py-4 text-center">Loading...</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {quickDialContacts.length === 0 && (
+                      <p className="text-gray-400 text-sm text-center py-2">No speed dial contacts yet.</p>
+                    )}
+
+                    {quickDialContacts.map(c => (
+                      <div key={c.id} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                        <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center flex-shrink-0">
+                          <Phone size={16} color="#16A34A" strokeWidth={2} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[#1B365D] font-semibold text-sm">{c.label}</p>
+                          <p className="text-gray-400 text-xs truncate">{c.name} · {c.phone}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEditingContact({ id: c.id, label: c.label, name: c.name, phone: c.phone })}
+                          className="p-2 text-gray-400 hover:text-[#1B365D]"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteQuickDialContact(c.id)}
+                          className="p-2 text-gray-400 hover:text-red-500"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+
+                    {quickDialContacts.length < 4 && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingContact({ label: '', name: '', phone: '' })}
+                        className="w-full py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 font-semibold text-sm flex items-center justify-center gap-2 hover:border-[#1B365D] hover:text-[#1B365D]"
+                      >
+                        <Plus size={16} />
+                        Add Contact ({quickDialContacts.length}/4)
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Account info */}
               <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
@@ -414,6 +531,66 @@ export default function ProfilePage() {
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Quick Dial Edit/Add Modal */}
+      {editingContact && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-6">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[#1B365D] font-bold text-lg">
+                {editingContact.id ? 'Edit Contact' : 'Add Speed Dial Contact'}
+              </h2>
+              <button onClick={() => setEditingContact(null)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Label</label>
+              <input
+                type="text"
+                value={editingContact.label}
+                onChange={e => setEditingContact(c => ({ ...c, label: e.target.value }))}
+                placeholder="e.g. Daughter, Doctor, Neighbor"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                style={{ fontSize: '16px' }}
+                maxLength={20}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={editingContact.name}
+                onChange={e => setEditingContact(c => ({ ...c, name: e.target.value }))}
+                placeholder="e.g. Sarah Johnson"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                style={{ fontSize: '16px' }}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone number</label>
+              <input
+                type="tel"
+                value={editingContact.phone}
+                onChange={e => setEditingContact(c => ({ ...c, phone: e.target.value }))}
+                placeholder="(336) 555-0100"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                style={{ fontSize: '16px' }}
+              />
+            </div>
+
+            <button
+              type="button"
+              disabled={qdSaving || !editingContact.label.trim() || !editingContact.name.trim() || !editingContact.phone.trim()}
+              onClick={saveQuickDialContact}
+              className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg disabled:opacity-40"
+            >
+              {qdSaving ? 'Saving...' : editingContact.id ? 'Save Changes' : 'Add Contact'}
+            </button>
           </div>
         </div>
       )}
