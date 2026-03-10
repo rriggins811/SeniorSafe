@@ -7,6 +7,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { sendSMS } from '../lib/sms'
 import BottomNav from '../components/BottomNav'
+import { Sparkles } from 'lucide-react'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -32,6 +33,12 @@ export default function DashboardPage() {
   const [nudgeWarning, setNudgeWarning] = useState('')
   const [showCallMenu, setShowCallMenu] = useState(false)
   const [quickDialContacts, setQuickDialContacts] = useState([])
+  // Check-in note state (Feature 2)
+  const [showNoteInput, setShowNoteInput] = useState(false)
+  const [checkinNote, setCheckinNote] = useState('')
+  const [noteSaving, setNoteSaving] = useState(false)
+  const [noteSaved, setNoteSaved] = useState(false)
+  const [lastCheckinId, setLastCheckinId] = useState(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -75,7 +82,7 @@ export default function DashboardPage() {
           // If member, check if admin has checked in today
           if (p?.invited_by) {
             supabase.from('checkins')
-              .select('checked_in_at')
+              .select('checked_in_at, note')
               .eq('user_id', p.invited_by)
               .gte('checked_in_at', todayStart)
               .order('checked_in_at', { ascending: false })
@@ -163,11 +170,11 @@ export default function DashboardPage() {
     }
     setCheckInStatus('loading')
 
-    const { error: checkInError } = await supabase.from('checkins').insert({
+    const { data: checkInData, error: checkInError } = await supabase.from('checkins').insert({
       user_id: user.id,
       family_name: familyName,
       checked_in_at: new Date().toISOString(),
-    })
+    }).select('id').single()
 
     if (checkInError) {
       alert('Check-in failed: ' + checkInError.message)
@@ -178,6 +185,10 @@ export default function DashboardPage() {
     setLastCheckIn(new Date())
     setAlreadyCheckedIn(true)
     setCheckInStatus('sent')
+    if (checkInData?.id) {
+      setLastCheckinId(checkInData.id)
+      if (subscriptionTier === 'paid') setShowNoteInput(true)
+    }
 
     // Only send SMS for paid tier
     if (subscriptionTier === 'paid') {
@@ -234,7 +245,47 @@ export default function DashboardPage() {
       console.log('🔍 [CHECK-IN] Skipping SMS — subscriptionTier:', subscriptionTier)
     }
 
-    setTimeout(() => setCheckInStatus('idle'), 3000)
+    // Don't auto-close — let note input persist
+  }
+
+  async function saveCheckinNote() {
+    if (!lastCheckinId || !checkinNote.trim() || noteSaving) return
+    setNoteSaving(true)
+
+    // Save note to checkin record
+    const { error } = await supabase
+      .from('checkins')
+      .update({ note: checkinNote.trim() })
+      .eq('id', lastCheckinId)
+
+    if (error) {
+      alert('Could not save note: ' + error.message)
+      setNoteSaving(false)
+      return
+    }
+
+    // Send follow-up SMS to family with the note (paid tier already confirmed)
+    const senderName = seniorName || user.user_metadata?.first_name || familyName || 'Your loved one'
+    const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+
+    const { data: memberProfiles } = await supabase
+      .from('user_profile')
+      .select('phone')
+      .eq('invited_by', user.id)
+      .not('phone', 'is', null)
+
+    if (memberProfiles?.length) {
+      await Promise.all(
+        memberProfiles.map(m =>
+          sendSMS(m.phone, `${senderName} checked in at ${time} — "${checkinNote.trim()}" — SeniorSafe`)
+        )
+      )
+    }
+
+    setNoteSaving(false)
+    setNoteSaved(true)
+    setShowNoteInput(false)
+    setTimeout(() => setNoteSaved(false), 3000)
   }
 
   async function sendNudge() {
@@ -498,12 +549,31 @@ export default function DashboardPage() {
 
         {/* Member: check-in confirmed */}
         {isMember && adminCheckInLoaded && adminCheckIn && (
-          <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-4 flex items-center gap-3">
-            <CheckCircle size={22} color="#16A34A" strokeWidth={2} />
+          <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-4 flex items-start gap-3">
+            <CheckCircle size={22} color="#16A34A" strokeWidth={2} className="flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-green-800 font-semibold text-sm">Checked in today ✓</p>
               <p className="text-green-700 text-sm">{seniorName || 'Your loved one'} is doing well today.</p>
+              {adminCheckIn.note && (
+                <p className="text-green-700 text-sm mt-1 italic">&ldquo;{adminCheckIn.note}&rdquo;</p>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* Member upsell — free tier only */}
+        {isMember && adminCheckInLoaded && subscriptionTier === 'free' && (
+          <div className="bg-white rounded-2xl px-4 py-3 shadow-sm flex items-center justify-between">
+            <p className="text-gray-500 text-sm">
+              ✓ Viewed in app.{' '}
+              <span className="text-gray-400">Want this as a text?</span>
+            </p>
+            <button
+              onClick={() => navigate('/upgrade')}
+              className="text-[#D4A843] text-sm font-semibold whitespace-nowrap flex items-center gap-1"
+            >
+              <Sparkles size={14} /> Upgrade
+            </button>
           </div>
         )}
 
@@ -547,6 +617,55 @@ export default function DashboardPage() {
                   Upgrade to also send them a text.
                 </button>
               </p>
+            )}
+
+            {/* Note saved confirmation */}
+            {noteSaved && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+                <p className="text-green-700 text-sm font-semibold">✓ Note sent to your family!</p>
+              </div>
+            )}
+
+            {/* Check-in note input — paid tier */}
+            {showNoteInput && subscriptionTier === 'paid' && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+                <p className="text-[#1B365D] font-semibold text-sm">Add a note for your family (optional)</p>
+                <input
+                  type="text"
+                  value={checkinNote}
+                  onChange={e => setCheckinNote(e.target.value)}
+                  placeholder='e.g. Going to the store'
+                  maxLength={200}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-gray-800 text-sm"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={saveCheckinNote}
+                    disabled={!checkinNote.trim() || noteSaving}
+                    className="flex-1 py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-sm disabled:opacity-40"
+                  >
+                    {noteSaving ? 'Sending...' : 'Send Note'}
+                  </button>
+                  <button
+                    onClick={() => setShowNoteInput(false)}
+                    className="px-5 py-3 rounded-xl bg-gray-200 text-gray-600 font-semibold text-sm"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Check-in note teaser — free tier */}
+            {alreadyCheckedIn && subscriptionTier !== 'paid' && (
+              <div className="bg-white rounded-2xl px-4 py-3 shadow-sm">
+                <p className="text-gray-400 text-sm text-center">
+                  📝 Add a note with your check-in —{' '}
+                  <button onClick={() => navigate('/upgrade')} className="text-[#D4A843] underline font-medium">
+                    Premium feature
+                  </button>
+                </p>
+              </div>
             )}
 
             {/* I Need Help button — available to all tiers */}
