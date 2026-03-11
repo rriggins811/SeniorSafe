@@ -1,5 +1,37 @@
 # SeniorSafe — Claude Code Project Brief
-Last updated: March 2026
+Last updated: March 11, 2026
+
+---
+
+## March 11, 2026 — Stripe Payments, AI Prompt, Webhook Fixes
+
+### Session Summary
+Fixed critical Stripe payment pipeline, updated AI system prompt, and resolved database trigger blocking webhook updates.
+
+### Commits This Session
+1. `4b237c4` — Enable promotion codes on Stripe checkout (`allow_promotion_codes: true`)
+2. `d667026` — Fix Stripe webhook: `constructEventAsync` for Deno/Edge Function compatibility
+3. `4890a8d` — Update AI assistant system prompt (warm personality, full RSS product knowledge, all 19 module details)
+4. `6f2d14a` — Clean up stripe-webhook: remove debug scaffolding, keep production fixes
+
+### Database Migration Applied
+- `fix_protect_profile_trigger_service_role_check` — Fixed `protect_user_profile_columns` trigger that was blocking Stripe webhook from updating `subscription_tier`. Root cause: old trigger checked `current_setting('request.jwt.claim.role')` which returns NULL on newer Supabase/PostgREST. Fixed to use `auth.role()` + `current_setting('role')` fallback.
+
+### Edge Functions Redeployed
+- **`create-checkout`** — Added `allow_promotion_codes: true` for coupon codes (e.g. BETATEST)
+- **`stripe-webhook`** — Fixed `constructEventAsync` (Deno SubtleCryptoProvider requires async), cleaned up debug code
+- **`ai-chat`** — New system prompt: warm neighbor personality, general-purpose helpfulness, specific RSS product pricing ($47 Blueprint, $297 Premium, $14.99/month app), all 19 Blueprint module details, tone examples
+
+### Key Fixes
+- **Stripe webhook was returning 200 but never updating DB** — Two issues: (1) `constructEvent()` needed to be `constructEventAsync()` for Deno, (2) the `protect_user_profile_columns` trigger blocked service_role updates because `request.jwt.claim.role` setting not available in newer Supabase
+- **Stripe checkout had no promo code field** — Added `allow_promotion_codes: true`
+- **AI assistant tone was too robotic** — Replaced entire system prompt with conversational, warm personality that knows exact RSS product details
+
+### Previous Session Fixes (also deployed)
+- Replaced all "Text Ryan to Upgrade" SMS links with `/upgrade` navigation links
+- Fixed Stripe price ID typo (`O2` → `OZ` in `STRIPE_PRICE_MONTHLY` secret)
+- Added `.trim()` safety on env var reads in create-checkout
+- Daily quotes after check-in + Google Calendar buttons on appointments/medications
 
 ---
 
