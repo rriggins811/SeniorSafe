@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, Camera, Trash2, FileText, X, FolderLock, Lock } from 'lucide-react'
+import { Upload, Camera, Trash2, FileText, X, FolderLock, Lock, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 
@@ -23,11 +23,15 @@ export default function VaultPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [subscriptionTier, setSubscriptionTier] = useState(null)
+  const [role, setRole] = useState(null)
+  const [vaultShared, setVaultShared] = useState(false)
+  const [adminVaultShared, setAdminVaultShared] = useState(null) // for members: admin's vault_shared flag
   const [documents, setDocuments] = useState([])
   const [filter, setFilter] = useState('All')
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState(null)
+  const [togglingShare, setTogglingShare] = useState(false)
 
   // Modal state
   const [pendingFile, setPendingFile] = useState(null) // { file, previewUrl }
@@ -37,12 +41,12 @@ export default function VaultPage() {
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
 
-  async function fetchDocuments(userId) {
+  async function fetchDocuments(targetUserId) {
     setLoading(true)
     const { data, error } = await supabase
       .from('documents')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', targetUserId)
       .order('uploaded_at', { ascending: false })
     if (!error && data) {
       // Resolve storage paths for each doc (handle legacy full URLs)
@@ -89,15 +93,59 @@ export default function VaultPage() {
   }
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-      if (user) {
-        fetchDocuments(user.id)
-        supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
-          .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
+    supabase.auth.getUser().then(async ({ data: { user: authUser } }) => {
+      setUser(authUser)
+      if (!authUser) return
+
+      // Fetch current user's profile
+      const { data: profile } = await supabase
+        .from('user_profile')
+        .select('subscription_tier, role, vault_shared, invited_by')
+        .eq('user_id', authUser.id)
+        .single()
+
+      if (!profile) return
+
+      setSubscriptionTier(profile.subscription_tier || 'free')
+      setRole(profile.role || 'admin')
+      setVaultShared(profile.vault_shared || false)
+
+      if (profile.role === 'member' && profile.invited_by) {
+        // Member: check admin's vault_shared setting and fetch their docs if shared
+        const { data: adminProfile } = await supabase
+          .from('user_profile')
+          .select('vault_shared')
+          .eq('user_id', profile.invited_by)
+          .single()
+
+        const shared = adminProfile?.vault_shared || false
+        setAdminVaultShared(shared)
+
+        if (shared) {
+          fetchDocuments(profile.invited_by)
+        } else {
+          setLoading(false)
+        }
+      } else {
+        // Admin: fetch own documents
+        fetchDocuments(authUser.id)
       }
     })
   }, [])
+
+  async function toggleVaultSharing() {
+    if (!user) return
+    setTogglingShare(true)
+    const newValue = !vaultShared
+    const { error } = await supabase
+      .from('user_profile')
+      .update({ vault_shared: newValue })
+      .eq('user_id', user.id)
+    if (!error) {
+      setVaultShared(newValue)
+    }
+    setTogglingShare(false)
+  }
 
   function openFilePicker(e) {
     const file = e.target.files?.[0]
@@ -180,6 +228,9 @@ export default function VaultPage() {
     ? documents
     : documents.filter(d => d.category === filter)
 
+  const isAdmin = role === 'admin'
+  const isMember = role === 'member'
+
   // Show upgrade prompt for free tier (null = still loading, show nothing yet)
   if (subscriptionTier === 'free') {
     return (
@@ -218,24 +269,62 @@ export default function VaultPage() {
     )
   }
 
+  // Member view: admin hasn't shared vault
+  if (isMember && adminVaultShared === false) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+        <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
+          <div className="max-w-lg mx-auto flex items-center gap-3">
+            <div className="bg-white/15 rounded-xl p-2">
+              <FolderLock size={22} color="#D4A843" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h1 className="text-white text-xl font-bold leading-tight">Family Vault</h1>
+              <p className="text-white/60 text-sm">Shared family documents</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center gap-5">
+          <div className="bg-gray-200 rounded-2xl p-5">
+            <EyeOff size={40} color="#9CA3AF" strokeWidth={1.5} />
+          </div>
+          <div>
+            <h2 className="text-[#1B365D] text-xl font-bold mb-2">Vault Not Shared Yet</h2>
+            <p className="text-gray-500 text-base leading-relaxed max-w-xs">
+              Your family member hasn&apos;t shared their vault yet. Once they turn on vault sharing, you&apos;ll be able to view their documents here.
+            </p>
+          </div>
+          <button onClick={() => navigate('/dashboard')} className="text-[#1B365D] text-sm underline">
+            ← Back to Dashboard
+          </button>
+        </div>
+        <BottomNav />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F5F5] flex flex-col pb-20">
-      {/* Hidden file inputs */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
-        onChange={openFilePicker}
-        className="hidden"
-      />
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={openFilePicker}
-        className="hidden"
-      />
+      {/* Hidden file inputs — admin only */}
+      {isAdmin && (
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={openFilePicker}
+            className="hidden"
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={openFilePicker}
+            className="hidden"
+          />
+        </>
+      )}
 
       {/* Header */}
       <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
@@ -246,31 +335,77 @@ export default function VaultPage() {
             </div>
             <div>
               <h1 className="text-white text-xl font-bold leading-tight">Family Vault</h1>
-              <p className="text-white/60 text-sm">Your important documents</p>
+              <p className="text-white/60 text-sm">
+                {isMember ? 'Shared family documents' : 'Your important documents'}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Upload buttons */}
-      <div className="px-4 py-4 bg-white border-b border-gray-200 flex-shrink-0">
-        <div className="max-w-lg mx-auto flex gap-3">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl bg-[#1B365D] text-white font-semibold text-base"
-          >
-            <Upload size={20} />
-            Upload File
-          </button>
-          <button
-            onClick={() => cameraInputRef.current?.click()}
-            className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-base bg-white"
-          >
-            <Camera size={20} />
-            Take Photo
-          </button>
+      {/* Vault sharing toggle — admin only */}
+      {isAdmin && (
+        <div className="px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0">
+          <div className="max-w-lg mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {vaultShared
+                ? <Eye size={20} className="text-[#D4A843] shrink-0" />
+                : <EyeOff size={20} className="text-gray-400 shrink-0" />
+              }
+              <div>
+                <p className="text-[#1B365D] text-sm font-semibold leading-tight">Share my vault with family</p>
+                <p className="text-gray-400 text-xs mt-0.5">Allow family members to view your documents</p>
+              </div>
+            </div>
+            <button
+              onClick={toggleVaultSharing}
+              disabled={togglingShare}
+              className={`relative w-12 h-7 rounded-full transition-colors duration-200 flex-shrink-0 ${
+                vaultShared ? 'bg-[#D4A843]' : 'bg-gray-300'
+              } disabled:opacity-50`}
+              aria-label={vaultShared ? 'Disable vault sharing' : 'Enable vault sharing'}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform duration-200 ${
+                  vaultShared ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Member read-only banner */}
+      {isMember && (
+        <div className="px-4 py-2 bg-[#D4A843]/10 border-b border-[#D4A843]/20 flex-shrink-0">
+          <div className="max-w-lg mx-auto flex items-center gap-2">
+            <Eye size={14} className="text-[#D4A843] shrink-0" />
+            <p className="text-[#1B365D] text-xs font-medium">View only — shared by your family admin</p>
+          </div>
+        </div>
+      )}
+
+      {/* Upload buttons — admin only */}
+      {isAdmin && (
+        <div className="px-4 py-4 bg-white border-b border-gray-200 flex-shrink-0">
+          <div className="max-w-lg mx-auto flex gap-3">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl bg-[#1B365D] text-white font-semibold text-base"
+            >
+              <Upload size={20} />
+              Upload File
+            </button>
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-base bg-white"
+            >
+              <Camera size={20} />
+              Take Photo
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Category filter tabs */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200">
@@ -303,7 +438,10 @@ export default function VaultPage() {
               </div>
               <p className="text-gray-600 text-base font-medium">No documents yet.</p>
               <p className="text-gray-400 text-sm mt-1 leading-relaxed">
-                Tap <strong>Upload File</strong> or <strong>Take Photo</strong> to get started.
+                {isAdmin
+                  ? <>Tap <strong>Upload File</strong> or <strong>Take Photo</strong> to get started.</>
+                  : 'No shared documents to show yet.'
+                }
               </p>
             </div>
           ) : (
@@ -339,14 +477,16 @@ export default function VaultPage() {
                     </span>
                   </div>
 
-                  {/* Delete */}
-                  <button
-                    onClick={() => handleDelete(doc)}
-                    disabled={deleting === doc.id}
-                    className="p-2.5 text-gray-300 hover:text-red-500 flex-shrink-0 disabled:opacity-40"
-                  >
-                    <Trash2 size={20} />
-                  </button>
+                  {/* Delete — admin/owner only */}
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleDelete(doc)}
+                      disabled={deleting === doc.id}
+                      className="p-2.5 text-gray-300 hover:text-red-500 flex-shrink-0 disabled:opacity-40"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  )}
                 </div>
               )
             })
@@ -354,8 +494,8 @@ export default function VaultPage() {
         </div>
       </div>
 
-      {/* Upload modal */}
-      {pendingFile && (
+      {/* Upload modal — admin only */}
+      {isAdmin && pendingFile && (
         <div
           className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center sm:items-center"
           onClick={e => { if (e.target === e.currentTarget) cancelModal() }}
