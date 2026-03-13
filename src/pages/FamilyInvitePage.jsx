@@ -6,7 +6,6 @@ import { generateFamilyCode } from '../lib/familyCode'
 
 export default function FamilyInvitePage() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -15,7 +14,6 @@ export default function FamilyInvitePage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
-      setUser(user)
 
       supabase.from('user_profile').select('*').eq('user_id', user.id).single()
         .then(async ({ data: p }) => {

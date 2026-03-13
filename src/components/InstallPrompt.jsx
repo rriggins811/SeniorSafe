@@ -35,9 +35,9 @@ export default function InstallPrompt() {
     }
     window.addEventListener('beforeinstallprompt', handler)
 
-    // iOS Safari: show manual instructions banner
+    // iOS Safari: show manual instructions banner (deferred to avoid synchronous setState in effect)
     if (isIOSSafari() && !recentlyDismissed) {
-      setShowIOSBanner(true)
+      queueMicrotask(() => setShowIOSBanner(true))
     }
 
     // Hide if installed
