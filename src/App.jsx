@@ -18,6 +18,7 @@ import ProfilePage from './pages/ProfilePage'
 import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import UpgradePage from './pages/UpgradePage'
+import SupportPage from './pages/SupportPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import InstallPrompt from './components/InstallPrompt'
 
@@ -74,6 +75,7 @@ export default function App() {
         <Route path="/family-invite" element={<P><FamilyInvitePage /></P>} />
         <Route path="/profile"       element={<P><ProfilePage /></P>} />
         <Route path="/upgrade"       element={<P><UpgradePage /></P>} />
+        <Route path="/support"       element={<P><SupportPage /></P>} />
         <Route path="/reset-password"  element={<ResetPasswordPage />} />
         <Route path="/terms"         element={<TermsPage />} />
         <Route path="/privacy"       element={<PrivacyPage />} />
