@@ -19,6 +19,7 @@ import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import UpgradePage from './pages/UpgradePage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import InstallPrompt from './components/InstallPrompt'
 
 function ProtectedRoute({ children }) {
   const [session, setSession] = useState(undefined)
@@ -56,6 +57,7 @@ function P({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <InstallPrompt />
       <Routes>
         <Route path="/"            element={<WelcomePage />} />
         <Route path="/signup"      element={<SignUpPage />} />
