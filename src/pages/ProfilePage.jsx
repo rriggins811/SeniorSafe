@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Settings, Clock, Lock, Trash2, AlertTriangle, Phone, Plus, X, Pencil, Mail, LogOut, CreditCard } from 'lucide-react'
+import { ArrowLeft, Settings, Clock, Lock, Trash2, AlertTriangle, Phone, Plus, X, Pencil, Mail, LogOut, CreditCard, HelpCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const SUPABASE_FN_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1'
@@ -599,6 +599,16 @@ export default function ProfilePage() {
                 <Mail size={14} className="text-gray-400" />
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Help &amp; Support</p>
               </div>
+              <button
+                onClick={() => navigate('/support')}
+                className="w-full flex items-center gap-3 py-3 px-4 rounded-xl bg-[#1B365D]/5 hover:bg-[#1B365D]/10 transition-colors mb-2"
+              >
+                <HelpCircle size={18} className="text-[#D4A843] flex-shrink-0" />
+                <div className="text-left">
+                  <p className="text-[#1B365D] font-semibold text-sm">Help Center</p>
+                  <p className="text-gray-400 text-xs">FAQs, guides, and contact info</p>
+                </div>
+              </button>
               <a
                 href="mailto:support@seniorsafeapp.com?subject=SeniorSafe%20Support%20Request"
                 className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
