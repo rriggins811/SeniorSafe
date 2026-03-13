@@ -30,28 +30,6 @@ export default function FamilyPage() {
   const msgPhotoRef = useRef(null)
   const photoUploadRef = useRef(null)
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      setUser(user)
-      fetchMessages()
-      fetchPhotos()
-      fetchCheckins(user.id)
-      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
-        .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
-    })
-  }, [])
-
-  // Resolve a photo_url to a viewable URL (handles both legacy full URLs and storage paths)
-  async function resolvePhotoUrl(storedUrl) {
-    if (!storedUrl) return ''
-    // Legacy full URL — already viewable (or broken if bucket went private)
-    if (storedUrl.startsWith('http')) return storedUrl
-    // Storage path — generate a signed URL (1 hour expiry)
-    const { data } = await supabase.storage.from('Documents').createSignedUrl(storedUrl, 3600)
-    return data?.signedUrl || ''
-  }
-
   async function fetchMessages() {
     setMsgLoading(true)
     // No user_id filter — RLS policy scopes to family via family_name
@@ -119,6 +97,18 @@ export default function FamilyPage() {
     setCheckins(data || [])
     setCheckinLoading(false)
   }
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      setUser(user)
+      fetchMessages()
+      fetchPhotos()
+      fetchCheckins(user.id)
+      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
+        .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
+    })
+  }, [])
 
   function authorName() {
     return user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'Family'
@@ -211,7 +201,7 @@ export default function FamilyPage() {
         const marker = '/object/public/Documents/'
         const idx = url.pathname.indexOf(marker)
         if (idx !== -1) storagePath = decodeURIComponent(url.pathname.slice(idx + marker.length))
-      } catch (_) {}
+      } catch { /* ignore invalid URL */ }
     }
     if (storagePath) await supabase.storage.from('Documents').remove([storagePath])
     await supabase.from('family_photos').delete().eq('id', photo.id)

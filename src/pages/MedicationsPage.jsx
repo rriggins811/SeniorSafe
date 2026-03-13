@@ -62,6 +62,18 @@ export default function MedicationsPage() {
     reminder_enabled: false, reminder_phone: '',
   })
 
+  async function fetchAll() {
+    setLoading(true)
+    // No user_id filter — RLS scopes to family via family_name
+    const [{ data: meds }, { data: logs }] = await Promise.all([
+      supabase.from('medications').select('*').eq('active', true).order('created_at'),
+      supabase.from('med_logs').select('id, medication_id, scheduled_time, user_id').eq('date', todayStr()),
+    ])
+    setMedications(meds || [])
+    setTodayLogs(logs || [])
+    setLoading(false)
+  }
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
@@ -76,18 +88,6 @@ export default function MedicationsPage() {
         })
     })
   }, [])
-
-  async function fetchAll() {
-    setLoading(true)
-    // No user_id filter — RLS scopes to family via family_name
-    const [{ data: meds }, { data: logs }] = await Promise.all([
-      supabase.from('medications').select('*').eq('active', true).order('created_at'),
-      supabase.from('med_logs').select('id, medication_id, scheduled_time, user_id').eq('date', todayStr()),
-    ])
-    setMedications(meds || [])
-    setTodayLogs(logs || [])
-    setLoading(false)
-  }
 
   function handleFreqChange(freq) {
     setForm(f => ({ ...f, frequency: freq, times: [...DEFAULT_TIMES[freq]] }))

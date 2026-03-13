@@ -18,7 +18,7 @@ export async function sendSMS(to, message) {
       body: JSON.stringify({ to, message }),
     })
     return res.ok
-  } catch (_) {
+  } catch {
     return false
   }
 }

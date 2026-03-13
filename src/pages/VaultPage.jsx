@@ -37,17 +37,6 @@ export default function VaultPage() {
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-      if (user) {
-        fetchDocuments(user.id)
-        supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
-          .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
-      }
-    })
-  }, [])
-
   async function fetchDocuments(userId) {
     setLoading(true)
     const { data, error } = await supabase
@@ -98,6 +87,17 @@ export default function VaultPage() {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+      if (user) {
+        fetchDocuments(user.id)
+        supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
+          .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
+      }
+    })
+  }, [])
 
   function openFilePicker(e) {
     const file = e.target.files?.[0]
@@ -169,7 +169,7 @@ export default function VaultPage() {
           await supabase.storage.from('Documents').remove([decodeURIComponent(path.slice(idx + marker.length))])
         }
       }
-    } catch (_) { /* ignore storage errors — still delete DB row */ }
+    } catch { /* ignore storage errors — still delete DB row */ }
 
     await supabase.from('documents').delete().eq('id', doc.id)
     setDocuments(prev => prev.filter(d => d.id !== doc.id))

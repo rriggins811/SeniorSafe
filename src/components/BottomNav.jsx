@@ -34,7 +34,9 @@ export default function BottomNav({ inline = false }) {
   return (
     <nav className={wrapClass}>
       <div className="flex max-w-lg mx-auto">
-        {NAV_TABS.map(({ label, icon: Icon, path, premium }) => {
+        {NAV_TABS.map((tab) => {
+          const { label, path, premium } = tab
+          const Icon = tab.icon
           const active = pathname === path
           const locked = isFree && premium
           return (

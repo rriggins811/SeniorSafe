@@ -202,14 +202,17 @@ export default function UpgradePage() {
               <h2 className="text-[#1B365D] font-bold text-lg">Premium Features</h2>
             </div>
             <ul className="flex flex-col gap-3">
-              {PAID_FEATURES.map(({ icon: Icon, text }, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-[#D4A843]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Icon size={13} className="text-[#D4A843]" strokeWidth={2} />
-                  </div>
-                  <span className="text-gray-700 text-[15px] leading-snug">{text}</span>
-                </li>
-              ))}
+              {PAID_FEATURES.map((feat, i) => {
+                const Icon = feat.icon
+                return (
+                  <li key={i} className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-[#D4A843]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Icon size={13} className="text-[#D4A843]" strokeWidth={2} />
+                    </div>
+                    <span className="text-gray-700 text-[15px] leading-snug">{feat.text}</span>
+                  </li>
+                )
+              })}
             </ul>
           </div>
 
@@ -217,7 +220,7 @@ export default function UpgradePage() {
           <div className="bg-gray-50 rounded-2xl p-5 border border-gray-200">
             <h3 className="text-gray-500 font-semibold text-sm mb-3 uppercase tracking-wide">Free Plan Includes</h3>
             <ul className="flex flex-col gap-2.5">
-              {FREE_FEATURES.map(({ icon: Icon, text }, i) => (
+              {FREE_FEATURES.map(({ text }, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <CheckCircle size={16} className="text-gray-400 flex-shrink-0 mt-0.5" strokeWidth={2} />
                   <span className="text-gray-500 text-sm leading-snug">{text}</span>

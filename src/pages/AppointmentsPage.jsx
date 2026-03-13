@@ -81,16 +81,6 @@ export default function AppointmentsPage() {
     appointment_date: '', appointment_time: '', location: '', notes: '',
   })
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      setUser(user)
-      fetchAppointments()
-      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
-        .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
-    })
-  }, [])
-
   async function fetchAppointments() {
     setLoading(true)
     // No user_id filter — RLS scopes to family via family_name
@@ -102,6 +92,16 @@ export default function AppointmentsPage() {
     setAppointments(data || [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      setUser(user)
+      fetchAppointments()
+      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
+        .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
+    })
+  }, [])
 
   async function handleAdd(e) {
     e.preventDefault()
