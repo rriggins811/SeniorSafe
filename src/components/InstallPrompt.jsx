@@ -22,8 +22,8 @@ export default function InstallPrompt() {
     // Already installed as PWA — don't show anything
     if (isStandalone()) return
 
-    const dismissed = localStorage.getItem('pwa-install-dismissed')
-    const recentlyDismissed = dismissed && Date.now() - parseInt(dismissed) < 7 * 24 * 60 * 60 * 1000
+    const dismissed = sessionStorage.getItem('pwa-install-dismissed')
+    const recentlyDismissed = !!dismissed
 
     // Android/Chrome: listen for native install prompt
     const handler = (e) => {
@@ -67,7 +67,7 @@ export default function InstallPrompt() {
   const handleDismiss = () => {
     setShowAndroidBanner(false)
     setShowIOSBanner(false)
-    localStorage.setItem('pwa-install-dismissed', Date.now().toString())
+    sessionStorage.setItem('pwa-install-dismissed', '1')
   }
 
   // Android/Chrome native install banner
