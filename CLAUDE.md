@@ -231,7 +231,7 @@ Both books drive readers to rigginsstrategicsolutions.com/bookresources for emai
 | Routing | React Router DOM | 7.13 |
 | Icons | Lucide React | 0.575 |
 | Database/Auth | Supabase | JS client 2.98 |
-| AI | Anthropic Claude API | claude-opus-4-5 (direct browser) |
+| AI | Anthropic Claude API | claude-haiku-4-5 via Edge Function (prompt caching enabled) |
 | SMS | Twilio REST API | via Supabase Edge Functions |
 | Hosting | Vercel | auto-deploy from GitHub |
 | Landing Page | GoHighLevel | seniorsafeapp.com |
@@ -312,6 +312,9 @@ message_week_start  date  -- for weekly AI reset (paid tier)
 | `emergency_info` | First responder card (blood_type, allergies, doctors, emergency contacts, insurance) |
 | `family_members` | Legacy/reserved |
 | `reminder_logs` | Dedup tracker for medication SMS (medication_id, date, scheduled_time) |
+| `ai_conversations` | Chat conversation history (user_id, family_code, title, timestamps) |
+| `ai_messages` | Individual messages within conversations (conversation_id, role, content) — cascades on conversation delete |
+| `ai_usage` | Per-family monthly AI message usage tracking (family_code, month_year, message_count) — NOT per user |
 
 ---
 
@@ -502,16 +505,18 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 - "Send them a reminder" button → SMS to admin's phone
 
 ### AIPage — key details
-- Direct Anthropic API from browser (`anthropic-dangerous-direct-browser-access: true`)
-- Model: `claude-opus-4-5` | Key: `VITE_ANTHROPIC_API_KEY`
-- SYSTEM_PROMPT: personalized with user_profile data (senior_name, age, living_situation, timeline, biggest_concern), includes all 19 Blueprint module references
-- **Free tier:** 10 messages lifetime (no reset)
-- **Paid tier:** 50 messages/week (resets every 7 days via `message_week_start` column)
-- Uses refs (`msgCountRef`, `msgLimitRef`, `userIdRef`, `profileRef`, `soundOnRef`, `tierRef`) to avoid stale closures
-- At limit: shows lead capture message with Ryan's text number (336) 553-8933
+- AI via Claude Haiku (claude-haiku-4-5-20251001) through `ai-chat` Supabase Edge Function with SSE streaming
+- **Prompt caching** enabled: base system prompt uses `cache_control: { type: "ephemeral" }` to cache at $0.10/MTok; per-user context (name, family, meds, recent topics) sent fresh each call
+- **Conversation history**: full sidebar on desktop (280px), slide-out drawer on mobile. Conversations grouped by Today/Yesterday/This Week/Older
+- **Messages saved to DB**: `ai_conversations` + `ai_messages` tables. Auto-title generated from first user message (5 words max)
+- **Long conversation truncation**: 50+ messages → send first 4 + last 20 to API
+- **Family-level usage**: tracked in `ai_usage` table by `family_code` + month. NOT stored on user_profile
+- **Free tier:** 10 messages LIFETIME (across all users in the family)
+- **Paid tier:** 500 messages/month per family (resets each calendar month)
 - Counter below input: gray → yellow at 80%+ → red at 95%+ of limit
 - Voice: Web Speech API (`speechSynthesis`) with sound toggle
-- **iOS fix:** "Tap to enable voice" banner on mobile to unlock audio context (required by iOS Safari)
+- **iOS fix:** "Tap to enable voice" banner on mobile to unlock audio context
+- **Auto-cleanup cron** (`ai-cleanup` edge function): runs nightly at 3 AM EST — deletes conversations older than 90 days, usage records older than 6 months
 
 ### FamilyInvitePage
 - Admin: shows family_code in large display, copy + share buttons, member list with remove option
@@ -555,10 +560,10 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 ## Freemium Model
 - **subscription_tier** column on `user_profile` ('free' or 'paid', DEFAULT 'paid')
 - All beta users default to 'paid' — free tier built in code but not exposed to public yet
-- **Paid features ($14.99/month):** I'm Okay with SMS, "I Need Help" alerts, all pages, 50 AI messages/week (resets every 7 days)
+- **Paid features ($14.99/month):** I'm Okay with SMS, "I Need Help" alerts, all pages, 500 AI messages/month per family
 - **Free features:** I'm Okay (no SMS), messages view-only, photos/vault/meds/appts/emergency/invite blocked, "I Need Help" blocked
-- **Free AI limit:** 10 messages lifetime (no reset)
-- **Weekly reset:** `message_week_start` date on profile; if >7 days old → reset count to 0
+- **Free AI limit:** 10 messages lifetime per family (no reset)
+- **AI usage tracking:** `ai_usage` table keyed on (family_code, month_year). RPC functions: `increment_family_usage`, `get_family_usage`, `get_family_total_usage`
 - **Stripe:** not yet integrated — upgrade by texting Ryan (336) 553-8933
 
 ---
