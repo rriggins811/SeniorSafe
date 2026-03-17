@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { CheckCircle, ChevronLeft, Clock, Users, Smartphone } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { CheckCircle, ChevronLeft, Clock, Users, Copy, Share2, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { generateFamilyCode } from '../lib/familyCode'
-import { sendSMS } from '../lib/sms'
-
-const TOTAL = 3
 
 // Time options: 30-min increments from 6 AM to 8 PM
 const TIME_OPTIONS = []
@@ -20,31 +17,32 @@ for (let h = 6; h <= 20; h++) {
   }
 }
 
-function detectPlatform() {
-  const ua = navigator.userAgent || ''
-  if (/iPhone|iPad|iPod/i.test(ua)) return 'ios'
-  if (/Android/i.test(ua)) return 'android'
-  return 'desktop'
+// Step offsets and totals per path (signup steps already completed)
+const PATH_CONFIG = {
+  'parent-setup': { signupSteps: 1, onboardingSteps: 3, total: 4 },
+  'member-join':  { signupSteps: 2, onboardingSteps: 1, total: 3 },
+  'self-setup':   { signupSteps: 1, onboardingSteps: 3, total: 4 },
 }
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const path = searchParams.get('path') || 'parent-setup'
+  const config = PATH_CONFIG[path] || PATH_CONFIG['parent-setup']
+
   const [user, setUser] = useState(null)
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
 
-  // Step 1: Check-in time
-  const [checkinTime, setCheckinTime] = useState('10:00')
+  // Check-in time (default 9 AM)
+  const [checkinTime, setCheckinTime] = useState('09:00')
 
-  // Step 2: Invite family member
-  const [inviteName, setInviteName] = useState('')
-  const [invitePhone, setInvitePhone] = useState('')
-  const [inviteSending, setInviteSending] = useState(false)
-  const [inviteSent, setInviteSent] = useState(false)
-  const [inviteError, setInviteError] = useState('')
+  // Check-in demo
+  const [checkedIn, setCheckedIn] = useState(false)
+  const [checkInLoading, setCheckInLoading] = useState(false)
 
-  // Step 3: platform detection
-  const [platform] = useState(detectPlatform)
+  // Family code
+  const [codeCopied, setCodeCopied] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -61,61 +59,60 @@ export default function OnboardingPage() {
     })
   }, [navigate])
 
-  async function handleSaveTime() {
-    // Save check-in time immediately
-    if (user) {
-      await supabase
-        .from('user_profile')
-        .update({ checkin_alert_time: checkinTime })
-        .eq('user_id', user.id)
-    }
-    setStep(1)
+  const meta = user?.user_metadata || {}
+  const seniorName = meta.first_name || 'your loved one'
+  const familyCode = meta.family_code || ''
+
+  function displayStep() {
+    return config.signupSteps + step + 1
   }
 
-  async function handleSendInvite() {
-    if (!inviteName.trim() || !invitePhone.trim()) return
-    setInviteSending(true)
-    setInviteError('')
+  function goBack() {
+    if (step > 0) setStep(s => s - 1)
+  }
 
+  // ─── Check-in demo ────────────────────────────────────────────────
+  async function handleDemoCheckIn() {
+    if (!user || checkedIn || checkInLoading) return
+    setCheckInLoading(true)
+    await supabase.from('checkins').insert({
+      user_id: user.id,
+      family_name: meta.family_name || '',
+      checked_in_at: new Date().toISOString(),
+    })
+    setCheckInLoading(false)
+    setCheckedIn(true)
+  }
+
+  // ─── Copy family code ─────────────────────────────────────────────
+  async function handleCopyCode() {
     try {
-      // Ensure admin has a family_code
-      const { data: profile } = await supabase
-        .from('user_profile')
-        .select('family_code')
-        .eq('user_id', user.id)
-        .single()
-
-      let code = profile?.family_code
-      if (!code) {
-        code = await generateFamilyCode()
-        await supabase
-          .from('user_profile')
-          .update({ family_code: code })
-          .eq('user_id', user.id)
-      }
-
-      // Send SMS invite
-      const firstName = user.user_metadata?.first_name || user.user_metadata?.family_name || 'Someone'
-      const smsBody = `${firstName} invited you to SeniorSafe! Join the family at app.seniorsafeapp.com/signup?code=${code} Reply STOP to opt out`
-
-      const sent = await sendSMS(invitePhone.trim(), smsBody)
-      if (!sent) throw new Error('SMS failed to send')
-
-      setInviteSent(true)
-    } catch (err) {
-      setInviteError(err.message || 'Could not send invite')
-    } finally {
-      setInviteSending(false)
+      await navigator.clipboard.writeText(familyCode)
+      setCodeCopied(true)
+      setTimeout(() => setCodeCopied(false), 2000)
+    } catch {
+      // Fallback: select a hidden input
     }
   }
 
+  // ─── Share family code ─────────────────────────────────────────────
+  async function handleShare() {
+    const url = `https://app.seniorsafeapp.com/signup?code=${familyCode}`
+    const text = `Join ${seniorName}'s family on SeniorSafe! Use code ${familyCode} or tap this link: ${url}`
+
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Join SeniorSafe', text }) } catch { /* cancelled */ }
+    } else {
+      try { await navigator.clipboard.writeText(text); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) } catch { /* noop */ }
+    }
+  }
+
+  // ─── Save profile and finish (admin paths) ────────────────────────
   async function handleFinish() {
+    if (!user) return
     setSaving(true)
-    const meta = user.user_metadata || {}
-    const role = meta.role || 'admin'
-    const family_code = role === 'member'
-      ? null
-      : (meta.family_code || await generateFamilyCode())
+
+    const familyCodeFinal = meta.family_code || await generateFamilyCode()
 
     const { error } = await supabase.from('user_profile').upsert({
       user_id: user.id,
@@ -123,9 +120,11 @@ export default function OnboardingPage() {
       first_name: meta.first_name || '',
       last_name: meta.last_name || '',
       phone: meta.phone || null,
-      role,
-      family_code,
-      invited_by: meta.invited_by || null,
+      role: 'admin',
+      family_code: familyCodeFinal,
+      invited_by: null,
+      senior_name: meta.senior_name || meta.first_name || '',
+      senior_age: meta.senior_age || null,
       checkin_alert_time: checkinTime,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       onboarding_complete: true,
@@ -133,247 +132,424 @@ export default function OnboardingPage() {
 
     setSaving(false)
     if (error) {
-      alert('Error saving your profile: ' + error.message)
+      alert('Error saving profile: ' + error.message)
     } else {
       navigate('/dashboard')
     }
   }
 
-  const progressPct = ((step + 1) / TOTAL) * 100
+  // ─── Finish for member path ────────────────────────────────────────
+  async function handleMemberFinish() {
+    if (!user) return
+    setSaving(true)
 
-  // ─── Step 1: Set Check-In Time ────────────────────────────────────
-  if (step === 0) {
-    return (
-      <div className="min-h-screen bg-white flex flex-col">
-        <Header step={step} setStep={setStep} total={TOTAL} progressPct={progressPct} />
+    await supabase
+      .from('user_profile')
+      .update({ onboarding_complete: true })
+      .eq('user_id', user.id)
 
-        <div className="flex-1 px-6 pt-8 pb-6 max-w-sm mx-auto w-full flex flex-col gap-6">
-          <div className="flex flex-col items-center gap-3 text-center">
+    setSaving(false)
+    navigate('/dashboard')
+  }
+
+  if (!user) return null
+
+  // ═════════════════════════════════════════════════════════════════════
+  //  PATH A: Parent Setup — Onboarding Steps 2-4
+  // ═════════════════════════════════════════════════════════════════════
+  if (path === 'parent-setup') {
+    // Step 0 (display: 2/4) — Set check-in time
+    if (step === 0) {
+      return (
+        <Shell displayStep={displayStep()} total={config.total} onBack={null}>
+          <div className="flex flex-col items-center gap-2 text-center">
             <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
               <Clock size={32} color="#1B365D" strokeWidth={1.5} />
             </div>
-            <h1 className="text-[#1B365D] font-bold text-xl leading-snug">
-              When should your family expect to hear from you?
+            <h1 className="text-[#1B365D] font-bold text-2xl">
+              Set {seniorName}'s check-in time
             </h1>
-            <p className="text-gray-500 text-base leading-relaxed">
-              If you haven&apos;t checked in by this time, we&apos;ll alert your family.
+            <p className="text-gray-500 text-lg leading-relaxed">
+              What time should {seniorName} tap "I'm Okay" each morning?
             </p>
           </div>
 
           <select
             value={checkinTime}
             onChange={e => setCheckinTime(e.target.value)}
-            className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-gray-800 font-medium text-lg bg-white appearance-none"
+            className="w-full px-4 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-[#1B365D] text-gray-800 font-semibold text-xl bg-white"
           >
             {TIME_OPTIONS.map(t => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
 
-          <p className="text-gray-400 text-sm text-center">
-            You can change this anytime in Settings.
+          <p className="text-[#1B365D]/70 text-base bg-[#1B365D]/5 rounded-xl p-4 text-center">
+            If {seniorName} doesn't check in by this time, your family will be notified.
+          </p>
+
+          <BigButton onClick={() => setStep(1)}>Next</BigButton>
+        </Shell>
+      )
+    }
+
+    // Step 1 (display: 3/4) — Try the first check-in
+    if (step === 1) {
+      return (
+        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
+          <div className="flex flex-col items-center gap-3 text-center">
+            {!checkedIn ? (
+              <>
+                <h1 className="text-[#1B365D] font-bold text-2xl">
+                  Try the first check-in
+                </h1>
+                <p className="text-gray-500 text-lg leading-relaxed">
+                  Hand the phone to {seniorName} and let them try it — one tap!
+                </p>
+
+                <div className="w-full mt-4">
+                  <button
+                    onClick={handleDemoCheckIn}
+                    disabled={checkInLoading}
+                    className="w-full rounded-2xl py-8 flex flex-col items-center gap-3 bg-[#1B365D] shadow-lg active:scale-[0.97] transition-transform"
+                  >
+                    <CheckCircle size={48} color="#D4A843" strokeWidth={1.5} />
+                    <span className="text-white font-bold text-2xl">
+                      {checkInLoading ? 'Checking in...' : "I'm Okay Today"}
+                    </span>
+                    <span className="text-white/60 text-base">
+                      Tap to let your family know you're doing well
+                    </span>
+                  </button>
+                </div>
+
+                <p className="text-gray-400 text-sm mt-2">
+                  Go ahead — hand them the phone and let them tap it!
+                </p>
+              </>
+            ) : (
+              <>
+                {/* Celebration */}
+                <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle size={56} color="#16A34A" strokeWidth={2} />
+                </div>
+                <h1 className="text-green-700 font-bold text-2xl mt-2">
+                  Perfect!
+                </h1>
+                <p className="text-gray-600 text-xl leading-relaxed">
+                  {seniorName} is all set.
+                </p>
+                <p className="text-gray-400 text-base mt-1">
+                  They just need to do this once a day.
+                </p>
+              </>
+            )}
+          </div>
+
+          {checkedIn && (
+            <BigButton onClick={() => setStep(2)}>Next</BigButton>
+          )}
+        </Shell>
+      )
+    }
+
+    // Step 2 (display: 4/4) — Show family code
+    if (step === 2) {
+      return (
+        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
+          <div className="flex flex-col items-center gap-2 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-[#D4A843]/20 flex items-center justify-center">
+              <Sparkles size={32} color="#D4A843" strokeWidth={1.5} />
+            </div>
+            <h1 className="text-[#1B365D] font-bold text-2xl">
+              Now set up YOUR account
+            </h1>
+            <p className="text-gray-500 text-lg leading-relaxed">
+              Open SeniorSafe on <strong>your</strong> phone and use this code to join {seniorName}'s family.
+            </p>
+          </div>
+
+          {/* Large code display */}
+          <div className="bg-[#F5F5F5] rounded-2xl p-6 flex flex-col items-center gap-4">
+            <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Family Code</p>
+            <p className="text-4xl font-bold tracking-[0.25em] text-[#1B365D]">
+              {familyCode}
+            </p>
+
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={handleCopyCode}
+                className="flex-1 py-3 rounded-xl bg-[#1B365D] text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              >
+                <Copy size={18} />
+                {codeCopied ? 'Copied!' : 'Copy Code'}
+              </button>
+              <button
+                onClick={handleShare}
+                className="flex-1 py-3 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              >
+                <Share2 size={18} />
+                Share
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-[#1B365D]/5 rounded-xl p-4 flex flex-col gap-2">
+            <p className="text-[#1B365D] font-semibold text-base">What happens next:</p>
+            <p className="text-gray-600 text-base">
+              You'll get notified every time {seniorName} checks in — and if they don't check in on time.
+            </p>
+          </div>
+
+          <BigButton onClick={handleFinish} disabled={saving}>
+            {saving ? 'Saving...' : 'Done'}
+          </BigButton>
+        </Shell>
+      )
+    }
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  //  PATH B: Member Join — Onboarding Step 3/3
+  // ═════════════════════════════════════════════════════════════════════
+  if (path === 'member-join') {
+    const adminSeniorName = meta.family_name || `${seniorName}'s family`
+    return (
+      <Shell displayStep={3} total={3} onBack={null}>
+        <div className="flex flex-col items-center gap-4 text-center pt-4">
+          <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
+            <CheckCircle size={56} color="#16A34A" strokeWidth={2} />
+          </div>
+          <h1 className="text-[#1B365D] font-bold text-2xl">
+            You're connected!
+          </h1>
+          <p className="text-gray-600 text-xl">
+            Welcome to <strong>{adminSeniorName}</strong>
           </p>
         </div>
 
-        <div className="px-6 pb-10 max-w-sm mx-auto w-full flex-shrink-0">
-          <button
-            onClick={handleSaveTime}
-            className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg"
-          >
-            Next
-          </button>
+        <div className="bg-[#F5F5F5] rounded-2xl p-5 flex flex-col gap-4">
+          <p className="text-[#1B365D] font-semibold text-base">Here's what you'll get:</p>
+          <div className="flex flex-col gap-3">
+            <FeatureRow emoji="✓" text="Daily check-in notifications" />
+            <FeatureRow emoji="✓" text="Family message board" />
+            <FeatureRow emoji="✓" text="Shared document vault" />
+            <FeatureRow emoji="✓" text="Medication & appointment tracking" />
+            <FeatureRow emoji="✓" text="Emergency alerts" />
+          </div>
         </div>
-      </div>
+
+        <BigButton onClick={handleMemberFinish} disabled={saving}>
+          {saving ? 'Loading...' : 'Get Started'}
+        </BigButton>
+      </Shell>
     )
   }
 
-  // ─── Step 2: Invite a Family Member ───────────────────────────────
-  if (step === 1) {
-    return (
-      <div className="min-h-screen bg-white flex flex-col">
-        <Header step={step} setStep={setStep} total={TOTAL} progressPct={progressPct} />
+  // ═════════════════════════════════════════════════════════════════════
+  //  PATH C: Self Setup — Onboarding Steps 2-4
+  // ═════════════════════════════════════════════════════════════════════
+  if (path === 'self-setup') {
+    // Step 0 (display: 2/4) — Set check-in time
+    if (step === 0) {
+      return (
+        <Shell displayStep={displayStep()} total={config.total} onBack={null}>
+          <div className="flex flex-col items-center gap-2 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
+              <Clock size={32} color="#1B365D" strokeWidth={1.5} />
+            </div>
+            <h1 className="text-[#1B365D] font-bold text-2xl">
+              Set your daily check-in time
+            </h1>
+            <p className="text-gray-500 text-lg leading-relaxed">
+              What time would you like to check in each morning?
+            </p>
+          </div>
 
-        <div className="flex-1 px-6 pt-8 pb-6 max-w-sm mx-auto w-full flex flex-col gap-6">
-          <div className="flex flex-col items-center gap-3 text-center">
+          <select
+            value={checkinTime}
+            onChange={e => setCheckinTime(e.target.value)}
+            className="w-full px-4 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-[#1B365D] text-gray-800 font-semibold text-xl bg-white"
+          >
+            {TIME_OPTIONS.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+
+          <p className="text-[#1B365D]/70 text-base bg-[#1B365D]/5 rounded-xl p-4 text-center">
+            If you haven't checked in by this time, your family will be notified.
+          </p>
+
+          <BigButton onClick={() => setStep(1)}>Next</BigButton>
+        </Shell>
+      )
+    }
+
+    // Step 1 (display: 3/4) — Invite your family
+    if (step === 1) {
+      return (
+        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
+          <div className="flex flex-col items-center gap-2 text-center">
             <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
               <Users size={32} color="#1B365D" strokeWidth={1.5} />
             </div>
-            <h1 className="text-[#1B365D] font-bold text-xl leading-snug">
-              Add a family member
+            <h1 className="text-[#1B365D] font-bold text-2xl">
+              Invite your family
             </h1>
-            <p className="text-gray-500 text-base leading-relaxed">
-              They&apos;ll get notified when you check in each day.
+            <p className="text-gray-500 text-lg leading-relaxed">
+              Share this code with your children so they can check on you.
             </p>
           </div>
 
-          {inviteSent ? (
-            <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-5 flex flex-col items-center gap-3 text-center">
-              <CheckCircle size={36} color="#16A34A" strokeWidth={1.5} />
-              <p className="text-green-800 font-semibold">
-                Invite sent to {inviteName}!
-              </p>
-              <p className="text-green-700 text-sm">
-                They&apos;ll get a text with a link to join.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-col gap-3">
-                <input
-                  type="text"
-                  value={inviteName}
-                  onChange={e => setInviteName(e.target.value)}
-                  placeholder="First name"
-                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-gray-800 font-medium"
-                  style={{ fontSize: '18px' }}
-                />
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  value={invitePhone}
-                  onChange={e => setInvitePhone(e.target.value)}
-                  placeholder="Phone number"
-                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-gray-800 font-medium"
-                  style={{ fontSize: '18px' }}
-                />
-              </div>
+          {/* Large code display */}
+          <div className="bg-[#F5F5F5] rounded-2xl p-6 flex flex-col items-center gap-4">
+            <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Your Family Code</p>
+            <p className="text-4xl font-bold tracking-[0.25em] text-[#1B365D]">
+              {familyCode}
+            </p>
 
+            <div className="flex gap-3 w-full">
               <button
-                onClick={handleSendInvite}
-                disabled={!inviteName.trim() || !invitePhone.trim() || inviteSending}
-                className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-40"
+                onClick={handleCopyCode}
+                className="flex-1 py-3 rounded-xl bg-[#1B365D] text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
               >
-                {inviteSending ? 'Sending...' : 'Send Invite'}
+                <Copy size={18} />
+                {codeCopied ? 'Copied!' : 'Copy Code'}
               </button>
-
-              {inviteError && (
-                <p className="text-red-500 text-sm text-center">{inviteError}</p>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="px-6 pb-10 max-w-sm mx-auto w-full flex-shrink-0 flex flex-col gap-3">
-          {inviteSent ? (
-            <button
-              onClick={() => setStep(2)}
-              className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg"
-            >
-              Next
-            </button>
-          ) : (
-            <button
-              onClick={() => setStep(2)}
-              className="w-full py-4 rounded-xl bg-gray-200 text-gray-600 font-semibold text-base"
-            >
-              Skip for now
-            </button>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // ─── Step 3: Add to Home Screen ───────────────────────────────────
-  if (step === 2) {
-    return (
-      <div className="min-h-screen bg-white flex flex-col">
-        <Header step={step} setStep={setStep} total={TOTAL} progressPct={progressPct} />
-
-        <div className="flex-1 px-6 pt-8 pb-6 max-w-sm mx-auto w-full flex flex-col gap-6">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
-              <Smartphone size={32} color="#1B365D" strokeWidth={1.5} />
+              <button
+                onClick={handleShare}
+                className="flex-1 py-3 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
+              >
+                <Share2 size={18} />
+                Share
+              </button>
             </div>
-            <h1 className="text-[#1B365D] font-bold text-xl leading-snug">
-              Add SeniorSafe to your home screen
-            </h1>
-            <p className="text-gray-500 text-base leading-relaxed">
-              One tap to check in — just like a regular app.
-            </p>
           </div>
 
-          {platform === 'ios' && (
-            <div className="bg-[#F5F5F5] rounded-2xl p-5 flex flex-col gap-4">
-              <Step num="1" text='Tap the Share button at the bottom of Safari' icon="↑" />
-              <Step num="2" text='Scroll down and tap "Add to Home Screen"' />
-              <Step num="3" text='Tap "Add" in the top right' />
-            </div>
-          )}
+          <div className="flex flex-col gap-3">
+            <BigButton onClick={() => setStep(2)}>Next</BigButton>
+            <button
+              onClick={() => setStep(2)}
+              className="w-full py-4 rounded-xl bg-gray-100 text-gray-500 font-semibold text-lg"
+            >
+              I'll do this later
+            </button>
+          </div>
+        </Shell>
+      )
+    }
 
-          {platform === 'android' && (
-            <div className="bg-[#F5F5F5] rounded-2xl p-5 flex flex-col gap-4">
-              <Step num="1" text='Tap the three dots (⋮) in the top-right of Chrome' />
-              <Step num="2" text='Tap "Add to Home screen"' />
-              <Step num="3" text='Tap "Add"' />
-            </div>
-          )}
+    // Step 2 (display: 4/4) — Try your first check-in
+    if (step === 2) {
+      return (
+        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
+          <div className="flex flex-col items-center gap-3 text-center">
+            {!checkedIn ? (
+              <>
+                <h1 className="text-[#1B365D] font-bold text-2xl">
+                  Try your first check-in
+                </h1>
+                <p className="text-gray-500 text-lg leading-relaxed">
+                  This is what you'll do every morning — one tap!
+                </p>
 
-          {platform === 'desktop' && (
-            <div className="bg-[#F5F5F5] rounded-2xl p-5 flex flex-col gap-4 text-center">
-              <p className="text-[#1B365D] font-semibold text-base">
-                Visit app.seniorsafeapp.com on your phone to add it to your home screen.
-              </p>
-              <p className="text-gray-500 text-sm leading-relaxed">
-                SeniorSafe works best as a home screen shortcut on your phone — it&apos;s the easiest way to check in daily.
-              </p>
-            </div>
-          )}
-        </div>
+                <div className="w-full mt-4">
+                  <button
+                    onClick={handleDemoCheckIn}
+                    disabled={checkInLoading}
+                    className="w-full rounded-2xl py-8 flex flex-col items-center gap-3 bg-[#1B365D] shadow-lg active:scale-[0.97] transition-transform"
+                  >
+                    <CheckCircle size={48} color="#D4A843" strokeWidth={1.5} />
+                    <span className="text-white font-bold text-2xl">
+                      {checkInLoading ? 'Checking in...' : "I'm Okay Today"}
+                    </span>
+                    <span className="text-white/60 text-base">
+                      Tap to let your family know you're doing well
+                    </span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle size={56} color="#16A34A" strokeWidth={2} />
+                </div>
+                <h1 className="text-green-700 font-bold text-2xl mt-2">
+                  Perfect!
+                </h1>
+                <p className="text-gray-600 text-xl">
+                  You're all set. Just do this once a day.
+                </p>
+              </>
+            )}
+          </div>
 
-        <div className="px-6 pb-10 max-w-sm mx-auto w-full flex-shrink-0">
-          <button
-            onClick={handleFinish}
-            disabled={saving}
-            className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg disabled:opacity-40"
-          >
-            {saving ? 'Saving...' : 'Done — Go to Dashboard'}
-          </button>
-        </div>
-      </div>
-    )
+          {checkedIn && (
+            <BigButton onClick={handleFinish} disabled={saving}>
+              {saving ? 'Saving...' : 'Go to Dashboard'}
+            </BigButton>
+          )}
+        </Shell>
+      )
+    }
   }
 
   return null
 }
 
-// ─── Shared Header ───────────────────────────────────────────────────
-function Header({ step, setStep, total, progressPct }) {
+// ═════════════════════════════════════════════════════════════════════════
+//  Shared UI Components
+// ═════════════════════════════════════════════════════════════════════════
+
+function Shell({ displayStep, total, onBack, children }) {
+  const pct = (displayStep / total) * 100
   return (
-    <div className="bg-[#1B365D] flex-shrink-0">
-      <div className="px-6 pt-12 pb-4 max-w-sm mx-auto w-full flex items-center justify-between">
-        <button
-          onClick={() => step > 0 ? setStep(s => s - 1) : null}
-          className={`p-2 -ml-2 rounded-lg ${step === 0 ? 'opacity-0 pointer-events-none' : 'text-white/70'}`}
-        >
-          <ChevronLeft size={24} />
-        </button>
-        <span className="text-[#D4A843] text-sm font-semibold">
-          Step {step + 1} of {total}
-        </span>
-        <div className="w-8" />
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Header */}
+      <div className="bg-[#1B365D] flex-shrink-0">
+        <div className="px-6 pt-12 pb-4 max-w-md mx-auto w-full flex items-center justify-between">
+          {onBack ? (
+            <button onClick={onBack} className="p-2 -ml-2 rounded-lg text-white/70 active:text-white">
+              <ChevronLeft size={24} />
+            </button>
+          ) : (
+            <div className="w-8" />
+          )}
+          <span className="text-[#D4A843] text-sm font-semibold">
+            Step {displayStep} of {total}
+          </span>
+          <div className="w-8" />
+        </div>
+        <div className="w-full h-1 bg-white/20">
+          <div className="h-full bg-[#D4A843] transition-all duration-500" style={{ width: `${pct}%` }} />
+        </div>
       </div>
-      <div className="w-full h-1 bg-white/20">
-        <div
-          className="h-full bg-[#D4A843] transition-all duration-500"
-          style={{ width: `${progressPct}%` }}
-        />
+
+      {/* Content */}
+      <div className="flex-1 px-6 pt-8 pb-10 max-w-md mx-auto w-full flex flex-col gap-6 overflow-y-auto">
+        {children}
       </div>
     </div>
   )
 }
 
-// ─── Step indicator for home screen instructions ─────────────────────
-function Step({ num, text, icon }) {
+function BigButton({ onClick, disabled, children }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="w-8 h-8 rounded-full bg-[#1B365D] flex items-center justify-center flex-shrink-0">
-        <span className="text-white text-sm font-bold">{num}</span>
-      </div>
-      <p className="text-gray-700 text-base leading-snug pt-1">
-        {icon && <span className="font-bold mr-1">{icon}</span>}
-        {text}
-      </p>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full py-5 rounded-2xl bg-[#1B365D] text-[#D4A843] font-bold text-xl disabled:opacity-40 active:scale-[0.98] transition-transform mt-2"
+    >
+      {children}
+    </button>
+  )
+}
+
+function FeatureRow({ emoji, text }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-green-600 font-bold text-lg">{emoji}</span>
+      <span className="text-gray-700 text-base">{text}</span>
     </div>
   )
 }
