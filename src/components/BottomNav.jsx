@@ -16,14 +16,43 @@ export default function BottomNav({ inline = false }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [tier, setTier] = useState('paid')
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
-        .then(({ data }) => setTier(data?.subscription_tier || 'free'))
+    let cancelled = false
+
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user || cancelled) return
+
+      // Fetch tier and last_family_read_at in one query
+      const { data: profile } = await supabase
+        .from('user_profile')
+        .select('subscription_tier, last_family_read_at, family_name, family_code, role, invited_by')
+        .eq('user_id', user.id)
+        .single()
+
+      if (cancelled) return
+      setTier(profile?.subscription_tier || 'free')
+
+      // Get the family_name for querying family_messages
+      const familyName = profile?.family_name
+      const lastRead = profile?.last_family_read_at || new Date(0).toISOString()
+
+      if (!familyName) return
+
+      // Count unread messages: created after last_family_read_at, not by current user
+      const { count } = await supabase
+        .from('family_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('family_name', familyName)
+        .gt('created_at', lastRead)
+        .neq('user_id', user.id)
+
+      if (!cancelled) setUnreadCount(count || 0)
     })
-  }, [])
+
+    return () => { cancelled = true }
+  }, [pathname]) // Re-check on every navigation
 
   const isFree = tier === 'free'
 
@@ -39,6 +68,7 @@ export default function BottomNav({ inline = false }) {
           const Icon = tab.icon
           const active = pathname === path
           const locked = isFree && premium
+          const showBadge = label === 'Family' && unreadCount > 0
           return (
             <button
               key={path}
@@ -51,6 +81,13 @@ export default function BottomNav({ inline = false }) {
                 <Icon size={22} strokeWidth={active ? 2.5 : 1.5} />
                 {locked && (
                   <Lock size={10} strokeWidth={2.5} className="absolute -top-1 -right-2.5 text-[#D4A843]" />
+                )}
+                {showBadge && (
+                  <span
+                    className="absolute -top-2 -right-3 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#EF4444] text-white text-[10px] font-bold px-1 leading-none"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
                 )}
               </div>
               <span className="text-xs font-medium">{label}</span>
