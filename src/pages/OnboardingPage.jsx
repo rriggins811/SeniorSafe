@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, ChevronLeft, Clock, Users, Copy, Share2, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { generateFamilyCode } from '../lib/familyCode'
 
 // Time options: 30-min increments from 6 AM to 8 PM
 const TIME_OPTIONS = []
@@ -108,27 +107,17 @@ export default function OnboardingPage() {
   }
 
   // ─── Save profile and finish (admin paths) ────────────────────────
+  // Profile already exists (created in SignUpPage). Update with onboarding data.
   async function handleFinish() {
     if (!user) return
     setSaving(true)
 
-    const familyCodeFinal = meta.family_code || await generateFamilyCode()
-
-    const { error } = await supabase.from('user_profile').upsert({
-      user_id: user.id,
-      family_name: meta.family_name || '',
-      first_name: meta.first_name || '',
-      last_name: meta.last_name || '',
-      phone: meta.phone || null,
-      role: 'admin',
-      family_code: familyCodeFinal,
-      invited_by: null,
-      senior_name: meta.senior_name || meta.first_name || '',
-      senior_age: meta.senior_age || null,
-      checkin_alert_time: checkinTime,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      onboarding_complete: true,
-    }, { onConflict: 'user_id' })
+    const { error } = await supabase.from('user_profile')
+      .update({
+        checkin_alert_time: checkinTime,
+        onboarding_complete: true,
+      })
+      .eq('user_id', user.id)
 
     setSaving(false)
     if (error) {

@@ -108,7 +108,7 @@ export default function SignUpPage() {
       ? `The ${form.lastName.trim()} Family`
       : `${form.firstName.trim()}'s Family`
 
-    const { error: err } = await supabase.auth.signUp({
+    const { data, error: err } = await supabase.auth.signUp({
       email: form.email.trim(),
       password: form.password,
       options: {
@@ -127,6 +127,26 @@ export default function SignUpPage() {
     })
 
     if (err) { setError(err.message); setLoading(false); return }
+
+    // Create user_profile immediately so family_code is in the DB
+    // before it's displayed on the onboarding family code screen.
+    // OnboardingPage handleFinish() will update with checkin_alert_time later.
+    if (data?.user) {
+      await supabase.from('user_profile').upsert({
+        user_id: data.user.id,
+        family_name: familyName,
+        first_name: form.firstName.trim(),
+        last_name: form.lastName.trim(),
+        phone: form.phone.trim() || null,
+        role: 'admin',
+        family_code: familyCode,
+        senior_name: form.firstName.trim(),
+        senior_age: parseInt(form.age) || null,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        onboarding_complete: false,
+      }, { onConflict: 'user_id' })
+    }
+
     setLoading(false)
     navigate(`/onboarding?path=${path}`)
   }
