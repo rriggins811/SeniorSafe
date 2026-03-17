@@ -107,6 +107,12 @@ export default function FamilyPage() {
       fetchCheckins(user.id)
       supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
         .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
+
+      // Mark family messages as read — update last_family_read_at to now
+      supabase.from('user_profile')
+        .update({ last_family_read_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .then(() => {}) // fire and forget
     })
   }, [])
 

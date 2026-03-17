@@ -262,23 +262,16 @@ export default function DashboardPage() {
       return
     }
 
-    // Send follow-up SMS to family with the note (paid tier already confirmed)
-    const senderName = seniorName || user.user_metadata?.first_name || familyName || 'Your loved one'
-    const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-
-    const { data: memberProfiles } = await supabase
-      .from('user_profile')
-      .select('phone')
-      .eq('invited_by', user.id)
-      .not('phone', 'is', null)
-
-    if (memberProfiles?.length) {
-      await Promise.all(
-        memberProfiles.map(m =>
-          sendSMS(m.phone, `${senderName} checked in at ${time} — "${checkinNote.trim()}" — SeniorSafe. Reply STOP to opt out`)
-        )
-      )
-    }
+    // Also post the check-in note to family_messages so it appears in the Family Hub
+    // and triggers the family-message-notify edge function (SMS to members).
+    // This replaces the direct SMS sending below — the trigger handles it.
+    const noteAuthor = user.user_metadata?.first_name || familyName || 'Family'
+    await supabase.from('family_messages').insert({
+      user_id: user.id,
+      family_name: familyName,
+      author_name: noteAuthor,
+      message_text: `✅ Checked in: "${checkinNote.trim()}"`,
+    })
 
     setNoteSaving(false)
     setNoteSaved(true)
