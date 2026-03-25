@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:highlevel.stoplight.io)",
+      "WebSearch"
+    ]
+  },
+  "mcpServers": {
+    "gohighlevel": {
+      "type": "http",
+      "url": "https://services.leadconnectorhq.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer pit-fbd7bff6-ad09-4c59-84ef-7609c2fc2a6b",
+        "locationId": "qvSvBqNwvDLyqkKoZXl2"
+      }
+    }
+  }
+}
