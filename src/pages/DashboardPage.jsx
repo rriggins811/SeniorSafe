@@ -391,7 +391,7 @@ export default function DashboardPage() {
   const isMember = profile?.role === 'member'
   const isAdmin = !isMember
   const isSent = checkInStatus === 'sent'
-  const displayName = familyName || 'Your'
+  const displayName = familyName || 'Your Family'
   const showMemberWarning = isMember && adminCheckInLoaded && !adminCheckIn && new Date().getHours() >= 10
 
   return (
@@ -404,7 +404,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-[#D4A843] text-xs font-semibold tracking-wide">SENIORSAFE</p>
               <h1 className="text-white font-bold leading-tight" style={{ fontSize: '18px' }}>
-                {displayName} Family
+                {displayName}
               </h1>
             </div>
           </div>
