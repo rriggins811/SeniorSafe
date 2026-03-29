@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { App as CapApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -61,6 +63,29 @@ function P({ children }) {
 export default function App() {
   useEffect(() => {
     initializeIAP()
+
+    // Listen for deep link callbacks (OAuth redirect from system browser)
+    if (isNative()) {
+      const handleDeepLink = async ({ url }) => {
+        // Close the system browser after OAuth completes
+        try { await Browser.close() } catch {}
+
+        // Handle auth callback: extract tokens from URL fragment
+        if (url.includes('auth/callback')) {
+          // Tokens can be in hash fragment (#access_token=...) or query params (?access_token=...)
+          const hashParams = new URLSearchParams(url.split('#')[1] || '')
+          const queryParams = new URLSearchParams(url.split('?')[1]?.split('#')[0] || '')
+          const accessToken = hashParams.get('access_token') || queryParams.get('access_token')
+          const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token')
+
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+          }
+        }
+      }
+      CapApp.addListener('appUrlOpen', handleDeepLink)
+      return () => { CapApp.removeAllListeners() }
+    }
   }, [])
 
   return (

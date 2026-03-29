@@ -4,6 +4,7 @@ import { Shield, ChevronLeft, Heart, Users, User, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { generateFamilyCode } from '../lib/familyCode'
 import { isNative } from '../lib/platform'
+import { Browser } from '@capacitor/browser'
 
 const NATIVE_REDIRECT = 'com.rigginsstrategicsolutions.seniorsafe://auth/callback'
 
@@ -70,24 +71,46 @@ export default function SignUpPage() {
 
   async function handleGoogleSignUp() {
     setGoogleLoading(true)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: getOAuthRedirect() },
-    })
-    if (error) {
-      setError(error.message)
+    try {
+      if (isNative()) {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
+        })
+        if (error) throw error
+        if (data?.url) await Browser.open({ url: data.url })
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: getOAuthRedirect() },
+        })
+        if (error) throw error
+      }
+    } catch (err) {
+      setError(err.message)
       setGoogleLoading(false)
     }
   }
 
   async function handleAppleSignUp() {
     setAppleLoading(true)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'apple',
-      options: { redirectTo: getOAuthRedirect() },
-    })
-    if (error) {
-      setError(error.message)
+    try {
+      if (isNative()) {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
+        })
+        if (error) throw error
+        if (data?.url) await Browser.open({ url: data.url })
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: { redirectTo: getOAuthRedirect() },
+        })
+        if (error) throw error
+      }
+    } catch (err) {
+      setError(err.message)
       setAppleLoading(false)
     }
   }
