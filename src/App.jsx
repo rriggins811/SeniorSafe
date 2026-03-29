@@ -22,6 +22,7 @@ import SupportPage from './pages/SupportPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import InstallPrompt from './components/InstallPrompt'
 import ErrorBoundary from './components/ErrorBoundary'
+import { isNative } from './lib/platform'
 
 function ProtectedRoute({ children }) {
   const [session, setSession] = useState(undefined)
@@ -60,7 +61,7 @@ export default function App() {
   return (
     <ErrorBoundary>
     <BrowserRouter>
-      <InstallPrompt />
+      {!isNative() && <InstallPrompt />}
       <Routes>
         <Route path="/"            element={<WelcomePage />} />
         <Route path="/signup"      element={<SignUpPage />} />
