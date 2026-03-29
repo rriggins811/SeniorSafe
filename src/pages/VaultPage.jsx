@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Upload, Camera, Trash2, FileText, X, FolderLock, Lock, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
+import { openExternalLink } from '../lib/platform'
 
 const CATEGORIES = ['Legal', 'Financial', 'Medical', 'Property', 'Personal']
 const FILTER_TABS = ['All', ...CATEGORIES]
@@ -451,10 +452,8 @@ export default function VaultPage() {
               return (
                 <div key={doc.id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
                   {/* Thumbnail */}
-                  <a
-                    href={doc.signedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => openExternalLink(doc.signedUrl)}
                     className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center"
                   >
                     {isImg ? (
@@ -462,7 +461,7 @@ export default function VaultPage() {
                     ) : (
                       <FileText size={28} color="#9CA3AF" strokeWidth={1.5} />
                     )}
-                  </a>
+                  </button>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">

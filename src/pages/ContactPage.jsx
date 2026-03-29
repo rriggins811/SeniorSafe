@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { MessageSquare, CalendarDays, HelpCircle, ArrowLeft } from 'lucide-react'
+import { openExternalLink } from '../lib/platform'
 
 export default function ContactPage() {
   const navigate = useNavigate()
@@ -45,11 +46,9 @@ export default function ContactPage() {
         </a>
 
         {/* Button 2: Book a Free Call */}
-        <a
-          href="https://www.rigginsstrategicsolutions.com/work-with-ryan"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full flex items-center gap-4 bg-[#D4A843] rounded-2xl px-6 py-5 shadow-sm active:opacity-90 no-underline"
+        <button
+          onClick={() => openExternalLink('https://www.rigginsstrategicsolutions.com/work-with-ryan')}
+          className="w-full flex items-center gap-4 bg-[#D4A843] rounded-2xl px-6 py-5 shadow-sm active:opacity-90 no-underline text-left"
         >
           <div className="bg-white/20 rounded-xl p-3">
             <CalendarDays size={28} color="#1B365D" strokeWidth={1.5} />
@@ -58,7 +57,7 @@ export default function ContactPage() {
             <span className="text-[#1B365D] font-semibold text-lg">Book a Free Call</span>
             <span className="text-[#1B365D]/70 text-sm">Schedule time with Ryan</span>
           </div>
-        </a>
+        </button>
 
         {/* Button 3: Quick Question */}
         <a

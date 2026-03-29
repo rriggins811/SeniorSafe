@@ -4,6 +4,7 @@ import {
   ArrowLeft, ChevronDown, ChevronUp, HelpCircle, Phone, Mail,
   Calendar, Globe, BookOpen, Settings, CreditCard, MessageCircle
 } from 'lucide-react'
+import { openExternalLink } from '../lib/platform'
 
 const sections = [
   {
@@ -230,32 +231,28 @@ export default function SupportPage() {
             </a>
 
             {/* Booking */}
-            <a
-              href="https://api.leadconnectorhq.com/widget/booking/PEGCu2kXYDZgAPPzXGv5"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+            <button
+              onClick={() => openExternalLink('https://api.leadconnectorhq.com/widget/booking/PEGCu2kXYDZgAPPzXGv5')}
+              className="w-full flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left"
             >
               <Calendar size={18} className="text-[#1B365D] shrink-0" />
               <div>
                 <p className="text-[#1B365D] font-semibold text-sm">Book a Call</p>
                 <p className="text-gray-400 text-xs">Schedule a free consultation</p>
               </div>
-            </a>
+            </button>
 
             {/* Website */}
-            <a
-              href="https://rigginsstrategicsolutions.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+            <button
+              onClick={() => openExternalLink('https://rigginsstrategicsolutions.com')}
+              className="w-full flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left"
             >
               <Globe size={18} className="text-[#1B365D] shrink-0" />
               <div>
                 <p className="text-[#1B365D] font-semibold text-sm">Visit Our Website</p>
                 <p className="text-gray-400 text-xs">rigginsstrategicsolutions.com</p>
               </div>
-            </a>
+            </button>
           </div>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, Calendar, X, ChevronDown, ChevronUp, Download, Lock, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Calendar, X, ChevronDown, ChevronUp, Download, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { googleCalendarUrl } from '../lib/calendar'
+import { openExternalLink } from '../lib/platform'
 
 const APPT_TYPES = ['Medical', 'Dental', 'Vision', 'Therapy', 'Other']
 
@@ -230,8 +231,8 @@ export default function AppointmentsPage() {
           )}
 
           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-4">
-            <a
-              href={googleCalendarUrl(
+            <button
+              onClick={() => openExternalLink(googleCalendarUrl(
                 appt.title,
                 `${appt.appointment_date}T${appt.appointment_time || '09:00'}`,
                 `${appt.appointment_date}T${(() => {
@@ -240,14 +241,12 @@ export default function AppointmentsPage() {
                 })()}`,
                 appt.provider_name ? `with ${appt.provider_name}${appt.notes ? '\n' + appt.notes : ''}` : (appt.notes || ''),
                 appt.location || ''
-              )}
-              target="_blank"
-              rel="noopener noreferrer"
+              ))}
               className="flex items-center gap-1.5 text-[#1B365D] text-sm font-medium hover:opacity-70"
             >
               <Calendar size={14} strokeWidth={2} />
               Add to Google Calendar
-            </a>
+            </button>
             <button
               onClick={() => downloadIcs(appt)}
               className="flex items-center gap-1.5 text-gray-400 text-xs hover:text-gray-600"

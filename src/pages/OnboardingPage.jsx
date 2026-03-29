@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, ChevronLeft, Clock, Users, Copy, Share2, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { getAppUrl, copyToClipboard } from '../lib/platform'
 
 // Time options: 30-min increments from 6 AM to 8 PM
 const TIME_OPTIONS = []
@@ -85,24 +86,23 @@ export default function OnboardingPage() {
 
   // ─── Copy family code ─────────────────────────────────────────────
   async function handleCopyCode() {
-    try {
-      await navigator.clipboard.writeText(familyCode)
-      setCodeCopied(true)
-      setTimeout(() => setCodeCopied(false), 2000)
-    } catch {
-      // Fallback: select a hidden input
-    }
+    await copyToClipboard(familyCode)
+    setCodeCopied(true)
+    setTimeout(() => setCodeCopied(false), 2000)
   }
 
   // ─── Share family code ─────────────────────────────────────────────
   async function handleShare() {
-    const url = `https://app.seniorsafeapp.com/signup?code=${familyCode}`
+    const appUrl = getAppUrl()
+    const url = `${appUrl}/signup?code=${familyCode}`
     const text = `Join ${seniorName}'s family on SeniorSafe! Use code ${familyCode} or tap this link: ${url}`
 
     if (navigator.share) {
       try { await navigator.share({ title: 'Join SeniorSafe', text }) } catch { /* cancelled */ }
     } else {
-      try { await navigator.clipboard.writeText(text); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000) } catch { /* noop */ }
+      await copyToClipboard(text)
+      setCodeCopied(true)
+      setTimeout(() => setCodeCopied(false), 2000)
     }
   }
 

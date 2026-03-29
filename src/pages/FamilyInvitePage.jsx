@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Users, Copy, CheckCircle, UserMinus, Share2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { generateFamilyCode } from '../lib/familyCode'
+import { getAppUrl, copyToClipboard } from '../lib/platform'
 
 export default function FamilyInvitePage() {
   const navigate = useNavigate()
@@ -51,20 +52,20 @@ export default function FamilyInvitePage() {
     setMembers(prev => prev.filter(m => m.user_id !== memberId))
   }
 
-  function copyCode() {
+  async function copyCode() {
     if (!profile?.family_code) return
-    navigator.clipboard.writeText(profile.family_code)
+    await copyToClipboard(profile.family_code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
   }
 
-  function shareInvite() {
-    const appUrl = import.meta.env.VITE_APP_URL || window.location.origin
+  async function shareInvite() {
+    const appUrl = getAppUrl()
     const shareText = `Join my family on SeniorSafe to stay coordinated during our transition.\n\nUse invite code: ${profile.family_code}\nSign up at: ${appUrl}/signup`
     if (navigator.share) {
-      navigator.share({ title: 'Join me on SeniorSafe', text: shareText })
+      try { await navigator.share({ title: 'Join me on SeniorSafe', text: shareText }) } catch { /* cancelled */ }
     } else {
-      navigator.clipboard.writeText(shareText)
+      await copyToClipboard(shareText)
       setCopied(true)
       setTimeout(() => setCopied(false), 2500)
     }
