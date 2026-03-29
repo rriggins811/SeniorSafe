@@ -1,0 +1,22 @@
+{
+  "appId": "com.rigginsstrategicsolutions.seniorsafe",
+  "appName": "SeniorSafe App",
+  "webDir": "dist",
+  "server": {
+    "allowNavigation": [
+      "ynsakoxsmuvwfjgbhxky.supabase.co",
+      "accounts.google.com",
+      "appleid.apple.com"
+    ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "dark"
+    }
+  }
+}
