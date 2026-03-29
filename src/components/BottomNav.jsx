@@ -61,7 +61,7 @@ export default function BottomNav({ inline = false }) {
     : 'fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200'
 
   return (
-    <nav className={wrapClass}>
+    <nav className={wrapClass} style={!inline ? { paddingBottom: 'env(safe-area-inset-bottom)' } : undefined}>
       <div className="flex max-w-lg mx-auto">
         {NAV_TABS.map((tab) => {
           const { label, path, premium } = tab
