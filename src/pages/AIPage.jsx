@@ -120,54 +120,58 @@ export default function AIPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user: u } } = await supabase.auth.getUser()
-      if (!u) { navigate('/signin'); return }
-      setUser(u)
+      try {
+        const { data: { user: u } } = await supabase.auth.getUser()
+        if (!u) { navigate('/signin'); return }
+        setUser(u)
 
-      const { data: prof } = await supabase
-        .from('user_profile')
-        .select('*')
-        .eq('user_id', u.id)
-        .single()
-
-      if (!prof) return
-      setProfile(prof)
-
-      // Resolve family code + tier
-      let fc = prof.family_code
-      let t = prof.subscription_tier || 'free'
-      if (prof.role === 'member' && prof.invited_by) {
-        const { data: admin } = await supabase
+        const { data: prof } = await supabase
           .from('user_profile')
-          .select('family_code, subscription_tier')
-          .eq('user_id', prof.invited_by)
+          .select('*')
+          .eq('user_id', u.id)
           .single()
-        if (admin) { fc = admin.family_code; t = admin.subscription_tier || 'free' }
-      }
-      setFamilyCode(fc || '')
-      setTier(t)
-      setUsageLimit(t === 'free' ? FREE_LIMIT : PAID_LIMIT)
 
-      // Load conversations
-      const { data: convs } = await supabase
-        .from('ai_conversations')
-        .select('*')
-        .eq('user_id', u.id)
-        .order('updated_at', { ascending: false })
-      setConversations(convs || [])
+        if (!prof) return
+        setProfile(prof)
 
-      // Load usage
-      if (fc) {
-        if (t === 'free') {
-          const { data: total } = await supabase.rpc('get_family_total_usage', { p_family_code: fc })
-          setUsageCount(total || 0)
-        } else {
-          const { data: mc } = await supabase.rpc('get_family_usage', {
-            p_family_code: fc,
-            p_month_year: getMonthYear(),
-          })
-          setUsageCount(mc || 0)
+        // Resolve family code + tier
+        let fc = prof.family_code
+        let t = prof.subscription_tier || 'free'
+        if (prof.role === 'member' && prof.invited_by) {
+          const { data: admin } = await supabase
+            .from('user_profile')
+            .select('family_code, subscription_tier')
+            .eq('user_id', prof.invited_by)
+            .single()
+          if (admin) { fc = admin.family_code; t = admin.subscription_tier || 'free' }
         }
+        setFamilyCode(fc || '')
+        setTier(t)
+        setUsageLimit(t === 'free' ? FREE_LIMIT : PAID_LIMIT)
+
+        // Load conversations
+        const { data: convs } = await supabase
+          .from('ai_conversations')
+          .select('*')
+          .eq('user_id', u.id)
+          .order('updated_at', { ascending: false })
+        setConversations(convs || [])
+
+        // Load usage
+        if (fc) {
+          if (t === 'free') {
+            const { data: total } = await supabase.rpc('get_family_total_usage', { p_family_code: fc })
+            setUsageCount(total || 0)
+          } else {
+            const { data: mc } = await supabase.rpc('get_family_usage', {
+              p_family_code: fc,
+              p_month_year: getMonthYear(),
+            })
+            setUsageCount(mc || 0)
+          }
+        }
+      } catch (err) {
+        console.error('AI page data load error:', err)
       }
     })()
   }, [navigate])

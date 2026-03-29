@@ -4,8 +4,6 @@ import { Shield, ChevronLeft, Heart, Users, User, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { generateFamilyCode } from '../lib/familyCode'
 
-const TOTAL_STEPS = { 'parent-setup': 4, 'member-join': 3, 'self-setup': 4 }
-
 export default function SignUpPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()

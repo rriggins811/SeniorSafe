@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   Shield, CheckCircle, Pill, Calendar, MessageCircle,
-  Phone, Heart, LogOut, ChevronRight, Users, AlertTriangle, Settings, Lock,
+  Phone, Heart, LogOut, ChevronRight, Users, AlertTriangle, Settings, Lock, Sparkles,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { sendSMS } from '../lib/sms'
 import BottomNav from '../components/BottomNav'
-import { Sparkles } from 'lucide-react'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -44,6 +43,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
+      try {
       if (!user) return
       setUser(user)
       setFamilyName(user.user_metadata?.family_name || '')
@@ -178,6 +178,9 @@ export default function DashboardPage() {
         if (qRow) setDailyQuote(qRow)
       }
 
+      } catch (err) {
+        console.error('Dashboard data load error:', err)
+      }
     })
   }, [navigate])
 

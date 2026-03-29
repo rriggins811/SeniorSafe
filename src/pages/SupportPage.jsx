@@ -136,7 +136,6 @@ function AccordionItem({ question, answer }) {
   )
 }
 
-// eslint-disable-next-line no-unused-vars
 function AccordionSection({ title, icon: Icon, items }) {
   const [expanded, setExpanded] = useState(false)
   return (
