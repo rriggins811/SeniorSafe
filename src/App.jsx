@@ -23,6 +23,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 import InstallPrompt from './components/InstallPrompt'
 import ErrorBoundary from './components/ErrorBoundary'
 import { isNative } from './lib/platform'
+import { initializeIAP } from './lib/iap'
 
 function ProtectedRoute({ children }) {
   const [session, setSession] = useState(undefined)
@@ -58,6 +59,10 @@ function P({ children }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    initializeIAP()
+  }, [])
+
   return (
     <ErrorBoundary>
     <BrowserRouter>

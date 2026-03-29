@@ -5,6 +5,8 @@ import {
   Heart, Pill, FolderLock, Bot, Users, Bell, Clock,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { isIOS } from '../lib/platform'
+import { purchaseMonthly, restorePurchases, setIAPCallbacks } from '../lib/iap'
 
 const CHECKOUT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/create-checkout'
 
@@ -37,6 +39,26 @@ export default function UpgradePage() {
   const [isMember, setIsMember] = useState(false)
   const [adminUserId, setAdminUserId] = useState(null)
   const [adminSeniorName, setAdminSeniorName] = useState('')
+  const [iapLoading, setIapLoading] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+
+  const oniOS = isIOS()
+
+  // Register IAP callbacks so purchase results update this page
+  useEffect(() => {
+    if (!oniOS) return
+    setIAPCallbacks({
+      onSuccess: () => {
+        setIapLoading(false)
+        setTier('paid')
+      },
+      onError: (msg) => {
+        setIapLoading(false)
+        setError(msg)
+      },
+    })
+    return () => setIAPCallbacks({ onSuccess: null, onError: null })
+  }, [oniOS])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -88,6 +110,30 @@ export default function UpgradePage() {
       setError(err.message)
       setLoading(false)
     }
+  }
+
+  function handleIAPPurchase() {
+    setIapLoading(true)
+    setError('')
+    purchaseMonthly()
+  }
+
+  async function handleRestore() {
+    setRestoring(true)
+    setError('')
+    await restorePurchases()
+    // Give a moment for callbacks to fire, then check tier
+    setTimeout(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase.from('user_profile')
+          .select('subscription_tier')
+          .eq('user_id', user.id)
+          .single()
+        if (data?.subscription_tier === 'paid') setTier('paid')
+      }
+      setRestoring(false)
+    }, 2000)
   }
 
   const monthlyPrice = '$14.99'
@@ -152,36 +198,43 @@ export default function UpgradePage() {
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-lg mx-auto flex flex-col gap-6">
 
-          {/* Plan toggle */}
-          <div className="bg-white rounded-2xl p-1.5 flex shadow-sm">
-            <button
-              onClick={() => setPlan('monthly')}
-              className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                plan === 'monthly'
-                  ? 'bg-[#1B365D] text-white'
-                  : 'text-gray-500'
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setPlan('annual')}
-              className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-colors relative ${
-                plan === 'annual'
-                  ? 'bg-[#1B365D] text-white'
-                  : 'text-gray-500'
-              }`}
-            >
-              Annual
-              <span className="absolute -top-2.5 right-2 bg-[#D4A843] text-[#1B365D] text-[10px] font-bold px-2 py-0.5 rounded-full">
-                Save {savingsPercent}
-              </span>
-            </button>
-          </div>
+          {/* Plan toggle — hidden on iOS (only monthly IAP available) */}
+          {!oniOS && (
+            <div className="bg-white rounded-2xl p-1.5 flex shadow-sm">
+              <button
+                onClick={() => setPlan('monthly')}
+                className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-colors ${
+                  plan === 'monthly'
+                    ? 'bg-[#1B365D] text-white'
+                    : 'text-gray-500'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setPlan('annual')}
+                className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-colors relative ${
+                  plan === 'annual'
+                    ? 'bg-[#1B365D] text-white'
+                    : 'text-gray-500'
+                }`}
+              >
+                Annual
+                <span className="absolute -top-2.5 right-2 bg-[#D4A843] text-[#1B365D] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  Save {savingsPercent}
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* Price display */}
           <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
-            {plan === 'monthly' ? (
+            {oniOS ? (
+              <>
+                <p className="text-4xl font-bold text-[#1B365D]">{monthlyPrice}<span className="text-lg font-normal text-gray-400">/mo</span></p>
+                <p className="text-gray-400 text-sm mt-1">Billed monthly via Apple. Cancel anytime.</p>
+              </>
+            ) : plan === 'monthly' ? (
               <>
                 <p className="text-4xl font-bold text-[#1B365D]">{monthlyPrice}<span className="text-lg font-normal text-gray-400">/mo</span></p>
                 <p className="text-gray-400 text-sm mt-1">Billed monthly. Cancel anytime.</p>
@@ -229,21 +282,42 @@ export default function UpgradePage() {
             </ul>
           </div>
 
-          {/* CTA button */}
-          <button
-            onClick={handleCheckout}
-            disabled={loading}
-            className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
-          >
-            {loading ? 'Redirecting to checkout...' : `Start Premium — ${plan === 'monthly' ? monthlyPrice + '/mo' : annualMonthly + '/mo'}`}
-          </button>
+          {/* CTA button — Apple IAP on iOS, Stripe on web */}
+          {oniOS ? (
+            <>
+              <button
+                onClick={handleIAPPurchase}
+                disabled={iapLoading}
+                className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
+              >
+                {iapLoading ? 'Processing...' : `Subscribe — ${monthlyPrice}/month`}
+              </button>
+              <button
+                onClick={handleRestore}
+                disabled={restoring}
+                className="w-full py-3 text-[#1B365D] text-sm font-semibold underline disabled:opacity-50"
+              >
+                {restoring ? 'Restoring...' : 'Restore Purchases'}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleCheckout}
+              disabled={loading}
+              className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
+            >
+              {loading ? 'Redirecting to checkout...' : `Start Premium — ${plan === 'monthly' ? monthlyPrice + '/mo' : annualMonthly + '/mo'}`}
+            </button>
+          )}
 
           {error && (
             <p className="text-red-500 text-sm text-center">{error}</p>
           )}
 
           <p className="text-gray-400 text-xs text-center pb-4">
-            Secure payment via Stripe. Cancel anytime from your account settings.
+            {oniOS
+              ? 'Payment is charged to your Apple ID. Cancel anytime in Settings > Subscriptions.'
+              : 'Secure payment via Stripe. Cancel anytime from your account settings.'}
           </p>
         </div>
       </div>
