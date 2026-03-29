@@ -131,7 +131,7 @@ Massive security audit + feature buildout session. 50+ fixes deployed across sec
 git add <files> && git commit -m "description" && git push
 
 # Edge function deploy
-SUPABASE_ACCESS_TOKEN=REDACTED \
+SUPABASE_ACCESS_TOKEN=<your-supabase-access-token> \
   /c/Users/Ryanr/bin/supabase.exe functions deploy <function-name> \
   --project-ref ynsakoxsmuvwfjgbhxky --no-verify-jwt
 ```
@@ -351,7 +351,7 @@ Uses same Twilio pattern as `send-sms`:
 
 ### Deploy command
 ```bash
-SUPABASE_ACCESS_TOKEN=REDACTED \
+SUPABASE_ACCESS_TOKEN=<your-supabase-access-token> \
   /c/Users/Ryanr/bin/supabase.exe functions deploy <function-name> \
   --project-ref ynsakoxsmuvwfjgbhxky --no-verify-jwt
 ```
@@ -660,7 +660,7 @@ git commit -m "description"
 git push
 
 # Edge function deploy
-SUPABASE_ACCESS_TOKEN=REDACTED \
+SUPABASE_ACCESS_TOKEN=<your-supabase-access-token> \
   /c/Users/Ryanr/bin/supabase.exe functions deploy <function-name> \
   --project-ref ynsakoxsmuvwfjgbhxky --no-verify-jwt
 
