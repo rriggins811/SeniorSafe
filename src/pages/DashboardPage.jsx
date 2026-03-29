@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const [checkInStatus, setCheckInStatus] = useState('idle') // idle | loading | sent | done
   const [lastCheckIn, setLastCheckIn] = useState(null)
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false)
-  const [subscriptionTier, setSubscriptionTier] = useState('paid')
+  const [subscriptionTier, setSubscriptionTier] = useState('free')
   const [adminCheckIn, setAdminCheckIn] = useState(null)    // for member view
   const [adminCheckInLoaded, setAdminCheckInLoaded] = useState(false)
   const [medsDue, setMedsDue] = useState(0)

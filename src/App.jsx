@@ -21,6 +21,7 @@ import UpgradePage from './pages/UpgradePage'
 import SupportPage from './pages/SupportPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import InstallPrompt from './components/InstallPrompt'
+import ErrorBoundary from './components/ErrorBoundary'
 
 function ProtectedRoute({ children }) {
   const [session, setSession] = useState(undefined)
@@ -57,6 +58,7 @@ function P({ children }) {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <BrowserRouter>
       <InstallPrompt />
       <Routes>
@@ -90,5 +92,6 @@ export default function App() {
         } />
       </Routes>
     </BrowserRouter>
+    </ErrorBoundary>
   )
 }
