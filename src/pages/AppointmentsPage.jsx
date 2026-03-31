@@ -70,6 +70,7 @@ function downloadIcs(appt) {
 export default function AppointmentsPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
+  const [familyName, setFamilyName] = useState('')
   const [subscriptionTier, setSubscriptionTier] = useState(null)
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -99,8 +100,11 @@ export default function AppointmentsPage() {
       if (!user) return
       setUser(user)
       fetchAppointments()
-      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
-        .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
+      supabase.from('user_profile').select('subscription_tier, family_name').eq('user_id', user.id).single()
+        .then(({ data }) => {
+          setSubscriptionTier(data?.subscription_tier || 'free')
+          if (data?.family_name) setFamilyName(data.family_name)
+        })
     })
   }, [])
 
@@ -110,7 +114,7 @@ export default function AppointmentsPage() {
     setSaving(true)
     const { error } = await supabase.from('appointments').insert({
       user_id: user.id,
-      family_name: user.user_metadata?.family_name || '',
+      family_name: familyName,
       title: form.title.trim(),
       provider_name: form.provider_name.trim(),
       appointment_type: form.appointment_type,

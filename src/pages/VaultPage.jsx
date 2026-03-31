@@ -23,6 +23,7 @@ function isImageFile(fileName) {
 export default function VaultPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
+  const [familyName, setFamilyName] = useState('')
   const [subscriptionTier, setSubscriptionTier] = useState(null)
   const [role, setRole] = useState(null)
   const [vaultShared, setVaultShared] = useState(false)
@@ -101,7 +102,7 @@ export default function VaultPage() {
       // Fetch current user's profile
       const { data: profile } = await supabase
         .from('user_profile')
-        .select('subscription_tier, role, vault_shared, invited_by')
+        .select('subscription_tier, role, vault_shared, invited_by, family_name')
         .eq('user_id', authUser.id)
         .single()
 
@@ -110,6 +111,7 @@ export default function VaultPage() {
       setSubscriptionTier(profile.subscription_tier || 'free')
       setRole(profile.role || 'admin')
       setVaultShared(profile.vault_shared || false)
+      if (profile.family_name) setFamilyName(profile.family_name)
 
       if (profile.role === 'member' && profile.invited_by) {
         // Member: check admin's vault_shared setting and fetch their docs if shared
@@ -185,7 +187,7 @@ export default function VaultPage() {
 
     const { error: dbError } = await supabase.from('documents').insert({
       user_id: user.id,
-      family_name: user.user_metadata?.family_name || '',
+      family_name: familyName,
       file_name: file.name,
       file_url: storagePath,
       category,

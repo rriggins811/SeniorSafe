@@ -50,6 +50,7 @@ const STATUS_STYLES = {
 export default function MedicationsPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
+  const [familyName, setFamilyName] = useState('')
   const [subscriptionTier, setSubscriptionTier] = useState(null)
   const [medications, setMedications] = useState([])
   const [todayLogs, setTodayLogs] = useState([])   // { id, medication_id, scheduled_time }
@@ -81,11 +82,12 @@ export default function MedicationsPage() {
       setUser(user)
       fetchAll()
       // Fetch user's phone + subscription tier
-      supabase.from('user_profile').select('phone, subscription_tier').eq('user_id', user.id).single()
+      supabase.from('user_profile').select('phone, subscription_tier, family_name').eq('user_id', user.id).single()
         .then(({ data }) => {
           const phone = data?.phone || user.user_metadata?.phone || ''
           setUserPhone(phone)
           setSubscriptionTier(data?.subscription_tier || 'free')
+          if (data?.family_name) setFamilyName(data.family_name)
         })
     })
   }, [])
@@ -108,7 +110,7 @@ export default function MedicationsPage() {
     setSaving(true)
     const { error } = await supabase.from('medications').insert({
       user_id: user.id,
-      family_name: user.user_metadata?.family_name || '',
+      family_name: familyName,
       med_name: form.med_name.trim(),
       dosage: form.dosage.trim(),
       frequency: form.frequency,
@@ -135,7 +137,7 @@ export default function MedicationsPage() {
     } else {
       const { data } = await supabase.from('med_logs').insert({
         user_id: user.id,
-        family_name: user.user_metadata?.family_name || '',
+        family_name: familyName,
         medication_id: med.id,
         taken_at: new Date().toISOString(),
         scheduled_time: time,

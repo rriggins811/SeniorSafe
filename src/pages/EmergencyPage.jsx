@@ -39,6 +39,7 @@ function Section({ title, children }) {
 export default function EmergencyPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
+  const [familyName, setFamilyName] = useState('')
   const [info, setInfo] = useState(EMPTY)
   const [editMode, setEditMode] = useState(false)
   const [draft, setDraft] = useState(EMPTY)
@@ -65,6 +66,10 @@ export default function EmergencyPage() {
           setLoading(false)
         })
 
+      // Fetch family_name from profile (source of truth)
+      supabase.from('user_profile').select('family_name').eq('user_id', user.id).single()
+        .then(({ data }) => { if (data?.family_name) setFamilyName(data.family_name) })
+
       // Auto-populate medications summary if empty
       supabase.from('medications').select('med_name, dosage').eq('user_id', user.id).eq('active', true)
         .then(({ data: meds }) => {
@@ -82,7 +87,7 @@ export default function EmergencyPage() {
   async function handleSave() {
     if (!user) return
     setSaving(true)
-    const payload = { ...draft, user_id: user.id, family_name: user.user_metadata?.family_name || '' }
+    const payload = { ...draft, user_id: user.id, family_name: familyName }
     const { error } = hasRecord
       ? await supabase.from('emergency_info').update(payload).eq('user_id', user.id)
       : await supabase.from('emergency_info').insert(payload)

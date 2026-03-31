@@ -7,7 +7,8 @@ import BottomNav from '../components/BottomNav'
 export default function FamilyPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
-  const [subscriptionTier, setSubscriptionTier] = useState('paid')
+  const [familyName, setFamilyName] = useState('')
+  const [subscriptionTier, setSubscriptionTier] = useState('free')
   const [tab, setTab] = useState('messages') // 'messages' | 'photos' | 'history'
 
   // Messages
@@ -105,8 +106,11 @@ export default function FamilyPage() {
       fetchMessages()
       fetchPhotos()
       fetchCheckins(user.id)
-      supabase.from('user_profile').select('subscription_tier').eq('user_id', user.id).single()
-        .then(({ data }) => setSubscriptionTier(data?.subscription_tier || 'free'))
+      supabase.from('user_profile').select('subscription_tier, family_name').eq('user_id', user.id).single()
+        .then(({ data }) => {
+          setSubscriptionTier(data?.subscription_tier || 'free')
+          if (data?.family_name) setFamilyName(data.family_name)
+        })
 
       // Mark family messages as read — update last_family_read_at to now
       supabase.from('user_profile')
@@ -146,7 +150,7 @@ export default function FamilyPage() {
 
     const { error } = await supabase.from('family_messages').insert({
       user_id: user.id,
-      family_name: user.user_metadata?.family_name || '',
+      family_name: familyName,
       author_name: authorName(),
       message_text: newMsg.trim(),
       photo_url: photoUrl,
@@ -184,7 +188,7 @@ export default function FamilyPage() {
     // Store the raw storage path — signed URLs are generated on fetch
     await supabase.from('family_photos').insert({
       user_id: user.id,
-      family_name: user.user_metadata?.family_name || '',
+      family_name: familyName,
       uploaded_by: authorName(),
       photo_url: path,
     })
