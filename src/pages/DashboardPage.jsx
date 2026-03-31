@@ -80,6 +80,8 @@ export default function DashboardPage() {
           setProfile(p)
           setSeniorName(p?.senior_name || '')
           setSubscriptionTier(p?.subscription_tier || 'free')
+          // Use profile family_name as source of truth (user_metadata can be stale/mismatched)
+          if (p?.family_name) setFamilyName(p.family_name)
 
           // If member, check if admin has checked in today
           if (p?.invited_by) {
