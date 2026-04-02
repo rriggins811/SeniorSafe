@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { sendSMS } from '../lib/sms'
+import { isPremium, trialDaysRemaining } from '../lib/subscription'
 import BottomNav from '../components/BottomNav'
 
 export default function DashboardPage() {
@@ -41,6 +42,10 @@ export default function DashboardPage() {
   const [lastCheckinId, setLastCheckinId] = useState(null)
   // Daily quote/joke state
   const [dailyQuote, setDailyQuote] = useState(null)
+  // Trial countdown
+  const [trialDays, setTrialDays] = useState(null) // null = not in trial
+  const [showTrialModal, setShowTrialModal] = useState(false)
+  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -64,7 +69,9 @@ export default function DashboardPage() {
               first_name: fullName.split(' ')[0] || '',
               last_name: fullName.split(' ').slice(1).join(' ') || '',
               role: 'admin',
-              subscription_tier: 'free',
+              subscription_tier: 'trial',
+              trial_status: 'active',
+              trial_start_date: new Date().toISOString(),
               onboarding_complete: false,
               timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             })
@@ -83,6 +90,13 @@ export default function DashboardPage() {
           setSubscriptionTier(p?.subscription_tier || 'free')
           // Use profile family_name as source of truth (user_metadata can be stale/mismatched)
           if (p?.family_name) setFamilyName(p.family_name)
+
+          // Trial countdown
+          if (p?.trial_status === 'active' && p?.trial_start_date) {
+            const days = trialDaysRemaining(p.trial_start_date)
+            setTrialDays(days)
+            if (days === 0) setShowTrialModal(true)
+          }
 
           // If member, check if admin has checked in today
           if (p?.invited_by) {
@@ -225,11 +239,11 @@ export default function DashboardPage() {
     setCheckInStatus('sent')
     if (checkInData?.id) {
       setLastCheckinId(checkInData.id)
-      if (subscriptionTier === 'paid') setShowNoteInput(true)
+      if (isPremium(subscriptionTier)) setShowNoteInput(true)
     }
 
     // Only send SMS for paid tier
-    if (subscriptionTier === 'paid') {
+    if (isPremium(subscriptionTier)) {
       // Notify all family members who have a phone number
       const { data: memberProfiles } = await supabase
         .from('user_profile')
@@ -299,7 +313,7 @@ export default function DashboardPage() {
 
   async function sendNudge() {
     if (!profile?.invited_by || reminding) return
-    if (subscriptionTier !== 'paid') return // Nudge is paid-only
+    if (!isPremium(subscriptionTier)) return // Nudge is paid-only
     if (nudgeCount >= 2) return // Daily limit reached
     setReminding(true)
 
@@ -520,6 +534,32 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Trial countdown banners */}
+        {trialDays !== null && trialDays <= 4 && trialDays > 0 && !trialBannerDismissed && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex items-start gap-3">
+            <Sparkles size={20} color="#D97706" className="flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-amber-800 font-semibold text-sm">
+                {trialDays === 1
+                  ? 'Your free trial ends tomorrow!'
+                  : `Your free trial ends in ${trialDays} days`}
+              </p>
+              <p className="text-amber-700 text-sm mt-0.5 leading-relaxed">
+                {trialDays <= 1
+                  ? "Don't lose access to AI Assistant, Document Vault, and SMS Alerts."
+                  : 'Subscribe to keep all Premium features.'}
+              </p>
+              <button
+                onClick={() => navigate('/upgrade')}
+                className="mt-2 px-4 py-2 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-sm"
+              >
+                Subscribe Now
+              </button>
+            </div>
+            <button onClick={() => setTrialBannerDismissed(true)} className="text-amber-400 text-lg leading-none">&times;</button>
+          </div>
+        )}
+
         {/* Member: no check-in warning banner */}
         {showMemberWarning && (
           <div className="bg-yellow-50 border-2 border-yellow-400 rounded-2xl p-4 flex flex-col gap-3">
@@ -532,7 +572,7 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            {subscriptionTier === 'paid' ? (
+            {isPremium(subscriptionTier) ? (
               nudgeCount >= 2 ? (
                 <div className="w-full py-3 px-4 rounded-xl bg-yellow-50 border border-yellow-300 text-center">
                   <p className="text-yellow-800 text-sm leading-relaxed">
@@ -631,7 +671,7 @@ export default function DashboardPage() {
                 ? `Last check-in: ${formatCheckIn(lastCheckIn)}`
                 : 'No check-in today yet'}
             </p>
-            {alreadyCheckedIn && subscriptionTier !== 'paid' && (
+            {alreadyCheckedIn && !isPremium(subscriptionTier) && (
               <p className="text-center text-sm text-gray-400">
                 ✓ Family can see this in the app.{' '}
                 <button onClick={() => navigate('/upgrade')} className="text-[#D4A843] underline font-medium">
@@ -648,7 +688,7 @@ export default function DashboardPage() {
             )}
 
             {/* Check-in note input — paid tier */}
-            {showNoteInput && subscriptionTier === 'paid' && (
+            {showNoteInput && isPremium(subscriptionTier) && (
               <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-3">
                 <p className="text-[#1B365D] font-semibold text-sm">Add a note for your family (optional)</p>
                 <input
@@ -678,7 +718,7 @@ export default function DashboardPage() {
             )}
 
             {/* Check-in note teaser — free tier */}
-            {alreadyCheckedIn && subscriptionTier !== 'paid' && (
+            {alreadyCheckedIn && !isPremium(subscriptionTier) && (
               <div className="bg-white rounded-2xl px-4 py-3 shadow-sm">
                 <p className="text-gray-400 text-sm text-center">
                   📝 Add a note with your check-in —{' '}
@@ -690,7 +730,7 @@ export default function DashboardPage() {
             )}
 
             {/* Daily quote/joke — paid tier */}
-            {alreadyCheckedIn && subscriptionTier === 'paid' && dailyQuote && (
+            {alreadyCheckedIn && isPremium(subscriptionTier) && dailyQuote && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
                 <p className="text-amber-700 text-xs font-bold uppercase tracking-wide text-center mb-3">
                   {dailyQuote.type === 'quote' ? '💡 Daily Inspiration' : '😄 Daily Laugh'}
@@ -705,7 +745,7 @@ export default function DashboardPage() {
             )}
 
             {/* Daily quote teaser — free tier */}
-            {alreadyCheckedIn && subscriptionTier !== 'paid' && (
+            {alreadyCheckedIn && !isPremium(subscriptionTier) && (
               <div className="bg-white rounded-2xl px-4 py-3 shadow-sm">
                 <p className="text-gray-400 text-sm text-center">
                   ✨ Upgrade to Premium for a daily dose of inspiration —{' '}
@@ -728,7 +768,7 @@ export default function DashboardPage() {
 
         {/* ── Speed Dial Contacts ── */}
         {isAdmin && (
-          subscriptionTier === 'paid' ? (
+          isPremium(subscriptionTier) ? (
             quickDialContacts.length > 0 ? (
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1">
@@ -862,6 +902,40 @@ export default function DashboardPage() {
           <Link to="/privacy" className="underline hover:text-gray-500">Privacy Policy</Link>
         </p>
       </div>
+
+      {/* Trial expiry modal — last day */}
+      {showTrialModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-6">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col gap-5 shadow-xl text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+              <Sparkles size={32} color="#D97706" strokeWidth={1.5} />
+            </div>
+            <h2 className="text-[#1B365D] font-bold text-xl">Your Premium trial ends today</h2>
+            <p className="text-gray-500 text-base leading-relaxed">
+              After today you'll lose access to:
+            </p>
+            <ul className="text-gray-600 text-sm text-left space-y-2 px-2">
+              <li className="flex items-center gap-2"><Lock size={14} color="#D4A843" /> AI Assistant</li>
+              <li className="flex items-center gap-2"><Lock size={14} color="#D4A843" /> Document Vault</li>
+              <li className="flex items-center gap-2"><Lock size={14} color="#D4A843" /> Medication Tracking</li>
+              <li className="flex items-center gap-2"><Lock size={14} color="#D4A843" /> SMS Check-in Alerts</li>
+              <li className="flex items-center gap-2"><Lock size={14} color="#D4A843" /> Family Messaging</li>
+            </ul>
+            <button
+              onClick={() => { setShowTrialModal(false); navigate('/upgrade') }}
+              className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg"
+            >
+              Subscribe Now — $14.99/mo
+            </button>
+            <button
+              onClick={() => setShowTrialModal(false)}
+              className="text-gray-400 text-sm underline"
+            >
+              Continue with Free
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* I Need Help confirmation modal */}
       {helpModal && (

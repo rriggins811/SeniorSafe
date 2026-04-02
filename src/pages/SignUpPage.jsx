@@ -174,6 +174,9 @@ export default function SignUpPage() {
         senior_age: parseInt(form.age) || null,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         onboarding_complete: false,
+        subscription_tier: 'trial',
+        trial_status: 'active',
+        trial_start_date: new Date().toISOString(),
       }, { onConflict: 'user_id' })
     }
 
@@ -226,6 +229,9 @@ export default function SignUpPage() {
         family_code: null,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         onboarding_complete: false,
+        subscription_tier: 'trial',
+        trial_status: 'active',
+        trial_start_date: new Date().toISOString(),
       }, { onConflict: 'user_id' })
     }
 

@@ -98,19 +98,39 @@ serve(async (req: Request) => {
       console.log(`👨‍👩‍👧 Member ${user.id} upgrading admin ${admin_user_id}`)
     }
 
+    // ---- Check if user is still in trial (offer Stripe trial if so) ----
+    const supabaseServiceRole = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    )
+    const { data: targetProfile } = await supabaseServiceRole
+      .from('user_profile')
+      .select('trial_status, trial_start_date')
+      .eq('user_id', targetUserId)
+      .single()
+
+    // Calculate remaining trial days for Stripe trial_period_days
+    let trialDays = 0
+    if (targetProfile?.trial_status === 'active' && targetProfile?.trial_start_date) {
+      const start = new Date(targetProfile.trial_start_date)
+      const now = new Date()
+      const elapsed = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      trialDays = Math.max(0, 14 - elapsed)
+    }
+
     // ---- Determine return URL (use origin of request) ----
     const origin = req.headers.get('Origin') || 'https://app.seniorsafeapp.com'
     const successUrl = `${origin}/dashboard?upgraded=true`
     const cancelUrl = `${origin}/upgrade`
 
     // ---- Create Stripe Checkout Session ----
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Record<string, unknown> = {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       customer_email: user.email,
-      client_reference_id: targetUserId,  // links Stripe session back to admin's Supabase user
+      client_reference_id: targetUserId,
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
@@ -118,7 +138,14 @@ serve(async (req: Request) => {
         paid_by: user.id,
         plan: plan,
       },
-    })
+    }
+
+    // If user is still in trial, sync remaining trial days to Stripe
+    if (trialDays > 0) {
+      sessionParams.subscription_data = { trial_period_days: trialDays }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams as any)
 
     return new Response(JSON.stringify({ url: session.url }), {
       status: 200,

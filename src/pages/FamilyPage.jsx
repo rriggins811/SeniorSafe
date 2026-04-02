@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, ImagePlus, Send, Trash2, X, Lock, CheckCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { isPremium } from '../lib/subscription'
 import BottomNav from '../components/BottomNav'
 
 export default function FamilyPage() {
@@ -409,7 +410,7 @@ export default function FamilyPage() {
       {/* ── HISTORY TAB ── */}
       {tab === 'history' && (
         <div className="flex-1 overflow-y-auto">
-          {subscriptionTier !== 'paid' ? (
+          {!isPremium(subscriptionTier) ? (
             /* Free tier lock screen */
             <div className="flex flex-col items-center justify-center px-6 py-16 text-center gap-5">
               <div className="bg-[#1B365D] rounded-2xl p-5">

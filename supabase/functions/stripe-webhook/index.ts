@@ -29,6 +29,7 @@ async function updateUserTier(
   interval?: string,
 ) {
   const update: Record<string, unknown> = { subscription_tier: tier }
+  if (tier === 'paid') update.trial_status = 'converted'
   if (stripeCustomerId) update.stripe_customer_id = stripeCustomerId
   if (stripeSubscriptionId) update.stripe_subscription_id = stripeSubscriptionId
   if (periodEnd !== undefined) update.subscription_period_end = periodEnd
