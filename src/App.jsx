@@ -26,6 +26,7 @@ import InstallPrompt from './components/InstallPrompt'
 import ErrorBoundary from './components/ErrorBoundary'
 import { isNative } from './lib/platform'
 import { initializeIAP } from './lib/iap'
+import { Keyboard, KeyboardResize } from '@capacitor/keyboard'
 
 function ProtectedRoute({ children }) {
   const [session, setSession] = useState(undefined)
@@ -61,6 +62,40 @@ function P({ children }) {
 }
 
 export default function App() {
+  // iOS keyboard: configure native keyboard behavior + dismiss on tap outside
+  useEffect(() => {
+    if (!isNative()) return
+
+    // Configure Capacitor Keyboard plugin: resize the webview when keyboard opens
+    Keyboard.setResizeMode({ mode: KeyboardResize.Ionic }).catch(() => {})
+    Keyboard.setScroll({ isDisabled: false }).catch(() => {})
+
+    // Dismiss keyboard when tapping outside input fields
+    const handleTouchStart = (e) => {
+      const tag = e.target.tagName
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !e.target.isContentEditable) {
+        Keyboard.hide().catch(() => {})
+      }
+    }
+
+    // Scroll focused input into view when keyboard opens
+    const handleFocusIn = (e) => {
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        setTimeout(() => {
+          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 300) // wait for keyboard animation
+      }
+    }
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: true })
+    document.addEventListener('focusin', handleFocusIn, { passive: true })
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart)
+      document.removeEventListener('focusin', handleFocusIn)
+    }
+  }, [])
+
   useEffect(() => {
     initializeIAP()
 

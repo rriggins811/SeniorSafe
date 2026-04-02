@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   Shield, CheckCircle, X, Sparkles, ArrowLeft,
   Heart, Pill, FolderLock, Bot, Users, Bell, Clock,
@@ -314,10 +314,16 @@ export default function UpgradePage() {
             <p className="text-red-500 text-sm text-center">{error}</p>
           )}
 
-          <p className="text-gray-400 text-xs text-center pb-4">
+          <p className="text-gray-400 text-xs text-center">
             {oniOS
-              ? 'Payment is charged to your Apple ID. Cancel anytime in Settings > Subscriptions.'
+              ? 'Payment is charged to your Apple ID. Subscription automatically renews unless canceled at least 24 hours before the end of the current period. Manage subscriptions in Settings > Apple ID > Subscriptions.'
               : 'Secure payment via Stripe. Cancel anytime from your account settings.'}
+          </p>
+
+          <p className="text-center text-xs text-gray-400 pb-4">
+            <Link to="/terms" className="underline hover:text-gray-600">Terms of Service</Link>
+            {' · '}
+            <Link to="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>
           </p>
         </div>
       </div>
