@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, ChevronLeft, Clock, Users, Copy, Share2, Sparkles } from 'lucide-react'
+import { CheckCircle, ChevronLeft, Clock, Users, Copy, Share2, Sparkles, Shield, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getAppUrl, copyToClipboard } from '../lib/platform'
 
@@ -18,10 +18,11 @@ for (let h = 6; h <= 20; h++) {
 }
 
 // Step offsets and totals per path (signup steps already completed)
+// +2 for medical disclaimer + emergency interstitial shown before path-specific steps
 const PATH_CONFIG = {
-  'parent-setup': { signupSteps: 1, onboardingSteps: 3, total: 4 },
-  'member-join':  { signupSteps: 2, onboardingSteps: 1, total: 3 },
-  'self-setup':   { signupSteps: 1, onboardingSteps: 3, total: 4 },
+  'parent-setup': { signupSteps: 1, onboardingSteps: 5, total: 6 },
+  'member-join':  { signupSteps: 2, onboardingSteps: 3, total: 5 },
+  'self-setup':   { signupSteps: 1, onboardingSteps: 5, total: 6 },
 }
 
 export default function OnboardingPage() {
@@ -144,13 +145,72 @@ export default function OnboardingPage() {
   if (!user) return null
 
   // ═════════════════════════════════════════════════════════════════════
-  //  PATH A: Parent Setup — Onboarding Steps 2-4
+  //  SHARED STEPS: Medical Disclaimer + Emergency Interstitial
+  //  These show for ALL paths before path-specific steps
+  // ═════════════════════════════════════════════════════════════════════
+
+  // Step 0: Medical Disclaimer
+  if (step === 0) {
+    return (
+      <Shell displayStep={displayStep()} total={config.total} onBack={null}>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+            <Shield size={32} color="#1B365D" strokeWidth={1.5} />
+          </div>
+          <h1 className="text-[#1B365D] font-bold text-2xl">
+            Before You Begin
+          </h1>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
+          <p className="text-[#1B365D] text-base leading-relaxed">
+            SeniorSafe is a family coordination tool. It is <strong>not</strong> a medical device, does not provide medical advice, and is not intended to diagnose, treat, cure, or prevent any medical condition.
+          </p>
+          <p className="text-[#1B365D] text-base leading-relaxed mt-3">
+            Always consult a qualified healthcare provider for medical concerns.
+          </p>
+        </div>
+
+        <BigButton onClick={() => setStep(1)}>I Understand</BigButton>
+      </Shell>
+    )
+  }
+
+  // Step 1: Emergency Service Interstitial
+  if (step === 1) {
+    return (
+      <Shell displayStep={displayStep()} total={config.total} onBack={() => setStep(0)}>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center">
+            <AlertTriangle size={32} color="#DC2626" strokeWidth={1.5} />
+          </div>
+          <h1 className="text-[#1B365D] font-bold text-2xl">
+            Important
+          </h1>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
+          <p className="text-gray-800 text-base leading-relaxed">
+            SeniorSafe is <strong>NOT</strong> an emergency monitoring service. Our check-in system helps families stay connected, but it does not replace 911, medical alert systems, or in-person care.
+          </p>
+          <p className="text-red-700 text-base leading-relaxed mt-3 font-semibold">
+            If someone is in danger, call 911 immediately.
+          </p>
+        </div>
+
+        <BigButton onClick={() => setStep(2)}>I Understand</BigButton>
+      </Shell>
+    )
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  //  PATH A: Parent Setup — Onboarding Steps (offset by 2 for disclaimers)
   // ═════════════════════════════════════════════════════════════════════
   if (path === 'parent-setup') {
-    // Step 0 (display: 2/4) — Set check-in time
-    if (step === 0) {
+    // Step 2 — Set check-in time
+    if (step === 2) {
       return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={null}>
+        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
           <div className="flex flex-col items-center gap-2 text-center">
             <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
               <Clock size={32} color="#1B365D" strokeWidth={1.5} />
@@ -177,13 +237,13 @@ export default function OnboardingPage() {
             If {seniorName} doesn't check in by this time, your family will be notified.
           </p>
 
-          <BigButton onClick={() => setStep(1)}>Next</BigButton>
+          <BigButton onClick={() => setStep(3)}>Next</BigButton>
         </Shell>
       )
     }
 
-    // Step 1 (display: 3/4) — Try the first check-in
-    if (step === 1) {
+    // Step 3 — Try the first check-in
+    if (step === 3) {
       return (
         <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
           <div className="flex flex-col items-center gap-3 text-center">
@@ -236,14 +296,14 @@ export default function OnboardingPage() {
           </div>
 
           {checkedIn && (
-            <BigButton onClick={() => setStep(2)}>Next</BigButton>
+            <BigButton onClick={() => setStep(4)}>Next</BigButton>
           )}
         </Shell>
       )
     }
 
-    // Step 2 (display: 4/4) — Show family code
-    if (step === 2) {
+    // Step 4 — Show family code
+    if (step === 4) {
       return (
         <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
           <div className="flex flex-col items-center gap-2 text-center">
@@ -299,12 +359,12 @@ export default function OnboardingPage() {
   }
 
   // ═════════════════════════════════════════════════════════════════════
-  //  PATH B: Member Join — Onboarding Step 3/3
+  //  PATH B: Member Join — Onboarding Step (offset by 2 for disclaimers)
   // ═════════════════════════════════════════════════════════════════════
   if (path === 'member-join') {
     const adminSeniorName = meta.family_name || `${seniorName}'s family`
     return (
-      <Shell displayStep={3} total={3} onBack={null}>
+      <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
         <div className="flex flex-col items-center gap-4 text-center pt-4">
           <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
             <CheckCircle size={56} color="#16A34A" strokeWidth={2} />
@@ -336,13 +396,13 @@ export default function OnboardingPage() {
   }
 
   // ═════════════════════════════════════════════════════════════════════
-  //  PATH C: Self Setup — Onboarding Steps 2-4
+  //  PATH C: Self Setup — Onboarding Steps (offset by 2 for disclaimers)
   // ═════════════════════════════════════════════════════════════════════
   if (path === 'self-setup') {
-    // Step 0 (display: 2/4) — Set check-in time
-    if (step === 0) {
+    // Step 2 — Set check-in time
+    if (step === 2) {
       return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={null}>
+        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
           <div className="flex flex-col items-center gap-2 text-center">
             <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
               <Clock size={32} color="#1B365D" strokeWidth={1.5} />
@@ -369,13 +429,13 @@ export default function OnboardingPage() {
             If you haven't checked in by this time, your family will be notified.
           </p>
 
-          <BigButton onClick={() => setStep(1)}>Next</BigButton>
+          <BigButton onClick={() => setStep(3)}>Next</BigButton>
         </Shell>
       )
     }
 
-    // Step 1 (display: 3/4) — Invite your family
-    if (step === 1) {
+    // Step 3 — Invite your family
+    if (step === 3) {
       return (
         <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
           <div className="flex flex-col items-center gap-2 text-center">
@@ -416,9 +476,9 @@ export default function OnboardingPage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <BigButton onClick={() => setStep(2)}>Next</BigButton>
+            <BigButton onClick={() => setStep(4)}>Next</BigButton>
             <button
-              onClick={() => setStep(2)}
+              onClick={() => setStep(4)}
               className="w-full py-4 rounded-xl bg-gray-100 text-gray-500 font-semibold text-lg"
             >
               I'll do this later
@@ -428,8 +488,8 @@ export default function OnboardingPage() {
       )
     }
 
-    // Step 2 (display: 4/4) — Try your first check-in
-    if (step === 2) {
+    // Step 4 — Try your first check-in
+    if (step === 4) {
       return (
         <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
           <div className="flex flex-col items-center gap-3 text-center">

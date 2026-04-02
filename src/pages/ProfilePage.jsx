@@ -631,6 +631,23 @@ export default function ProfilePage() {
               </a>
             </div>
 
+            {/* ───────── About SeniorSafe / Medical Disclaimer ───────── */}
+            <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle size={14} className="text-gray-400" />
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-400">About SeniorSafe</p>
+              </div>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                SeniorSafe is a family coordination tool. It is <strong>not</strong> a medical device, does not provide medical advice, and is not intended to diagnose, treat, cure, or prevent any medical condition.
+              </p>
+              <p className="text-gray-600 text-sm leading-relaxed mt-2">
+                Always consult a qualified healthcare provider for medical concerns.
+              </p>
+              <p className="text-gray-600 text-sm leading-relaxed mt-2">
+                SeniorSafe is <strong>not</strong> an emergency monitoring service. Do not rely solely on automated check-ins for the safety of any individual. If someone is in danger, call 911 immediately.
+              </p>
+            </div>
+
             {/* ───────── Leave Family (members only) ───────── */}
             {isMember && profile?.invited_by && (
               <div className="bg-white rounded-2xl px-4 py-5 shadow-sm border border-orange-100">

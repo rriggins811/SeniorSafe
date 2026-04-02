@@ -23,6 +23,22 @@ const STARTER_PROMPTS = [
   'What documents do we need for a move?',
 ]
 
+// Emergency keywords — client-side detection before sending to AI
+const EMERGENCY_KEYWORDS = [
+  'chest pain', "can't breathe", "can't breath", 'not breathing',
+  'stroke', 'unconscious', 'unresponsive', 'heart attack',
+  'seizure', 'choking', "fell and can't get up", 'bleeding badly',
+  'overdose', 'suicide', 'suicidal',
+]
+
+function detectEmergencyKeyword(text) {
+  const lower = text.toLowerCase()
+  for (const kw of EMERGENCY_KEYWORDS) {
+    if (lower.includes(kw)) return kw
+  }
+  return null
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────
 
 function generateTitle(text) {
@@ -110,6 +126,10 @@ export default function AIPage() {
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(true)
   const [voiceUnlocked, setVoiceUnlocked] = useState(false)
+
+  // Emergency keyword alert
+  const [emergencyAlert, setEmergencyAlert] = useState(null) // { keyword, text }
+
 
   // Refs
   const bottomRef = useRef(null)
@@ -270,9 +290,25 @@ export default function AIPage() {
 
   // ─── Send message ──────────────────────────────────────────────────
 
-  async function sendMessage(text) {
+  async function sendMessage(text, bypassEmergencyCheck = false) {
     const userText = (text || input).trim()
     if (!userText || loading) return
+
+    // Emergency keyword detection — intercept before sending to AI
+    if (!bypassEmergencyCheck) {
+      const matchedKeyword = detectEmergencyKeyword(userText)
+      if (matchedKeyword) {
+        setEmergencyAlert({ keyword: matchedKeyword, text: userText })
+        // Log to Supabase for audit
+        supabase.from('emergency_keyword_log').insert({
+          user_id: user.id,
+          keyword_matched: matchedKeyword,
+          message_preview: userText.slice(0, 50),
+          user_proceeded: false,
+        }).then(() => {}) // fire and forget
+        return
+      }
+    }
 
     // Limit check (optimistic — server enforces authoritatively)
     if (usageCount >= usageLimit) {
@@ -685,6 +721,49 @@ export default function AIPage() {
               <div ref={bottomRef} />
             </div>
           </div>
+
+          {/* ─── Emergency keyword alert ─────────────────────────── */}
+          {emergencyAlert && (
+            <div className="flex-shrink-0 bg-red-50 border-t-2 border-red-400 px-4 py-4">
+              <div className="max-w-2xl mx-auto flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-lg font-bold">!</span>
+                  </div>
+                  <div>
+                    <p className="text-red-800 font-bold text-base">If this is a medical emergency, call 911 immediately.</p>
+                    <p className="text-red-700 text-sm mt-1 leading-relaxed">
+                      SeniorSafe is not an emergency service. If someone needs immediate help, please call 911 or your local emergency number.
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="tel:911"
+                  className="w-full py-4 rounded-xl bg-red-600 text-white font-bold text-lg text-center flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  Call 911
+                </a>
+                <button
+                  onClick={() => {
+                    // Log that user proceeded
+                    supabase.from('emergency_keyword_log')
+                      .update({ user_proceeded: true })
+                      .eq('user_id', user.id)
+                      .eq('keyword_matched', emergencyAlert.keyword)
+                      .order('created_at', { ascending: false })
+                      .limit(1)
+                      .then(() => {})
+                    const savedText = emergencyAlert.text
+                    setEmergencyAlert(null)
+                    sendMessage(savedText, true)
+                  }}
+                  className="w-full py-3 rounded-xl border border-gray-300 text-gray-600 font-semibold text-sm"
+                >
+                  This is not an emergency — send my message
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* ─── Input bar ──────────────────────────────────────── */}
           <div className="flex-shrink-0 bg-white border-t border-gray-200 px-4 py-3">

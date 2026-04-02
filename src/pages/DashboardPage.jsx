@@ -31,6 +31,7 @@ export default function DashboardPage() {
   const [nudgeCount, setNudgeCount] = useState(0)
   const [nudgeWarning, setNudgeWarning] = useState('')
   const [showCallMenu, setShowCallMenu] = useState(false)
+  const [failedNotification, setFailedNotification] = useState(null) // { created_at }
   const [quickDialContacts, setQuickDialContacts] = useState([])
   // Check-in note state (Feature 2)
   const [showNoteInput, setShowNoteInput] = useState(false)
@@ -160,6 +161,18 @@ export default function DashboardPage() {
         .order('sort_order', { ascending: true })
         .limit(4)
         .then(({ data }) => setQuickDialContacts(data || []))
+
+      // Check for recent failed notifications (last 48 hours)
+      const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+      supabase.from('notification_log')
+        .select('created_at')
+        .eq('status', 'failed')
+        .gte('created_at', twoDaysAgo)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .then(({ data }) => {
+          if (data?.length) setFailedNotification(data[0])
+        })
 
       // Fetch today's daily quote/joke (cycles by day of year)
       // Goal: expand daily_quotes table to 365 entries over time
@@ -478,6 +491,34 @@ export default function DashboardPage() {
       </div>
 
       <div className="px-4 pt-5 pb-4 max-w-lg mx-auto flex flex-col gap-5">
+
+        {/* Emergency 911 button — always visible above the fold */}
+        <a
+          href="tel:911"
+          className="w-full rounded-2xl py-4 flex items-center justify-center gap-3 bg-red-600 shadow-md active:scale-[0.98] transition-all"
+        >
+          <Phone size={22} color="white" strokeWidth={2} />
+          <span className="text-white font-bold" style={{ fontSize: '18px' }}>Emergency? Call 911</span>
+        </a>
+
+        {/* Failed notification alert banner */}
+        {failedNotification && (
+          <div
+            className="bg-orange-50 border-2 border-orange-300 rounded-2xl p-4 flex items-start gap-3 cursor-pointer"
+            onClick={() => { setFailedNotification(null); navigate('/profile') }}
+          >
+            <AlertTriangle size={20} color="#D97706" className="flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-orange-800 font-semibold text-sm">Notification delivery issue</p>
+              <p className="text-orange-700 text-sm mt-0.5 leading-relaxed">
+                We had trouble delivering a notification on{' '}
+                {new Date(failedNotification.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.
+                Please check phone numbers and notification settings in your family profile.
+              </p>
+              <p className="text-orange-600 text-xs mt-1 underline">Tap to review settings</p>
+            </div>
+          </div>
+        )}
 
         {/* Member: no check-in warning banner */}
         {showMemberWarning && (

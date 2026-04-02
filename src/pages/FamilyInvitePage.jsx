@@ -11,6 +11,9 @@ export default function FamilyInvitePage() {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [showAgeGate, setShowAgeGate] = useState(false) // COPPA age gate
+  const [ageGateAction, setAgeGateAction] = useState(null) // 'copy' or 'share'
+  const [showAgeBlocked, setShowAgeBlocked] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -135,14 +138,14 @@ export default function FamilyInvitePage() {
 
                 <div className="flex gap-3">
                   <button
-                    onClick={copyCode}
+                    onClick={() => { setAgeGateAction('copy'); setShowAgeGate(true) }}
                     className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-sm"
                   >
                     {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
                     {copied ? 'Copied!' : 'Copy Code'}
                   </button>
                   <button
-                    onClick={shareInvite}
+                    onClick={() => { setAgeGateAction('share'); setShowAgeGate(true) }}
                     className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-sm"
                   >
                     <Share2 size={16} />
@@ -231,6 +234,63 @@ export default function FamilyInvitePage() {
           )}
         </div>
       </div>
+
+      {/* COPPA Age Gate Modal */}
+      {showAgeGate && (
+        <>
+          <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowAgeGate(false)} />
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl p-6 max-w-sm mx-auto shadow-xl">
+            <h3 className="text-[#1B365D] font-bold text-lg text-center mb-3">
+              Age Confirmation
+            </h3>
+            <p className="text-gray-600 text-sm text-center leading-relaxed mb-5">
+              Is the person you're inviting 13 years of age or older?
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setShowAgeGate(false)
+                  if (ageGateAction === 'copy') copyCode()
+                  else if (ageGateAction === 'share') shareInvite()
+                }}
+                className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base"
+              >
+                Yes, they are 13+
+              </button>
+              <button
+                onClick={() => { setShowAgeGate(false); setShowAgeBlocked(true) }}
+                className="w-full py-4 rounded-xl border border-gray-300 text-gray-600 font-semibold text-base"
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Age Gate Blocked Message */}
+      {showAgeBlocked && (
+        <>
+          <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowAgeBlocked(false)} />
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl p-6 max-w-sm mx-auto shadow-xl">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+                <UserMinus size={28} color="#DC2626" strokeWidth={1.5} />
+              </div>
+              <h3 className="text-[#1B365D] font-bold text-lg">Not Available</h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                SeniorSafe is not available for users under 13 years of age. Family members must be at least 13 to use the app.
+              </p>
+              <button
+                onClick={() => setShowAgeBlocked(false)}
+                className="w-full py-3 rounded-xl bg-gray-100 text-gray-700 font-semibold text-sm mt-2"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
