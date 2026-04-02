@@ -27,6 +27,11 @@ export default function ProfilePage() {
   const [pwMessage, setPwMessage] = useState('')
   const [pwError, setPwError] = useState('')
 
+  // Feedback state
+  const [feedbackText, setFeedbackText] = useState('')
+  const [feedbackSending, setFeedbackSending] = useState(false)
+  const [feedbackSent, setFeedbackSent] = useState(false)
+
   // Delete account state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteText, setDeleteText] = useState('')
@@ -629,6 +634,46 @@ export default function ProfilePage() {
                   <p className="text-gray-400 text-xs">(336) 553-8933</p>
                 </div>
               </a>
+            </div>
+
+            {/* ───────── Send Feedback ───────── */}
+            <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <Mail size={14} className="text-gray-400" />
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Send Feedback</p>
+              </div>
+              {feedbackSent ? (
+                <p className="text-green-600 text-sm font-medium">Thanks for your feedback! We read every message.</p>
+              ) : (
+                <>
+                  <textarea
+                    value={feedbackText}
+                    onChange={e => setFeedbackText(e.target.value)}
+                    placeholder="Tell us what's working, what's not, or what you'd like to see..."
+                    className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#D4A843]"
+                    rows={3}
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!feedbackText.trim() || !user) return
+                      setFeedbackSending(true)
+                      await supabase.from('feedback').insert({
+                        user_id: user.id,
+                        message: feedbackText.trim(),
+                        platform: window.Capacitor?.getPlatform?.() || 'web',
+                        app_version: '1.0.0',
+                      })
+                      setFeedbackSending(false)
+                      setFeedbackSent(true)
+                      setFeedbackText('')
+                    }}
+                    disabled={!feedbackText.trim() || feedbackSending}
+                    className="mt-3 w-full py-3 rounded-xl bg-[#1B365D] text-white font-semibold text-sm disabled:opacity-50"
+                  >
+                    {feedbackSending ? 'Sending...' : 'Submit Feedback'}
+                  </button>
+                </>
+              )}
             </div>
 
             {/* ───────── About SeniorSafe / Medical Disclaimer ───────── */}

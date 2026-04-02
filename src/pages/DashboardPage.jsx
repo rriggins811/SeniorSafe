@@ -47,6 +47,8 @@ export default function DashboardPage() {
   const [trialDays, setTrialDays] = useState(null) // null = not in trial
   const [showTrialModal, setShowTrialModal] = useState(false)
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false)
+  // Review prompt
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -100,6 +102,17 @@ export default function DashboardPage() {
             const days = trialDaysRemaining(p.trial_start_date)
             setTrialDays(days)
             if (days === 0) setShowTrialModal(true)
+          }
+
+          // Review prompt: 7+ days active, 5+ check-ins, max 3 prompts, 30-day cooldown
+          if (p?.first_checkin_date && (p?.checkin_count || 0) >= 5 && (p?.review_prompt_count || 0) < 3) {
+            const daysSinceFirst = Math.floor((Date.now() - new Date(p.first_checkin_date).getTime()) / (1000 * 60 * 60 * 24))
+            const daysSinceLastPrompt = p.review_prompted_date
+              ? Math.floor((Date.now() - new Date(p.review_prompted_date).getTime()) / (1000 * 60 * 60 * 24))
+              : 999
+            if (daysSinceFirst >= 7 && daysSinceLastPrompt >= 30) {
+              setShowReviewPrompt(true)
+            }
           }
 
           // If member, check if admin has checked in today
@@ -273,6 +286,11 @@ export default function DashboardPage() {
       setLastCheckinId(checkInData.id)
       if (isPremium(subscriptionTier)) setShowNoteInput(true)
     }
+
+    // Update check-in tracking for review prompt
+    const updates = { checkin_count: (profile?.checkin_count || 0) + 1 }
+    if (!profile?.first_checkin_date) updates.first_checkin_date = new Date().toISOString()
+    supabase.from('user_profile').update(updates).eq('user_id', user.id).then(() => {})
 
     // Only send notifications for premium tier
     if (isPremium(subscriptionTier)) {
@@ -943,6 +961,52 @@ export default function DashboardPage() {
           <Link to="/privacy" className="underline hover:text-gray-500">Privacy Policy</Link>
         </p>
       </div>
+
+      {/* Review prompt modal */}
+      {showReviewPrompt && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-6">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-xl text-center">
+            <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+              <Heart size={28} color="#D4A843" strokeWidth={1.5} />
+            </div>
+            <h2 className="text-[#1B365D] font-bold text-lg">Enjoying SeniorSafe?</h2>
+            <p className="text-gray-500 text-sm leading-relaxed">
+              A quick review helps other families find us and keeps our team motivated!
+            </p>
+            <button
+              onClick={async () => {
+                setShowReviewPrompt(false)
+                await supabase.from('user_profile').update({
+                  review_prompted_date: new Date().toISOString(),
+                  review_prompt_count: (profile?.review_prompt_count || 0) + 1,
+                }).eq('user_id', user.id)
+                // Open App Store review page
+                const { isIOS } = await import('../lib/platform')
+                if (isIOS()) {
+                  window.open('https://apps.apple.com/app/seniorsafe/id6744250582?action=write-review', '_blank')
+                } else {
+                  window.open('https://apps.apple.com/app/seniorsafe/id6744250582', '_blank')
+                }
+              }}
+              className="w-full py-3.5 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-base"
+            >
+              Rate SeniorSafe
+            </button>
+            <button
+              onClick={async () => {
+                setShowReviewPrompt(false)
+                await supabase.from('user_profile').update({
+                  review_prompted_date: new Date().toISOString(),
+                  review_prompt_count: (profile?.review_prompt_count || 0) + 1,
+                }).eq('user_id', user.id)
+              }}
+              className="text-gray-400 text-sm"
+            >
+              Not Now
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Trial expiry modal — last day */}
       {showTrialModal && (
