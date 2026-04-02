@@ -85,6 +85,7 @@ export default function AIPage() {
   const [profile, setProfile] = useState(null)
   const [familyCode, setFamilyCode] = useState('')
   const [tier, setTier] = useState('paid')
+  const [aiConsent, setAiConsent] = useState(null) // null=loading, true=consented, false=needs consent
 
   // Conversations
   const [conversations, setConversations] = useState([])
@@ -133,6 +134,7 @@ export default function AIPage() {
 
         if (!prof) return
         setProfile(prof)
+        setAiConsent(!!prof.ai_consent)
 
         // Resolve family code + tier
         let fc = prof.family_code
@@ -443,6 +445,62 @@ export default function AIPage() {
   const counterColor = ratio >= 0.95 ? 'text-red-500' : ratio >= 0.80 ? 'text-yellow-500' : 'text-gray-400'
   const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
+  async function handleAiConsent() {
+    if (!user) return
+    await supabase.from('user_profile').update({
+      ai_consent: true,
+      ai_consent_date: new Date().toISOString(),
+    }).eq('user_id', user.id)
+    setAiConsent(true)
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  AI Consent Gate — shown before first use
+  // ═══════════════════════════════════════════════════════════════════
+
+  if (aiConsent === false) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+        <div className="flex-1 flex items-center justify-center px-6 py-12">
+          <div className="bg-white rounded-2xl shadow-lg p-6 max-w-sm w-full flex flex-col gap-5">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="bg-[#1B365D] rounded-2xl p-4">
+                <Bot size={36} color="#D4A843" strokeWidth={1.5} />
+              </div>
+              <h2 className="text-[#1B365D] text-xl font-bold">About SeniorSafe AI</h2>
+            </div>
+            <div className="text-gray-600 text-sm leading-relaxed flex flex-col gap-3">
+              <p>
+                SeniorSafe's AI assistant is powered by <strong>Anthropic's Claude</strong>. When you use the AI assistant, your messages are sent to Anthropic to generate responses.
+              </p>
+              <p>
+                Anthropic does not store your conversations or use them for training.
+              </p>
+              <p>
+                No medical or financial data from other parts of the app (medications, documents, check-ins) is shared with the AI unless you include it in your message.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                onClick={handleAiConsent}
+                className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base"
+              >
+                I Understand
+              </button>
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="w-full py-3 rounded-xl text-gray-500 font-medium text-sm"
+              >
+                Not Now
+              </button>
+            </div>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    )
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   //  Render
   // ═══════════════════════════════════════════════════════════════════
@@ -677,7 +735,7 @@ export default function AIPage() {
               )}
             </p>
             <p className="text-center text-xs text-gray-400 mt-0.5 max-w-2xl mx-auto">
-              Not legal or medical advice.
+              Powered by Anthropic AI · Not legal or medical advice.
             </p>
           </div>
         </div>
