@@ -266,7 +266,7 @@ export default function FamilyPage() {
       {tab === 'messages' && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Message list */}
-          <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="flex-1 overflow-y-auto px-4 py-4 keyboard-safe-bottom">
             <div className="max-w-lg mx-auto flex flex-col gap-3">
               {msgLoading ? (
                 <p className="text-center text-gray-400 py-16" style={{ fontSize: '16px' }}>Loading...</p>

@@ -29,3 +29,8 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Extra bottom padding so the last input/button is scrollable above the iOS keyboard */
+.keyboard-safe-bottom {
+  padding-bottom: 320px;
+}

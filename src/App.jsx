@@ -62,37 +62,66 @@ function P({ children }) {
 }
 
 export default function App() {
-  // iOS keyboard: configure native keyboard behavior + dismiss on tap outside
+  // iOS keyboard: app-managed scrolling + dismiss on tap outside
   useEffect(() => {
     if (!isNative()) return
 
-    // Configure Capacitor Keyboard plugin: resize the webview when keyboard opens
-    Keyboard.setResizeMode({ mode: KeyboardResize.Ionic }).catch(() => {})
-    Keyboard.setScroll({ isDisabled: false }).catch(() => {})
+    // Don't let Capacitor resize the webview — we handle scroll ourselves
+    Keyboard.setResizeMode({ mode: KeyboardResize.None }).catch(() => {})
+    Keyboard.setScroll({ isDisabled: true }).catch(() => {})
+
+    // Scroll the focused element into view, including within scrollable parents
+    function scrollActiveIntoView() {
+      const el = document.activeElement
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT')) return
+
+      // Scroll within the nearest scrollable parent first
+      let parent = el.parentElement
+      while (parent && parent !== document.body) {
+        const style = window.getComputedStyle(parent)
+        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+          const parentRect = parent.getBoundingClientRect()
+          const elRect = el.getBoundingClientRect()
+          if (elRect.bottom > parentRect.bottom || elRect.top < parentRect.top) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            return
+          }
+        }
+        parent = parent.parentElement
+      }
+
+      // Fallback: scroll the page
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
+    // On focus, wait for keyboard animation then scroll
+    const handleFocusIn = (e) => {
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+        setTimeout(scrollActiveIntoView, 300)
+      }
+    }
+
+    // When keyboard finishes opening, re-scroll (keyboard may have shifted layout)
+    const keyboardShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(scrollActiveIntoView, 50)
+    })
 
     // Dismiss keyboard when tapping outside input fields
     const handleTouchStart = (e) => {
       const tag = e.target.tagName
-      if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !e.target.isContentEditable) {
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !e.target.isContentEditable) {
         Keyboard.hide().catch(() => {})
       }
     }
 
-    // Scroll focused input into view when keyboard opens
-    const handleFocusIn = (e) => {
-      const tag = e.target.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA') {
-        setTimeout(() => {
-          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }, 300) // wait for keyboard animation
-      }
-    }
-
-    document.addEventListener('touchstart', handleTouchStart, { passive: true })
     document.addEventListener('focusin', handleFocusIn, { passive: true })
+    document.addEventListener('touchstart', handleTouchStart, { passive: true })
+
     return () => {
-      document.removeEventListener('touchstart', handleTouchStart)
       document.removeEventListener('focusin', handleFocusIn)
+      document.removeEventListener('touchstart', handleTouchStart)
+      keyboardShowListener.then(h => h.remove()).catch(() => {})
     }
   }, [])
 

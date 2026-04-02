@@ -102,7 +102,7 @@ export default function SignInPage() {
   // ---------- Forgot password screen ----------
   if (showReset) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12 keyboard-safe-bottom">
         <div className="w-full max-w-sm flex flex-col gap-6">
           <div className="flex flex-col items-center gap-2">
             <div className="bg-[#1B365D] rounded-2xl p-3">
@@ -160,7 +160,7 @@ export default function SignInPage() {
 
   // ---------- Normal sign in ----------
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12 keyboard-safe-bottom">
       <div className="w-full max-w-sm flex flex-col gap-6">
 
         {/* Header */}

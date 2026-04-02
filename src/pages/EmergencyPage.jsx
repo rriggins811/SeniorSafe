@@ -159,7 +159,7 @@ export default function EmergencyPage() {
       {loading ? (
         <p className="text-center text-gray-400 py-16" style={{ fontSize: '16px' }}>Loading...</p>
       ) : (
-        <div className="flex-1 overflow-y-auto px-4 py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-5 keyboard-safe-bottom">
           <div className="max-w-lg mx-auto flex flex-col gap-4">
 
             {editMode ? (
