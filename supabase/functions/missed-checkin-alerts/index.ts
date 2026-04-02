@@ -108,7 +108,7 @@ serve(async (_req) => {
     .from('user_profile')
     .select('user_id, senior_name, first_name, timezone, checkin_alert_time')
     .eq('role', 'admin')
-    .eq('subscription_tier', 'paid')
+    .in('subscription_tier', ['paid', 'trial'])
 
   if (adminErr) {
     console.error('Error fetching admins:', adminErr.message)
@@ -170,12 +170,11 @@ serve(async (_req) => {
         continue // Already checked in today
       }
 
-      // Get family members with phone numbers
+      // Get family members (with or without phone — push doesn't need phone)
       const { data: members } = await supabase
         .from('user_profile')
-        .select('phone, first_name')
+        .select('user_id, phone, first_name, device_token, device_platform')
         .eq('invited_by', admin.user_id)
-        .not('phone', 'is', null)
 
       if (!members?.length) {
         skipped++
@@ -194,7 +193,40 @@ serve(async (_req) => {
         .single()
       const familyLabel = adminProfile?.family_name || seniorName
 
+      // Send push notifications to members with device tokens
       for (const member of members) {
+        if (member.device_token) {
+          try {
+            // Call send-push-notification function internally
+            const pushRes = await fetch(
+              `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notification`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  user_ids: [member.user_id],
+                  title: 'Missed Check-In',
+                  body: `${seniorName} hasn't checked in yet today.`,
+                  notification_type: 'missed_check_in',
+                  data: { route: '/dashboard' },
+                }),
+              },
+            )
+            if (pushRes.ok) {
+              console.log(`📱 Push sent to ${member.first_name} for missed check-in`)
+            }
+          } catch (pushErr) {
+            console.error(`Push error for ${member.first_name}:`, pushErr)
+          }
+        }
+      }
+
+      // Send SMS to members with phone numbers
+      for (const member of members) {
+        if (!member.phone) continue
         try {
           const toPhone = normalizePhone(member.phone)
           const body = new URLSearchParams({

@@ -107,27 +107,59 @@ serve(async (req) => {
       })
     }
 
-    // 3) Look up all OTHER family members with phone + sms_notifications enabled
+    // 3) Look up all OTHER family members
     const { data: familyMembers } = await supabaseAdmin
       .from('user_profile')
-      .select('phone, first_name, sms_notifications')
+      .select('user_id, phone, first_name, sms_notifications')
       .eq('invited_by', record.user_id)
-      .not('phone', 'is', null)
 
-    const eligibleMembers = (familyMembers || []).filter(
-      m => m.phone && m.sms_notifications !== false
-    )
-
-    if (eligibleMembers.length === 0) {
-      console.log('No eligible family members to notify.')
+    if (!familyMembers?.length) {
+      console.log('No family members to notify.')
       return new Response(JSON.stringify({ skipped: true, reason: 'no recipients' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    // 4) Build SMS message
+    // Send push notifications to all members
     const senderName = posterProfile.first_name || record.author_name || 'Your loved one'
+    const pushPreview = (record.message_text || '').trim().slice(0, 50)
+    const pushBody = pushPreview || 'Shared something new'
+    try {
+      await fetch(
+        `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notification`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_ids: familyMembers.map(m => m.user_id),
+            title: 'New Message',
+            body: `${senderName}: ${pushBody}`,
+            notification_type: 'family_message',
+            data: { route: '/family' },
+          }),
+        },
+      )
+    } catch (pushErr) {
+      console.error('Push notification error:', pushErr)
+    }
+
+    const eligibleMembers = familyMembers.filter(
+      m => m.phone && m.sms_notifications !== false
+    )
+
+    if (eligibleMembers.length === 0) {
+      console.log('Push sent, but no eligible SMS recipients.')
+      return new Response(JSON.stringify({ skipped: false, push: true, sms: 0 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    // 4) Build SMS message
     const msgText = (record.message_text || '').trim()
 
     let smsBody: string

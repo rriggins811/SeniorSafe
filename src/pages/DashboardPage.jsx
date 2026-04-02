@@ -7,6 +7,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { sendSMS } from '../lib/sms'
 import { isPremium, trialDaysRemaining } from '../lib/subscription'
+import { registerPushNotifications } from '../lib/pushNotifications'
 import BottomNav from '../components/BottomNav'
 
 export default function DashboardPage() {
@@ -90,6 +91,9 @@ export default function DashboardPage() {
           setSubscriptionTier(p?.subscription_tier || 'free')
           // Use profile family_name as source of truth (user_metadata can be stale/mismatched)
           if (p?.family_name) setFamilyName(p.family_name)
+
+          // Register push notifications (native only, no-op on web)
+          registerPushNotifications(user.id)
 
           // Trial countdown
           if (p?.trial_status === 'active' && p?.trial_start_date) {
@@ -213,6 +217,34 @@ export default function DashboardPage() {
     })
   }, [navigate])
 
+  // Helper: send push notifications to family members via edge function
+  async function sendPushToFamily(userIds, title, body, notificationType, smsFallback) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push-notification`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_ids: userIds,
+            title,
+            body,
+            notification_type: notificationType,
+            sms_fallback_message: smsFallback || null,
+            data: { route: '/dashboard' },
+          }),
+        },
+      )
+    } catch (err) {
+      console.error('Push notification error:', err)
+    }
+  }
+
   async function handleCheckIn() {
     if (checkInStatus !== 'idle' || !user) return
     if (alreadyCheckedIn) {
@@ -242,20 +274,25 @@ export default function DashboardPage() {
       if (isPremium(subscriptionTier)) setShowNoteInput(true)
     }
 
-    // Only send SMS for paid tier
+    // Only send notifications for premium tier
     if (isPremium(subscriptionTier)) {
-      // Notify all family members who have a phone number
+      // Get all family members
       const { data: memberProfiles } = await supabase
         .from('user_profile')
         .select('phone, first_name, user_id, invited_by, role')
         .eq('invited_by', user.id)
-        .not('phone', 'is', null)
 
       const senderName = user.user_metadata?.first_name || familyName || 'Your loved one'
 
       if (memberProfiles?.length) {
+        // Send push notifications to all members
+        const memberIds = memberProfiles.map(m => m.user_id)
+        sendPushToFamily(memberIds, 'Check-In', `${senderName} just checked in!`, 'check_in')
+
+        // Send SMS to members with phone numbers
+        const membersWithPhone = memberProfiles.filter(m => m.phone)
         await Promise.all(
-          memberProfiles.map(m =>
+          membersWithPhone.map(m =>
             sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today. Reply STOP to opt out`)
           )
         )
@@ -367,16 +404,20 @@ export default function DashboardPage() {
         .from('user_profile')
         .select('phone, first_name, user_id, invited_by, role')
         .eq('invited_by', user.id)
-        .not('phone', 'is', null)
 
       if (!memberProfiles?.length) {
         console.warn('⚠️ [HELP-ALERT] No family members found! Check invited_by values in user_profile table.')
-        alert('No family members with phone numbers found. Ask your family to add their phone number in the app.')
+        alert('No family members found. Ask your family to join through the invite code.')
         setHelpSending(false)
         return
       }
 
-      const results = await Promise.all(memberProfiles.map(m =>
+      // Send push + SMS to all family members (belt and suspenders)
+      const memberIds = memberProfiles.map(m => m.user_id)
+      sendPushToFamily(memberIds, 'Help Requested', `${name} is requesting help. Please check in with them.`, 'help_request', message)
+
+      const membersWithPhone = memberProfiles.filter(m => m.phone)
+      const results = await Promise.all(membersWithPhone.map(m =>
         sendSMS(m.phone, message)
       ))
       const successCount = results.filter(Boolean).length
