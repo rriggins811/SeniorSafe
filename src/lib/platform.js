@@ -14,6 +14,14 @@ export const isIOS = () => {
   }
 }
 
+export const isAndroid = () => {
+  try {
+    return window.Capacitor?.getPlatform?.() === 'android'
+  } catch {
+    return false
+  }
+}
+
 export const openExternalLink = (url) => {
   if (isNative() && window.Capacitor?.Plugins?.Browser) {
     window.Capacitor.Plugins.Browser.open({ url })

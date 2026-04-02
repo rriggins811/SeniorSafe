@@ -5,7 +5,7 @@ import {
   Heart, Pill, FolderLock, Bot, Users, Bell, Clock,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { isIOS } from '../lib/platform'
+import { isIOS, isAndroid } from '../lib/platform'
 import { purchaseMonthly, restorePurchases, setIAPCallbacks } from '../lib/iap'
 
 const CHECKOUT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/create-checkout'
@@ -42,11 +42,11 @@ export default function UpgradePage() {
   const [iapLoading, setIapLoading] = useState(false)
   const [restoring, setRestoring] = useState(false)
 
-  const oniOS = isIOS()
+  const onNativeStore = isIOS() || isAndroid()
 
   // Register IAP callbacks so purchase results update this page
   useEffect(() => {
-    if (!oniOS) return
+    if (!onNativeStore) return
     setIAPCallbacks({
       onSuccess: () => {
         setIapLoading(false)
@@ -58,7 +58,7 @@ export default function UpgradePage() {
       },
     })
     return () => setIAPCallbacks({ onSuccess: null, onError: null })
-  }, [oniOS])
+  }, [onNativeStore])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -199,7 +199,7 @@ export default function UpgradePage() {
         <div className="max-w-lg mx-auto flex flex-col gap-6">
 
           {/* Plan toggle — hidden on iOS (only monthly IAP available) */}
-          {!oniOS && (
+          {!onNativeStore && (
             <div className="bg-white rounded-2xl p-1.5 flex shadow-sm">
               <button
                 onClick={() => setPlan('monthly')}
@@ -229,10 +229,10 @@ export default function UpgradePage() {
 
           {/* Price display */}
           <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
-            {oniOS ? (
+            {onNativeStore ? (
               <>
                 <p className="text-4xl font-bold text-[#1B365D]">{monthlyPrice}<span className="text-lg font-normal text-gray-400">/mo</span></p>
-                <p className="text-gray-400 text-sm mt-1">Billed monthly via Apple. Cancel anytime.</p>
+                <p className="text-gray-400 text-sm mt-1">Billed monthly via {isIOS() ? 'Apple' : 'Google Play'}. Cancel anytime.</p>
               </>
             ) : plan === 'monthly' ? (
               <>
@@ -283,7 +283,7 @@ export default function UpgradePage() {
           </div>
 
           {/* CTA button — Apple IAP on iOS, Stripe on web */}
-          {oniOS ? (
+          {onNativeStore ? (
             <>
               <button
                 onClick={handleIAPPurchase}
@@ -315,8 +315,10 @@ export default function UpgradePage() {
           )}
 
           <p className="text-gray-400 text-xs text-center">
-            {oniOS
+            {isIOS()
               ? 'Payment is charged to your Apple ID. Subscription automatically renews unless canceled at least 24 hours before the end of the current period. Manage subscriptions in Settings > Apple ID > Subscriptions.'
+              : isAndroid()
+              ? 'Payment processed by Google Play. Subscription automatically renews. Cancel anytime in Play Store > Subscriptions.'
               : 'Secure payment via Stripe. Cancel anytime from your account settings.'}
           </p>
 
