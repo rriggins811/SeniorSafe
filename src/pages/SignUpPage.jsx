@@ -24,7 +24,6 @@ export default function SignUpPage() {
   const [adminProfile, setAdminProfile] = useState(null)
   const [codeValidating, setCodeValidating] = useState(!!urlCode)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [appleLoading, setAppleLoading] = useState(false)
 
   const [form, setForm] = useState({
     firstName: '',
@@ -89,29 +88,6 @@ export default function SignUpPage() {
     } catch (err) {
       setError(err.message)
       setGoogleLoading(false)
-    }
-  }
-
-  async function handleAppleSignUp() {
-    setAppleLoading(true)
-    try {
-      if (isNative()) {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'apple',
-          options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
-        })
-        if (error) throw error
-        if (data?.url) await Browser.open({ url: data.url })
-      } else {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'apple',
-          options: { redirectTo: getOAuthRedirect() },
-        })
-        if (error) throw error
-      }
-    } catch (err) {
-      setError(err.message)
-      setAppleLoading(false)
     }
   }
 
@@ -339,18 +315,6 @@ export default function SignUpPage() {
             <span className="text-xs text-gray-400">or</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
-
-          {/* Apple OAuth */}
-          <button
-            onClick={handleAppleSignUp}
-            disabled={appleLoading}
-            className="w-full py-4 rounded-xl bg-black text-white font-semibold text-base flex items-center justify-center gap-3 hover:bg-gray-900 disabled:opacity-60"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" fill="white">
-              <path d="M14.94 9.63c-.02-2.1 1.71-3.11 1.79-3.16-0.98-1.43-2.49-1.62-3.03-1.65-1.29-.13-2.52.76-3.18.76-.65 0-1.66-.74-2.73-.72-1.4.02-2.7.82-3.42 2.07-1.46 2.53-.37 6.28 1.05 8.34.7 1.01 1.53 2.14 2.62 2.1 1.05-.04 1.45-.68 2.72-.68 1.27 0 1.64.68 2.74.66 1.13-.02 1.85-1.03 2.54-2.04.8-1.17 1.13-2.3 1.15-2.36-.03-.01-2.2-.85-2.25-3.32ZM12.86 3.32c.58-.7.97-1.68.86-2.65-.83.03-1.84.55-2.44 1.25-.53.62-1 1.61-.87 2.56.93.07 1.88-.47 2.45-1.16Z"/>
-            </svg>
-            {appleLoading ? 'Redirecting...' : 'Sign in with Apple'}
-          </button>
 
           {/* Google OAuth */}
           <button

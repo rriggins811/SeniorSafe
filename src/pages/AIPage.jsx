@@ -634,21 +634,6 @@ export default function AIPage() {
               onSubmit={e => { e.preventDefault(); sendMessage(input) }}
               className="max-w-2xl mx-auto flex gap-2 items-end"
             >
-              {voiceSupported && (
-                <button
-                  type="button"
-                  onClick={listening ? stopListening : startListening}
-                  disabled={loading}
-                  className="relative flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center disabled:opacity-40"
-                  style={{ background: listening ? '#EF4444' : '#F5F5F5' }}
-                >
-                  {listening && (
-                    <span className="absolute inset-0 rounded-2xl animate-ping" style={{ background: 'rgba(239,68,68,0.3)' }} />
-                  )}
-                  {listening ? <MicOff size={20} color="white" /> : <Mic size={20} color="#1B365D" />}
-                </button>
-              )}
-
               <textarea
                 ref={inputRef}
                 value={input}
