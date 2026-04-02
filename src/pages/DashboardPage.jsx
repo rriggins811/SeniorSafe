@@ -49,6 +49,9 @@ export default function DashboardPage() {
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false)
   // Review prompt
   const [showReviewPrompt, setShowReviewPrompt] = useState(false)
+  // Phone number missing
+  const [phoneBannerDismissed, setPhoneBannerDismissed] = useState(false)
+  const [smsToast, setSmsToast] = useState('')
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -309,13 +312,19 @@ export default function DashboardPage() {
 
         // Send SMS to members with phone numbers
         const membersWithPhone = memberProfiles.filter(m => m.phone)
-        await Promise.all(
-          membersWithPhone.map(m =>
-            sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today. Reply STOP to opt out`)
+        if (membersWithPhone.length > 0) {
+          await Promise.all(
+            membersWithPhone.map(m =>
+              sendSMS(m.phone, `✅ ${senderName} just checked in on SeniorSafe and is doing well today. Reply STOP to opt out`)
+            )
           )
-        )
+        } else {
+          setSmsToast('Check-in recorded! SMS alerts require phone numbers — add yours in Settings.')
+          setTimeout(() => setSmsToast(''), 5000)
+        }
       } else {
-        console.warn('⚠️ [CHECK-IN] No family members found with phones! SMS only going to senior.')
+        setSmsToast('Check-in recorded! Invite family members to receive notifications.')
+        setTimeout(() => setSmsToast(''), 5000)
       }
 
       // Also confirm to the senior's own phone
@@ -435,15 +444,20 @@ export default function DashboardPage() {
       sendPushToFamily(memberIds, 'Help Requested', `${name} is requesting help. Please check in with them.`, 'help_request', message)
 
       const membersWithPhone = memberProfiles.filter(m => m.phone)
-      const results = await Promise.all(membersWithPhone.map(m =>
-        sendSMS(m.phone, message)
-      ))
-      const successCount = results.filter(Boolean).length
+      if (membersWithPhone.length > 0) {
+        const results = await Promise.all(membersWithPhone.map(m =>
+          sendSMS(m.phone, message)
+        ))
+        const successCount = results.filter(Boolean).length
 
-      if (successCount === 0) {
-        setHelpSending(false)
-        setHelpFailed(true)
-        return
+        if (successCount === 0) {
+          setHelpSending(false)
+          setHelpFailed(true)
+          return
+        }
+      } else {
+        setSmsToast('Help alert sent via push. Add phone numbers in Settings for SMS alerts too.')
+        setTimeout(() => setSmsToast(''), 5000)
       }
 
       setHelpSending(false)
@@ -590,6 +604,35 @@ export default function DashboardPage() {
               </p>
               <p className="text-orange-600 text-xs mt-1 underline">Tap to review settings</p>
             </div>
+          </div>
+        )}
+
+        {/* Missing phone number banner */}
+        {isAdmin && profile && !profile.phone && !phoneBannerDismissed && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex items-start gap-3">
+            <Phone size={20} color="#D97706" className="flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-amber-800 font-semibold text-sm">Add your phone number</p>
+              <p className="text-amber-700 text-sm mt-0.5 leading-relaxed">
+                Add your phone number in Settings to enable SMS alerts for your family.
+              </p>
+              <button
+                onClick={() => navigate('/profile')}
+                className="mt-2 px-4 py-2 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-sm"
+              >
+                Go to Settings
+              </button>
+            </div>
+            <button onClick={() => setPhoneBannerDismissed(true)} className="text-amber-400 text-lg leading-none">&times;</button>
+          </div>
+        )}
+
+        {/* SMS toast notification */}
+        {smsToast && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 flex items-center gap-3">
+            <AlertTriangle size={16} color="#3B82F6" className="flex-shrink-0" />
+            <p className="text-blue-800 text-sm flex-1">{smsToast}</p>
+            <button onClick={() => setSmsToast('')} className="text-blue-400 text-sm">&times;</button>
           </div>
         )}
 

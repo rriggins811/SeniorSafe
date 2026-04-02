@@ -256,7 +256,7 @@ export default function ProfilePage() {
 
   const isAdmin = profile?.role === 'admin'
   const isMember = profile?.role === 'member'
-  const isPaid = profile?.subscription_tier === 'paid'
+  const isPaid = profile?.subscription_tier === 'paid' || profile?.subscription_tier === 'trial'
   const hasStripeSubscription = !!profile?.stripe_subscription_id
 
   // Billing display
@@ -478,7 +478,9 @@ export default function ProfilePage() {
                 <p className="text-gray-700 text-sm mt-1">
                   <span className="text-gray-500">Plan: </span>
                   <span className={isPaid ? 'text-green-600 font-medium' : 'text-gray-600'}>
-                    {isPaid ? `Premium (${billingInterval})` : 'Free'}
+                    {profile?.subscription_tier === 'trial' && profile?.trial_status === 'active'
+                      ? `Premium Trial (${Math.max(0, Math.ceil((new Date(new Date(profile.trial_start_date).getTime() + 14 * 24 * 60 * 60 * 1000) - new Date()) / (1000 * 60 * 60 * 24)))} days left)`
+                      : isPaid ? `Premium (${billingInterval})` : 'Free'}
                   </span>
                 </p>
                 {isPaid && periodEnd && (
