@@ -589,7 +589,7 @@ export default function SignUpPage() {
 function StepShell({ step, total, onBack, children }) {
   const pct = (step / total) * 100
   return (
-    <div className="h-[100dvh] bg-white flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Header with progress */}
       <div className="bg-[#1B365D] flex-shrink-0">
         <div className="px-6 pt-12 pb-4 max-w-md mx-auto w-full flex items-center justify-between">
@@ -607,7 +607,7 @@ function StepShell({ step, total, onBack, children }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-h-0 px-6 pt-8 pb-10 max-w-md mx-auto w-full flex flex-col gap-6 overflow-y-auto keyboard-safe-bottom">
+      <div className="flex-1 px-6 pt-8 pb-10 max-w-md mx-auto w-full flex flex-col gap-6 overflow-y-auto keyboard-safe-bottom">
         {children}
       </div>
     </div>

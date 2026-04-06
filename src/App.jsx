@@ -28,13 +28,12 @@ import { isNative } from './lib/platform'
 import { initializeIAP } from './lib/iap'
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard'
 
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, skipOnboardingCheck }) {
   const [session, setSession] = useState(undefined)
+  const [onboardingChecked, setOnboardingChecked] = useState(skipOnboardingCheck || false)
+  const [needsOnboarding, setNeedsOnboarding] = useState(false)
 
   useEffect(() => {
-    // "Remember me" session cleanup — if user unchecked "Remember me",
-    // sign out when they close and reopen the browser.
-    // sessionStorage clears on browser close; localStorage persists.
     const sessionOnly = localStorage.getItem('seniorsafe_session_only')
     const activeTab = sessionStorage.getItem('seniorsafe_active_tab')
     if (sessionOnly && !activeTab) {
@@ -42,7 +41,6 @@ function ProtectedRoute({ children }) {
       supabase.auth.signOut()
       return
     }
-    // Mark this tab as active (persists until browser closes)
     if (sessionOnly) {
       sessionStorage.setItem('seniorsafe_active_tab', 'true')
     }
@@ -52,13 +50,36 @@ function ProtectedRoute({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Check if user has completed onboarding (for OAuth users who skip SignUpPage)
+  useEffect(() => {
+    if (!session || skipOnboardingCheck || onboardingChecked) return
+    supabase
+      .from('user_profile')
+      .select('onboarding_complete')
+      .eq('user_id', session.user.id)
+      .single()
+      .then(({ data }) => {
+        if (!data || !data.onboarding_complete) {
+          setNeedsOnboarding(true)
+        }
+        setOnboardingChecked(true)
+      })
+  }, [session, skipOnboardingCheck, onboardingChecked])
+
   if (session === undefined) return null
   if (!session) return <Navigate to="/signin" replace />
+  if (!skipOnboardingCheck && !onboardingChecked) return null
+  if (needsOnboarding) {
+    const provider = session.user.app_metadata?.provider
+    const isOAuth = provider === 'apple' || provider === 'google'
+    const onboardingPath = isOAuth ? 'oauth' : 'parent-setup'
+    return <Navigate to={`/onboarding?path=${onboardingPath}`} replace />
+  }
   return children
 }
 
-function P({ children }) {
-  return <ProtectedRoute>{children}</ProtectedRoute>
+function P({ children, skipOnboardingCheck }) {
+  return <ProtectedRoute skipOnboardingCheck={skipOnboardingCheck}>{children}</ProtectedRoute>
 }
 
 export default function App() {
@@ -143,7 +164,25 @@ export default function App() {
           const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token')
 
           if (accessToken && refreshToken) {
-            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+            const { data: { session } } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+
+            // Route OAuth users: check if they have a profile / completed onboarding
+            if (session?.user) {
+              const { data: profile } = await supabase
+                .from('user_profile')
+                .select('onboarding_complete')
+                .eq('user_id', session.user.id)
+                .single()
+
+              if (profile?.onboarding_complete) {
+                window.location.replace('/dashboard')
+              } else {
+                // Determine onboarding path from provider
+                const provider = session.user.app_metadata?.provider
+                const isOAuth = provider === 'apple' || provider === 'google'
+                window.location.replace(isOAuth ? '/onboarding?path=oauth' : '/onboarding')
+              }
+            }
           }
         }
       }
@@ -160,7 +199,7 @@ export default function App() {
         <Route path="/"            element={<WelcomePage />} />
         <Route path="/signup"      element={<SignUpPage />} />
         <Route path="/signin"      element={<SignInPage />} />
-        <Route path="/onboarding"  element={<P><OnboardingPage /></P>} />
+        <Route path="/onboarding"  element={<P skipOnboardingCheck><OnboardingPage /></P>} />
         <Route path="/dashboard"   element={<P><DashboardPage /></P>} />
         <Route path="/vault"       element={<P><VaultPage /></P>} />
         <Route path="/ai"          element={<P><AIPage /></P>} />
