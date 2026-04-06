@@ -6,7 +6,6 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
-import useKeyboardHeight from '../hooks/useKeyboardHeight'
 
 const AI_CHAT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/ai-chat'
 const FREE_LIMIT = 10
@@ -132,9 +131,6 @@ export default function AIPage() {
   const [emergencyAlert, setEmergencyAlert] = useState(null) // { keyword, text }
 
 
-  // Keyboard height for iOS
-  const keyboardHeight = useKeyboardHeight()
-
   // Refs
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -208,10 +204,10 @@ export default function AIPage() {
     return () => clearInterval(id)
   }, [])
 
-  // Auto-scroll (also when keyboard opens/closes)
+  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading, keyboardHeight])
+  }, [messages, loading])
 
   // Voice setup
   useEffect(() => {
@@ -677,19 +673,17 @@ export default function AIPage() {
                     help with an email, questions about your family&apos;s transition,
                     or anything else on your mind.
                   </p>
-                  {!keyboardHeight && (
-                    <div className="flex flex-col gap-3 w-full max-w-sm mt-2">
-                      {STARTER_PROMPTS.map(q => (
-                        <button
-                          key={q}
-                          onClick={() => sendMessage(q)}
-                          className="w-full text-left px-5 py-4 rounded-xl border-2 border-[#1B365D]/20 bg-white text-[#1B365D] font-medium text-lg leading-snug active:scale-[0.98] transition-transform"
-                        >
-                          {q}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex flex-col gap-3 w-full max-w-sm mt-2">
+                    {STARTER_PROMPTS.map(q => (
+                      <button
+                        key={q}
+                        onClick={() => sendMessage(q)}
+                        className="w-full text-left px-5 py-4 rounded-xl border-2 border-[#1B365D]/20 bg-white text-[#1B365D] font-medium text-lg leading-snug active:scale-[0.98] transition-transform"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 

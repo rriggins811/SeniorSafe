@@ -4,11 +4,9 @@ import { Users, ImagePlus, Send, Trash2, X, Lock, CheckCircle } from 'lucide-rea
 import { supabase } from '../lib/supabase'
 import { isPremium } from '../lib/subscription'
 import BottomNav from '../components/BottomNav'
-import useKeyboardHeight from '../hooks/useKeyboardHeight'
 
 export default function FamilyPage() {
   const navigate = useNavigate()
-  const keyboardHeight = useKeyboardHeight()
   const [user, setUser] = useState(null)
   const [familyName, setFamilyName] = useState('')
   const [subscriptionTier, setSubscriptionTier] = useState('free')
@@ -233,9 +231,7 @@ export default function FamilyPage() {
   // Family Hub is accessible to all tiers (free users get up to 3 family members)
 
   return (
-    <div
-      className={keyboardHeight ? 'h-screen bg-[#F5F5F5] flex flex-col overflow-hidden' : 'min-h-screen bg-[#F5F5F5] flex flex-col pb-20'}
-    >
+    <div className="min-h-screen bg-[#F5F5F5] flex flex-col pb-20">
       {/* Hidden inputs */}
       <input ref={msgPhotoRef} type="file" accept="image/*" onChange={handleMsgPhotoSelect} className="hidden" />
       <input ref={photoUploadRef} type="file" accept="image/*" onChange={uploadPhoto} className="hidden" />
@@ -515,7 +511,7 @@ export default function FamilyPage() {
         </div>
       )}
 
-      {!keyboardHeight && <BottomNav />}
+      <BottomNav />
     </div>
   )
 }

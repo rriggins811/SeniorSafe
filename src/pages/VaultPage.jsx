@@ -4,7 +4,6 @@ import { Upload, Camera, Trash2, FileText, X, FolderLock, Lock, Eye, EyeOff } fr
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 import { openExternalLink } from '../lib/platform'
-import useKeyboardHeight from '../hooks/useKeyboardHeight'
 
 const CATEGORIES = ['Legal', 'Financial', 'Medical', 'Property', 'Personal']
 const FILTER_TABS = ['All', ...CATEGORIES]
@@ -23,7 +22,6 @@ function isImageFile(fileName) {
 
 export default function VaultPage() {
   const navigate = useNavigate()
-  const keyboardHeight = useKeyboardHeight()
   const [user, setUser] = useState(null)
   const [familyName, setFamilyName] = useState('')
   const [subscriptionTier, setSubscriptionTier] = useState(null)
@@ -503,7 +501,7 @@ export default function VaultPage() {
           className="fixed inset-0 bg-black/60 z-50 overflow-y-auto"
           onClick={e => { if (e.target === e.currentTarget) cancelModal() }}
         >
-          <div className="min-h-full flex items-end justify-center sm:items-center" style={{ paddingBottom: keyboardHeight ? `${keyboardHeight}px` : undefined }}>
+          <div className="min-h-full flex items-end justify-center sm:items-center">
             <div className="bg-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-[#1B365D] text-xl font-bold">What is this document?</h2>
@@ -537,7 +535,6 @@ export default function VaultPage() {
                   type="text"
                   value={label}
                   onChange={e => setLabel(e.target.value)}
-                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                   placeholder="e.g. Dad's Power of Attorney"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
                   style={{ fontSize: '16px' }}
@@ -551,7 +548,6 @@ export default function VaultPage() {
                 <select
                   value={category}
                   onChange={e => setCategory(e.target.value)}
-                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1B365D]"
                   style={{ fontSize: '16px' }}
                 >

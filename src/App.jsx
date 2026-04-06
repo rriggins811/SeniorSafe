@@ -83,51 +83,12 @@ function P({ children, skipOnboardingCheck }) {
 }
 
 export default function App() {
-  // iOS keyboard: app-managed scrolling + dismiss on tap outside
+  // iOS keyboard: let the OS handle it natively, just dismiss on tap outside
   useEffect(() => {
     if (!isNative()) return
 
-    // Let the webview shrink when the keyboard opens (standard iOS behavior)
-    Keyboard.setResizeMode({ mode: KeyboardResize.Body }).catch(() => {})
+    Keyboard.setResizeMode({ mode: KeyboardResize.Native }).catch(() => {})
 
-    // Scroll the focused element into view, including within scrollable parents
-    function scrollActiveIntoView() {
-      const el = document.activeElement
-      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT')) return
-
-      // Scroll within the nearest scrollable parent first
-      let parent = el.parentElement
-      while (parent && parent !== document.body) {
-        const style = window.getComputedStyle(parent)
-        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
-          const parentRect = parent.getBoundingClientRect()
-          const elRect = el.getBoundingClientRect()
-          if (elRect.bottom > parentRect.bottom || elRect.top < parentRect.top) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            return
-          }
-        }
-        parent = parent.parentElement
-      }
-
-      // Fallback: scroll the page
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-
-    // On focus, wait for keyboard animation then scroll
-    const handleFocusIn = (e) => {
-      const tag = e.target.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
-        setTimeout(scrollActiveIntoView, 300)
-      }
-    }
-
-    // When keyboard finishes opening, re-scroll (keyboard may have shifted layout)
-    const keyboardShowListener = Keyboard.addListener('keyboardDidShow', () => {
-      setTimeout(scrollActiveIntoView, 50)
-    })
-
-    // Dismiss keyboard when tapping outside input fields
     const handleTouchStart = (e) => {
       const tag = e.target.tagName
       if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT' && !e.target.isContentEditable) {
@@ -135,14 +96,8 @@ export default function App() {
       }
     }
 
-    document.addEventListener('focusin', handleFocusIn, { passive: true })
     document.addEventListener('touchstart', handleTouchStart, { passive: true })
-
-    return () => {
-      document.removeEventListener('focusin', handleFocusIn)
-      document.removeEventListener('touchstart', handleTouchStart)
-      keyboardShowListener.then(h => h.remove()).catch(() => {})
-    }
+    return () => document.removeEventListener('touchstart', handleTouchStart)
   }, [])
 
   useEffect(() => {
