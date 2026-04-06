@@ -87,9 +87,8 @@ export default function App() {
   useEffect(() => {
     if (!isNative()) return
 
-    // Don't let Capacitor resize the webview — we handle scroll ourselves
-    Keyboard.setResizeMode({ mode: KeyboardResize.None }).catch(() => {})
-    Keyboard.setScroll({ isDisabled: true }).catch(() => {})
+    // Let the webview shrink when the keyboard opens (standard iOS behavior)
+    Keyboard.setResizeMode({ mode: KeyboardResize.Body }).catch(() => {})
 
     // Scroll the focused element into view, including within scrollable parents
     function scrollActiveIntoView() {
