@@ -4,6 +4,7 @@ import { Upload, Camera, Trash2, FileText, X, FolderLock, Lock, Eye, EyeOff } fr
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 import { openExternalLink } from '../lib/platform'
+import useKeyboardHeight from '../hooks/useKeyboardHeight'
 
 const CATEGORIES = ['Legal', 'Financial', 'Medical', 'Property', 'Personal']
 const FILTER_TABS = ['All', ...CATEGORIES]
@@ -22,6 +23,7 @@ function isImageFile(fileName) {
 
 export default function VaultPage() {
   const navigate = useNavigate()
+  const keyboardHeight = useKeyboardHeight()
   const [user, setUser] = useState(null)
   const [familyName, setFamilyName] = useState('')
   const [subscriptionTier, setSubscriptionTier] = useState(null)
@@ -501,7 +503,7 @@ export default function VaultPage() {
           className="fixed inset-0 bg-black/60 z-50 overflow-y-auto"
           onClick={e => { if (e.target === e.currentTarget) cancelModal() }}
         >
-          <div className="min-h-full flex items-end justify-center sm:items-center">
+          <div className="min-h-full flex items-end justify-center sm:items-center" style={{ paddingBottom: keyboardHeight ? `${keyboardHeight}px` : undefined }}>
             <div className="bg-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-[#1B365D] text-xl font-bold">What is this document?</h2>

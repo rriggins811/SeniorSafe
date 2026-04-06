@@ -12,6 +12,7 @@ export default function FamilyPage() {
   const [user, setUser] = useState(null)
   const [familyName, setFamilyName] = useState('')
   const [subscriptionTier, setSubscriptionTier] = useState('free')
+  const [profileName, setProfileName] = useState('')
   const [tab, setTab] = useState('messages') // 'messages' | 'photos' | 'history'
 
   // Messages
@@ -109,10 +110,11 @@ export default function FamilyPage() {
       fetchMessages()
       fetchPhotos()
       fetchCheckins(user.id)
-      supabase.from('user_profile').select('subscription_tier, family_name').eq('user_id', user.id).single()
+      supabase.from('user_profile').select('subscription_tier, family_name, first_name, last_name').eq('user_id', user.id).single()
         .then(({ data }) => {
           setSubscriptionTier(data?.subscription_tier || 'free')
           if (data?.family_name) setFamilyName(data.family_name)
+          if (data?.first_name) setProfileName([data.first_name, data.last_name].filter(Boolean).join(' '))
         })
 
       // Mark family messages as read — update last_family_read_at to now
@@ -124,7 +126,7 @@ export default function FamilyPage() {
   }, [])
 
   function authorName() {
-    return user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'Family'
+    return profileName || user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'Family'
   }
 
   function handleMsgPhotoSelect(e) {
@@ -232,8 +234,7 @@ export default function FamilyPage() {
 
   return (
     <div
-      className={keyboardHeight ? 'bg-[#F5F5F5] flex flex-col overflow-hidden' : 'min-h-screen bg-[#F5F5F5] flex flex-col pb-20'}
-      style={keyboardHeight ? { height: `calc(100vh - ${keyboardHeight}px)` } : undefined}
+      className={keyboardHeight ? 'h-screen bg-[#F5F5F5] flex flex-col overflow-hidden' : 'min-h-screen bg-[#F5F5F5] flex flex-col pb-20'}
     >
       {/* Hidden inputs */}
       <input ref={msgPhotoRef} type="file" accept="image/*" onChange={handleMsgPhotoSelect} className="hidden" />

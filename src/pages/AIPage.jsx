@@ -546,7 +546,7 @@ export default function AIPage() {
   // ═══════════════════════════════════════════════════════════════════
 
   return (
-    <div className="bg-[#F5F5F5] flex flex-col overflow-hidden" style={{ height: keyboardHeight ? `calc(100vh - ${keyboardHeight}px)` : '100vh' }}>
+    <div className="h-screen bg-[#F5F5F5] flex flex-col overflow-hidden">
 
       {/* ─── Header ─────────────────────────────────────────────── */}
       <div className="bg-[#1B365D] px-4 pt-12 pb-4 flex-shrink-0">
@@ -677,17 +677,19 @@ export default function AIPage() {
                     help with an email, questions about your family&apos;s transition,
                     or anything else on your mind.
                   </p>
-                  <div className="flex flex-col gap-3 w-full max-w-sm mt-2">
-                    {STARTER_PROMPTS.map(q => (
-                      <button
-                        key={q}
-                        onClick={() => sendMessage(q)}
-                        className="w-full text-left px-5 py-4 rounded-xl border-2 border-[#1B365D]/20 bg-white text-[#1B365D] font-medium text-lg leading-snug active:scale-[0.98] transition-transform"
-                      >
-                        {q}
-                      </button>
-                    ))}
-                  </div>
+                  {!keyboardHeight && (
+                    <div className="flex flex-col gap-3 w-full max-w-sm mt-2">
+                      {STARTER_PROMPTS.map(q => (
+                        <button
+                          key={q}
+                          onClick={() => sendMessage(q)}
+                          className="w-full text-left px-5 py-4 rounded-xl border-2 border-[#1B365D]/20 bg-white text-[#1B365D] font-medium text-lg leading-snug active:scale-[0.98] transition-transform"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
