@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
+import useKeyboardHeight from '../hooks/useKeyboardHeight'
 
 const AI_CHAT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/ai-chat'
 const FREE_LIMIT = 10
@@ -131,6 +132,9 @@ export default function AIPage() {
   const [emergencyAlert, setEmergencyAlert] = useState(null) // { keyword, text }
 
 
+  // Keyboard height for iOS
+  const keyboardHeight = useKeyboardHeight()
+
   // Refs
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -204,10 +208,10 @@ export default function AIPage() {
     return () => clearInterval(id)
   }, [])
 
-  // Auto-scroll
+  // Auto-scroll (also when keyboard opens/closes)
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
+  }, [messages, loading, keyboardHeight])
 
   // Voice setup
   useEffect(() => {
@@ -542,7 +546,7 @@ export default function AIPage() {
   // ═══════════════════════════════════════════════════════════════════
 
   return (
-    <div className="bg-[#F5F5F5] flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
+    <div className="h-screen bg-[#F5F5F5] flex flex-col overflow-hidden" style={{ paddingBottom: keyboardHeight ? `${keyboardHeight}px` : undefined }}>
 
       {/* ─── Header ─────────────────────────────────────────────── */}
       <div className="bg-[#1B365D] px-4 pt-12 pb-4 flex-shrink-0">
