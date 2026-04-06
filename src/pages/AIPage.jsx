@@ -542,7 +542,7 @@ export default function AIPage() {
   // ═══════════════════════════════════════════════════════════════════
 
   return (
-    <div className="h-screen bg-[#F5F5F5] flex flex-col overflow-hidden">
+    <div className="bg-[#F5F5F5] flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
 
       {/* ─── Header ─────────────────────────────────────────────── */}
       <div className="bg-[#1B365D] px-4 pt-12 pb-4 flex-shrink-0">
