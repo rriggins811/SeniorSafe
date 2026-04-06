@@ -498,69 +498,73 @@ export default function VaultPage() {
       {/* Upload modal — admin only */}
       {isAdmin && pendingFile && (
         <div
-          className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center sm:items-center"
+          className="fixed inset-0 bg-black/60 z-50 overflow-y-auto"
           onClick={e => { if (e.target === e.currentTarget) cancelModal() }}
         >
-          <div className="bg-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-[#1B365D] text-xl font-bold">What is this document?</h2>
-              <button onClick={cancelModal} className="p-2 text-gray-400 hover:text-gray-600">
-                <X size={22} />
+          <div className="min-h-full flex items-end justify-center sm:items-center">
+            <div className="bg-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[#1B365D] text-xl font-bold">What is this document?</h2>
+                <button onClick={cancelModal} className="p-2 text-gray-400 hover:text-gray-600">
+                  <X size={22} />
+                </button>
+              </div>
+
+              {/* Image preview */}
+              {pendingFile.previewUrl && (
+                <img
+                  src={pendingFile.previewUrl}
+                  alt="preview"
+                  className="w-full h-44 object-cover rounded-xl bg-gray-100"
+                />
+              )}
+
+              {!pendingFile.previewUrl && (
+                <div className="w-full h-20 rounded-xl bg-gray-100 flex items-center justify-center gap-2 text-gray-400">
+                  <FileText size={28} strokeWidth={1.5} />
+                  <span className="text-sm">{pendingFile.file.name}</span>
+                </div>
+              )}
+
+              {/* Label */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Document name / label
+                </label>
+                <input
+                  type="text"
+                  value={label}
+                  onChange={e => setLabel(e.target.value)}
+                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
+                  placeholder="e.g. Dad's Power of Attorney"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                  style={{ fontSize: '16px' }}
+                  autoFocus
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={category}
+                  onChange={e => setCategory(e.target.value)}
+                  onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1B365D]"
+                  style={{ fontSize: '16px' }}
+                >
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <button
+                onClick={handleUploadConfirm}
+                disabled={uploading || !label.trim()}
+                className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg disabled:opacity-50"
+              >
+                {uploading ? 'Uploading...' : 'Save Document'}
               </button>
             </div>
-
-            {/* Image preview */}
-            {pendingFile.previewUrl && (
-              <img
-                src={pendingFile.previewUrl}
-                alt="preview"
-                className="w-full h-44 object-cover rounded-xl bg-gray-100"
-              />
-            )}
-
-            {!pendingFile.previewUrl && (
-              <div className="w-full h-20 rounded-xl bg-gray-100 flex items-center justify-center gap-2 text-gray-400">
-                <FileText size={28} strokeWidth={1.5} />
-                <span className="text-sm">{pendingFile.file.name}</span>
-              </div>
-            )}
-
-            {/* Label */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Document name / label
-              </label>
-              <input
-                type="text"
-                value={label}
-                onChange={e => setLabel(e.target.value)}
-                placeholder="e.g. Dad's Power of Attorney"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
-                style={{ fontSize: '16px' }}
-                autoFocus
-              />
-            </div>
-
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select
-                value={category}
-                onChange={e => setCategory(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1B365D]"
-                style={{ fontSize: '16px' }}
-              >
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-
-            <button
-              onClick={handleUploadConfirm}
-              disabled={uploading || !label.trim()}
-              className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg disabled:opacity-50"
-            >
-              {uploading ? 'Uploading...' : 'Save Document'}
-            </button>
           </div>
         </div>
       )}

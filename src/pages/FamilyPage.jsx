@@ -232,8 +232,8 @@ export default function FamilyPage() {
 
   return (
     <div
-      className={keyboardHeight ? 'h-screen bg-[#F5F5F5] flex flex-col overflow-hidden' : 'min-h-screen bg-[#F5F5F5] flex flex-col pb-20'}
-      style={{ paddingBottom: keyboardHeight ? `${keyboardHeight}px` : undefined }}
+      className={keyboardHeight ? 'bg-[#F5F5F5] flex flex-col overflow-hidden' : 'min-h-screen bg-[#F5F5F5] flex flex-col pb-20'}
+      style={keyboardHeight ? { height: `calc(100vh - ${keyboardHeight}px)` } : undefined}
     >
       {/* Hidden inputs */}
       <input ref={msgPhotoRef} type="file" accept="image/*" onChange={handleMsgPhotoSelect} className="hidden" />

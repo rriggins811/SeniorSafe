@@ -546,7 +546,7 @@ export default function AIPage() {
   // ═══════════════════════════════════════════════════════════════════
 
   return (
-    <div className="h-screen bg-[#F5F5F5] flex flex-col overflow-hidden" style={{ paddingBottom: keyboardHeight ? `${keyboardHeight}px` : undefined }}>
+    <div className="bg-[#F5F5F5] flex flex-col overflow-hidden" style={{ height: keyboardHeight ? `calc(100vh - ${keyboardHeight}px)` : '100vh' }}>
 
       {/* ─── Header ─────────────────────────────────────────────── */}
       <div className="bg-[#1B365D] px-4 pt-12 pb-4 flex-shrink-0">
