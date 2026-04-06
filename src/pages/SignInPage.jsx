@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Shield, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { isNative, isIOS } from '../lib/platform'
+import { isNative } from '../lib/platform'
 import { Browser } from '@capacitor/browser'
 
 const NATIVE_REDIRECT = 'com.rigginsstrategicsolutions.seniorsafe://auth/callback'
@@ -85,44 +85,23 @@ export default function SignInPage() {
     setAppleLoading(true)
     setError('')
     try {
-      const { SignInWithApple } = await import('@capacitor-community/apple-sign-in')
-
-      // Race the Apple sign-in against a 30-second timeout
-      const appleResult = await Promise.race([
-        SignInWithApple.authorize({
-          clientId: 'com.rigginsstrategicsolutions.seniorsafe',
-          redirectURI: 'https://ynsakoxsmuvwfjgbhxky.supabase.co/auth/v1/callback',
-          scopes: 'email name',
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Apple Sign In timed out. Please try again.')), 30000)
-        ),
-      ])
-
-      const idToken = appleResult?.response?.identityToken
-      if (!idToken) throw new Error('No identity token received from Apple.')
-
-      // Exchange the Apple identity token with Supabase
-      const { data, error: authError } = await supabase.auth.signInWithIdToken({
-        provider: 'apple',
-        token: idToken,
-      })
-      if (authError) throw authError
-
-      // Check if user has completed onboarding
-      const { data: profile } = await supabase
-        .from('user_profile')
-        .select('onboarding_complete')
-        .eq('user_id', data.user.id)
-        .single()
-
-      setAppleLoading(false)
-      navigate(profile?.onboarding_complete ? '/dashboard' : '/onboarding')
+      if (isNative()) {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
+        })
+        if (error) throw error
+        if (data?.url) await Browser.open({ url: data.url })
+      } else {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: { redirectTo: getOAuthRedirect() },
+        })
+        if (error) throw error
+      }
     } catch (err) {
-      setAppleLoading(false)
-      // User cancelled — don't show an error
-      if (err?.message?.includes('canceled') || err?.message?.includes('cancelled') || err?.code === '1001') return
       setError(err.message || 'Apple Sign In failed. Please try again.')
+      setAppleLoading(false)
     }
   }
 
@@ -299,19 +278,17 @@ export default function SignInPage() {
           {googleLoading ? 'Redirecting...' : 'Continue with Google'}
         </button>
 
-        {/* Apple Sign In — native iOS only */}
-        {isIOS() && (
-          <button
-            onClick={handleAppleSignIn}
-            disabled={appleLoading}
-            className="w-full py-4 rounded-xl bg-black text-white font-semibold text-base flex items-center justify-center gap-3 disabled:opacity-60"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="white" xmlns="http://www.w3.org/2000/svg">
-              <path d="M13.71 9.54c-.02-2.17 1.77-3.22 1.85-3.27-1.01-1.48-2.58-1.68-3.13-1.7-1.33-.14-2.6.79-3.28.79-.68 0-1.72-.77-2.83-.75-1.46.02-2.8.85-3.55 2.15-1.52 2.63-.39 6.52 1.09 8.65.72 1.04 1.58 2.22 2.71 2.17 1.09-.04 1.5-.7 2.81-.7 1.31 0 1.68.7 2.82.68 1.17-.02 1.91-1.06 2.63-2.11.83-1.21 1.17-2.38 1.19-2.44-.03-.01-2.28-.88-2.31-3.47zM11.56 3.28c.6-.73 1.01-1.73.9-2.74-.87.04-1.92.58-2.54 1.3-.56.64-1.05 1.67-.92 2.66.97.07 1.96-.49 2.56-1.22z"/>
-            </svg>
-            {appleLoading ? 'Signing in...' : 'Continue with Apple'}
-          </button>
-        )}
+        {/* Apple Sign In */}
+        <button
+          onClick={handleAppleSignIn}
+          disabled={appleLoading}
+          className="w-full py-4 rounded-xl bg-black text-white font-semibold text-base flex items-center justify-center gap-3 disabled:opacity-60"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13.71 9.54c-.02-2.17 1.77-3.22 1.85-3.27-1.01-1.48-2.58-1.68-3.13-1.7-1.33-.14-2.6.79-3.28.79-.68 0-1.72-.77-2.83-.75-1.46.02-2.8.85-3.55 2.15-1.52 2.63-.39 6.52 1.09 8.65.72 1.04 1.58 2.22 2.71 2.17 1.09-.04 1.5-.7 2.81-.7 1.31 0 1.68.7 2.82.68 1.17-.02 1.91-1.06 2.63-2.11.83-1.21 1.17-2.38 1.19-2.44-.03-.01-2.28-.88-2.31-3.47zM11.56 3.28c.6-.73 1.01-1.73.9-2.74-.87.04-1.92.58-2.54 1.3-.56.64-1.05 1.67-.92 2.66.97.07 1.96-.49 2.56-1.22z"/>
+          </svg>
+          {appleLoading ? 'Redirecting...' : 'Continue with Apple'}
+        </button>
 
         <p className="text-sm text-center text-gray-500">
           Don&apos;t have an account?{' '}
