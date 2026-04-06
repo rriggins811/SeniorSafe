@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Send, Bot, Plus, Menu, X, Trash2, MessageSquare,
-  Volume2, VolumeX, Mic, MicOff,
+  Volume2, VolumeX, Mic, MicOff, ArrowLeft,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
@@ -549,8 +549,15 @@ export default function AIPage() {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
+              onClick={() => navigate('/dashboard')}
+              className="p-2 -ml-2 rounded-lg text-white/70 active:text-white"
+              aria-label="Back to Dashboard"
+            >
+              <ArrowLeft size={22} />
+            </button>
+            <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden p-2 -ml-2 rounded-lg text-white/70 active:text-white"
+              className="md:hidden p-2 -ml-1 rounded-lg text-white/70 active:text-white"
               aria-label="Toggle conversation history"
             >
               <Menu size={22} />
@@ -619,7 +626,7 @@ export default function AIPage() {
               onClick={() => setSidebarOpen(false)}
             />
             <div className="fixed inset-y-0 left-0 w-80 bg-white z-50 flex flex-col md:hidden shadow-2xl">
-              <div className="p-4 flex items-center justify-between border-b">
+              <div className="p-4 flex items-center justify-between border-b" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
                 <h2 className="text-[#1B365D] font-bold text-lg">Conversations</h2>
                 <button onClick={() => setSidebarOpen(false)} className="p-1 text-gray-400">
                   <X size={22} />
