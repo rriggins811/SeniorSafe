@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, ChevronLeft, Clock, Users, Copy, Share2, Sparkles, Shield, AlertTriangle, Heart, User } from 'lucide-react'
+import { CheckCircle, ChevronLeft, Clock, Users, Copy, Share2, Sparkles, Shield, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getAppUrl, copyToClipboard } from '../lib/platform'
 import { generateFamilyCode } from '../lib/familyCode'
@@ -18,13 +18,32 @@ for (let h = 6; h <= 20; h++) {
   }
 }
 
+// Derive first/last name from OAuth provider metadata.
+// Apple/Google return name data in a few different shapes; if the user chose
+// to hide their name (Apple "Hide My Email" with no name shared) we fall back
+// to a placeholder rather than prompting — Apple rejects re-prompting.
+function deriveNameFromMetadata(meta) {
+  if (meta.first_name || meta.last_name) {
+    return { firstName: meta.first_name || '', lastName: meta.last_name || '' }
+  }
+  if (meta.full_name) {
+    const parts = meta.full_name.trim().split(/\s+/)
+    return { firstName: parts[0] || '', lastName: parts.slice(1).join(' ') }
+  }
+  if (meta.name) {
+    const parts = meta.name.trim().split(/\s+/)
+    return { firstName: parts[0] || '', lastName: parts.slice(1).join(' ') }
+  }
+  return { firstName: 'Family', lastName: 'Member' }
+}
+
 // Step offsets and totals per path (signup steps already completed)
 // +2 for medical disclaimer + emergency interstitial shown before path-specific steps
 const PATH_CONFIG = {
   'parent-setup': { signupSteps: 1, onboardingSteps: 5, total: 6 },
   'member-join':  { signupSteps: 2, onboardingSteps: 3, total: 5 },
   'self-setup':   { signupSteps: 1, onboardingSteps: 5, total: 6 },
-  'oauth':        { signupSteps: 0, onboardingSteps: 6, total: 6 },
+  'oauth':        { signupSteps: 0, onboardingSteps: 5, total: 5 },
 }
 
 export default function OnboardingPage() {
@@ -47,9 +66,9 @@ export default function OnboardingPage() {
   // Family code
   const [codeCopied, setCodeCopied] = useState(false)
 
-  // OAuth profile fields (only used for oauth path)
-  const [oauthForm, setOauthForm] = useState({ firstName: '', lastName: '', setupType: '' })
+  // OAuth: family code populated by auto-create useEffect below
   const [oauthFamilyCode, setOauthFamilyCode] = useState('')
+  const [oauthFirstName, setOauthFirstName] = useState('')
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -66,8 +85,50 @@ export default function OnboardingPage() {
     })
   }, [navigate])
 
+  // ─── OAuth: auto-create profile from Apple/Google name metadata ───
+  // Apple requires we use whatever name the Authentication Services framework
+  // provides without re-prompting the user.
+  useEffect(() => {
+    if (!user || path !== 'oauth') return
+    ;(async () => {
+      const { data: existing } = await supabase
+        .from('user_profile')
+        .select('family_code, first_name')
+        .eq('user_id', user.id)
+        .single()
+
+      if (existing?.family_code) {
+        setOauthFamilyCode(existing.family_code)
+        setOauthFirstName(existing.first_name || '')
+        return
+      }
+
+      const { firstName, lastName } = deriveNameFromMetadata(user.user_metadata || {})
+      const code = await generateFamilyCode()
+      const familyName = lastName ? `The ${lastName} Family` : `${firstName}'s Family`
+
+      await supabase.from('user_profile').upsert({
+        user_id: user.id,
+        first_name: firstName,
+        last_name: lastName,
+        family_name: familyName,
+        role: 'admin',
+        family_code: code,
+        senior_name: firstName,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        onboarding_complete: false,
+        subscription_tier: 'trial',
+        trial_status: 'active',
+        trial_start_date: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+
+      setOauthFamilyCode(code)
+      setOauthFirstName(firstName)
+    })()
+  }, [user, path])
+
   const meta = user?.user_metadata || {}
-  const seniorName = oauthForm.firstName || meta.first_name || 'your loved one'
+  const seniorName = oauthFirstName || meta.first_name || 'your loved one'
   const familyCode = oauthFamilyCode || meta.family_code || ''
 
   function displayStep() {
@@ -146,36 +207,6 @@ export default function OnboardingPage() {
 
     setSaving(false)
     navigate('/dashboard')
-  }
-
-  // ─── OAuth: create profile and proceed ─────────────────────────────
-  async function handleOauthCreateProfile() {
-    if (!user || !oauthForm.firstName.trim()) return
-    setSaving(true)
-
-    const code = await generateFamilyCode()
-    const familyName = oauthForm.lastName.trim()
-      ? `The ${oauthForm.lastName.trim()} Family`
-      : `${oauthForm.firstName.trim()}'s Family`
-
-    await supabase.from('user_profile').upsert({
-      user_id: user.id,
-      first_name: oauthForm.firstName.trim(),
-      last_name: oauthForm.lastName.trim(),
-      family_name: familyName,
-      role: 'admin',
-      family_code: code,
-      senior_name: oauthForm.firstName.trim(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      onboarding_complete: false,
-      subscription_tier: 'trial',
-      trial_status: 'active',
-      trial_start_date: new Date().toISOString(),
-    }, { onConflict: 'user_id' })
-
-    setOauthFamilyCode(code)
-    setSaving(false)
-    setStep(3) // advance past the name collection step
   }
 
   // ─── OAuth: final save ─────────────────────────────────────────────
@@ -596,60 +627,14 @@ export default function OnboardingPage() {
   }
 
   // ═════════════════════════════════════════════════════════════════════
-  //  PATH: OAuth (Apple / Google) — no email/password, collect name
+  //  PATH: OAuth (Apple / Google) — name auto-populated from provider metadata
   // ═════════════════════════════════════════════════════════════════════
   if (path === 'oauth') {
     // Steps 0 & 1 are medical disclaimer + emergency interstitial (handled above)
+    // Profile is auto-created via useEffect — no name step.
 
-    // Step 2 — Collect name
+    // Step 2 — Set check-in time
     if (step === 2) {
-      return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
-              <User size={32} color="#1B365D" strokeWidth={1.5} />
-            </div>
-            <h1 className="text-[#1B365D] font-bold text-2xl">
-              Tell us about yourself
-            </h1>
-            <p className="text-gray-500 text-lg">
-              Just a couple quick things to get you set up.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <div>
-              <label className="block text-base font-medium text-gray-700 mb-2">First name</label>
-              <input
-                type="text"
-                value={oauthForm.firstName}
-                onChange={e => setOauthForm(f => ({ ...f, firstName: e.target.value }))}
-                placeholder="e.g. Margaret"
-                className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl text-lg focus:outline-none focus:border-[#1B365D]"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="block text-base font-medium text-gray-700 mb-2">Last name</label>
-              <input
-                type="text"
-                value={oauthForm.lastName}
-                onChange={e => setOauthForm(f => ({ ...f, lastName: e.target.value }))}
-                placeholder="e.g. Johnson"
-                className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl text-lg focus:outline-none focus:border-[#1B365D]"
-              />
-            </div>
-          </div>
-
-          <BigButton onClick={handleOauthCreateProfile} disabled={saving || !oauthForm.firstName.trim()}>
-            {saving ? 'Saving...' : 'Continue'}
-          </BigButton>
-        </Shell>
-      )
-    }
-
-    // Step 3 — Set check-in time
-    if (step === 3) {
       return (
         <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
           <div className="flex flex-col items-center gap-2 text-center">
@@ -678,13 +663,13 @@ export default function OnboardingPage() {
             If no one checks in by this time, your family will be notified.
           </p>
 
-          <BigButton onClick={() => setStep(4)}>Next</BigButton>
+          <BigButton onClick={() => setStep(3)}>Next</BigButton>
         </Shell>
       )
     }
 
-    // Step 4 — Try the first check-in
-    if (step === 4) {
+    // Step 3 — Try the first check-in
+    if (step === 3) {
       return (
         <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
           <div className="flex flex-col items-center gap-3 text-center">
@@ -729,14 +714,14 @@ export default function OnboardingPage() {
           </div>
 
           {checkedIn && (
-            <BigButton onClick={() => setStep(5)}>Next</BigButton>
+            <BigButton onClick={() => setStep(4)}>Next</BigButton>
           )}
         </Shell>
       )
     }
 
-    // Step 5 — Show family code
-    if (step === 5) {
+    // Step 4 — Show family code
+    if (step === 4) {
       return (
         <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
           <div className="flex flex-col items-center gap-2 text-center">
