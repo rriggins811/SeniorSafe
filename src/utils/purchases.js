@@ -1,7 +1,7 @@
 import { Purchases } from '@revenuecat/purchases-capacitor'
 import { Capacitor } from '@capacitor/core'
 
-const APPLE_API_KEY = 'appl_OHVFNXVYMWMNtxNhUVcNjXqaLsz'
+const APPLE_API_KEY = 'appl_TzwbAuYsqyTfHLRocmJpjzNSPnL'
 const ANDROID_API_KEY = 'ANDROID_KEY_PLACEHOLDER'
 const ENTITLEMENT_ID = 'SeniorSafeApp Pro'
 
@@ -20,8 +20,8 @@ export async function initializePurchases() {
 
 export async function purchaseMonthly() {
   const { offerings } = await Purchases.getOfferings()
-  if (!offerings.current?.monthly) {
-    throw new Error('Monthly subscription not available. Please try again later.')
+  if (!offerings?.current?.monthly) {
+    throw new Error('Subscription not available right now. Please try again later.')
   }
 
   const result = await Purchases.purchasePackage({ aPackage: offerings.current.monthly })
