@@ -25,7 +25,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 import InstallPrompt from './components/InstallPrompt'
 import ErrorBoundary from './components/ErrorBoundary'
 import { isNative } from './lib/platform'
-import { initializeIAP } from './lib/iap'
+import { initializePurchases } from './utils/purchases'
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard'
 
 function ProtectedRoute({ children, skipOnboardingCheck }) {
@@ -101,7 +101,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    initializeIAP()
+    initializePurchases().catch((err) => console.warn('RevenueCat init skipped:', err))
 
     // Listen for deep link callbacks (OAuth redirect from system browser)
     if (isNative()) {

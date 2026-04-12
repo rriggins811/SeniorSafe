@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Settings, Clock, Lock, Trash2, AlertTriangle, Phone, Plus, X, Pencil, Mail, LogOut, CreditCard, HelpCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { isIOS, isAndroid } from '../lib/platform'
 
 const SUPABASE_FN_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1'
 
@@ -568,7 +569,25 @@ export default function ProfilePage() {
                   </p>
                 )}
 
-                {hasStripeSubscription && !cancelledAt ? (
+                {isIOS() ? (
+                  <a
+                    href="https://apps.apple.com/account/subscriptions"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-center py-3 rounded-xl border border-gray-300 text-[#1B365D] font-semibold text-sm mb-3"
+                  >
+                    Manage Subscription in Settings
+                  </a>
+                ) : isAndroid() ? (
+                  <a
+                    href="https://play.google.com/store/account/subscriptions"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-center py-3 rounded-xl border border-gray-300 text-[#1B365D] font-semibold text-sm mb-3"
+                  >
+                    Manage Subscription in Play Store
+                  </a>
+                ) : hasStripeSubscription && !cancelledAt ? (
                   <button
                     type="button"
                     onClick={handleCancelSubscription}

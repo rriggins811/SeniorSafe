@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { isIOS, isAndroid } from '../lib/platform'
-import { purchaseMonthly, restorePurchases, setIAPCallbacks } from '../lib/iap'
+import { purchaseMonthly as rcPurchaseMonthly, restorePurchases as rcRestorePurchases, isNativePlatform, checkEntitlement } from '../utils/purchases'
 
 const CHECKOUT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/create-checkout'
 
@@ -42,23 +42,7 @@ export default function UpgradePage() {
   const [iapLoading, setIapLoading] = useState(false)
   const [restoring, setRestoring] = useState(false)
 
-  const onNativeStore = isIOS() || isAndroid()
-
-  // Register IAP callbacks so purchase results update this page
-  useEffect(() => {
-    if (!onNativeStore) return
-    setIAPCallbacks({
-      onSuccess: () => {
-        setIapLoading(false)
-        setTier('paid')
-      },
-      onError: (msg) => {
-        setIapLoading(false)
-        setError(msg)
-      },
-    })
-    return () => setIAPCallbacks({ onSuccess: null, onError: null })
-  }, [onNativeStore])
+  const onNativeStore = isNativePlatform()
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -112,28 +96,63 @@ export default function UpgradePage() {
     }
   }
 
-  function handleIAPPurchase() {
+  async function handleIAPPurchase() {
     setIapLoading(true)
     setError('')
-    purchaseMonthly()
+    try {
+      await rcPurchaseMonthly()
+
+      // Purchase succeeded — update Supabase
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const userId = isMember && adminUserId ? adminUserId : user.id
+        await supabase.from('user_profile').update({
+          subscription_tier: 'paid',
+          subscription_source: 'revenuecat',
+          updated_at: new Date().toISOString(),
+        }).eq('user_id', userId)
+      }
+
+      setTier('paid')
+    } catch (err) {
+      // User cancelled — do nothing
+      if (err?.code === 'PURCHASE_CANCELLED' || err?.message?.toLowerCase().includes('cancel')) {
+        setIapLoading(false)
+        return
+      }
+      setError(err.message || 'Purchase failed. Please try again.')
+    } finally {
+      setIapLoading(false)
+    }
   }
 
   async function handleRestore() {
     setRestoring(true)
     setError('')
-    await restorePurchases()
-    // Give a moment for callbacks to fire, then check tier
-    setTimeout(async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data } = await supabase.from('user_profile')
-          .select('subscription_tier')
-          .eq('user_id', user.id)
-          .single()
-        if (data?.subscription_tier === 'paid') setTier('paid')
+    try {
+      await rcRestorePurchases()
+      const hasEntitlement = await checkEntitlement()
+
+      if (hasEntitlement) {
+        // Restore succeeded — update Supabase
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const userId = isMember && adminUserId ? adminUserId : user.id
+          await supabase.from('user_profile').update({
+            subscription_tier: 'paid',
+            subscription_source: 'revenuecat',
+            updated_at: new Date().toISOString(),
+          }).eq('user_id', userId)
+        }
+        setTier('paid')
+      } else {
+        setError('No active subscription found to restore.')
       }
+    } catch (err) {
+      setError(err.message || 'Could not restore purchases. Please try again later.')
+    } finally {
       setRestoring(false)
-    }, 2000)
+    }
   }
 
   const monthlyPrice = '$14.99'
