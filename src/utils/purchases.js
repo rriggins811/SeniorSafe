@@ -19,9 +19,25 @@ export async function initializePurchases() {
 }
 
 export async function purchaseMonthly() {
-  const { offerings } = await Purchases.getOfferings()
-  if (!offerings?.current?.monthly) {
-    throw new Error('Subscription not available right now. Please try again later.')
+  let offeringsResponse
+  try {
+    offeringsResponse = await Purchases.getOfferings()
+  } catch (fetchErr) {
+    throw new Error(`[RC-FETCH] ${fetchErr.message || JSON.stringify(fetchErr)}`)
+  }
+
+  const offerings = offeringsResponse?.offerings
+  if (!offerings) {
+    throw new Error(`[RC-NULL] offerings object is null/undefined. Raw: ${JSON.stringify(offeringsResponse).slice(0, 300)}`)
+  }
+  if (!offerings.current) {
+    const keys = Object.keys(offerings).join(', ')
+    throw new Error(`[RC-NO-CURRENT] offerings.current is null. Available keys: [${keys}]. Raw: ${JSON.stringify(offerings).slice(0, 300)}`)
+  }
+  if (!offerings.current.monthly) {
+    const pkgKeys = Object.keys(offerings.current).join(', ')
+    const availPkgs = offerings.current.availablePackages?.map(p => p.identifier).join(', ') || 'none'
+    throw new Error(`[RC-NO-MONTHLY] No monthly package. Keys: [${pkgKeys}]. Packages: [${availPkgs}]`)
   }
 
   const result = await Purchases.purchasePackage({ aPackage: offerings.current.monthly })
