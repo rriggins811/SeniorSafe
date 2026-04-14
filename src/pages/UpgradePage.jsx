@@ -8,8 +8,6 @@ import { supabase } from '../lib/supabase'
 import { isIOS, isAndroid } from '../lib/platform'
 import { purchaseMonthly as rcPurchaseMonthly, restorePurchases as rcRestorePurchases, isNativePlatform, checkEntitlement } from '../utils/purchases'
 
-const CHECKOUT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/create-checkout'
-
 const FREE_FEATURES = [
   { icon: Heart,  text: 'Daily "I\'m Okay" check-in' },
   { icon: Bell,   text: '"I Need Help" emergency SMS alerts' },
@@ -79,24 +77,24 @@ export default function UpgradePage() {
     setError('')
 
     try {
+      // Ensure the auth session is hydrated before invoking the function.
+      // supabase.functions.invoke() auto-attaches the current user's JWT
+      // as Authorization: Bearer <access_token>, plus the apikey header.
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not logged in')
 
-      const res = await fetch(CHECKOUT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({ plan, ...(isMember && adminUserId ? { admin_user_id: adminUserId } : {}) }),
+      const { data, error: fnError } = await supabase.functions.invoke('create-checkout', {
+        body: { plan, ...(isMember && adminUserId ? { admin_user_id: adminUserId } : {}) },
       })
 
-      const data = await res.json()
-      if (!res.ok) {
-        const code = data.code || data.error_code || res.status
-        const detail = data.error || data.message || 'Unable to start checkout.'
+      if (fnError) {
+        const code = fnError.context?.status || fnError.status || 'fn-error'
+        const detail = fnError.message || 'Unable to start checkout.'
         throw new Error(`${detail} (${code}). If this keeps happening, text Ryan at (336) 553-8933 or email support@seniorsafeapp.com.`)
+      }
+
+      if (!data?.url) {
+        throw new Error('Checkout URL missing from response. If this keeps happening, text Ryan at (336) 553-8933 or email support@seniorsafeapp.com.')
       }
 
       // Redirect to Stripe Checkout
@@ -333,10 +331,10 @@ export default function UpgradePage() {
           ) : (
             <button
               onClick={handleCheckout}
-              disabled={loading}
+              disabled={loading || tier === null}
               className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
             >
-              {loading ? 'Redirecting to checkout...' : `Start Premium — ${plan === 'monthly' ? monthlyPrice + '/mo' : annualMonthly + '/mo'}`}
+              {tier === null ? 'Loading...' : loading ? 'Redirecting to checkout...' : `Start Premium — ${plan === 'monthly' ? monthlyPrice + '/mo' : annualMonthly + '/mo'}`}
             </button>
           )}
 
