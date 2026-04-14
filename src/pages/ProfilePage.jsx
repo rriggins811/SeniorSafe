@@ -28,12 +28,6 @@ export default function ProfilePage() {
   const [pwMessage, setPwMessage] = useState('')
   const [pwError, setPwError] = useState('')
 
-  // Feedback state
-  const [feedbackText, setFeedbackText] = useState('')
-  const [feedbackSending, setFeedbackSending] = useState(false)
-  const [feedbackSent, setFeedbackSent] = useState(false)
-  const [feedbackError, setFeedbackError] = useState('')
-
   // Delete account state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteText, setDeleteText] = useState('')
@@ -656,81 +650,6 @@ export default function ProfilePage() {
                   <p className="text-gray-400 text-xs">(336) 553-8933</p>
                 </div>
               </a>
-            </div>
-
-            {/* ───────── Send Feedback ───────── */}
-            <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <Mail size={14} className="text-gray-400" />
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Send Feedback</p>
-              </div>
-              {feedbackSent ? (
-                <p className="text-green-600 text-sm font-medium">Thanks for your feedback! We read every message.</p>
-              ) : (
-                <>
-                  <textarea
-                    value={feedbackText}
-                    onChange={e => setFeedbackText(e.target.value)}
-                    placeholder="Tell us what's working, what's not, or what you'd like to see..."
-                    className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#D4A843]"
-                    rows={3}
-                  />
-                  <button
-                    onClick={async () => {
-                      if (!feedbackText.trim() || !user) return
-                      setFeedbackSending(true)
-                      setFeedbackError('')
-                      try {
-                        const { data: { session } } = await supabase.auth.getSession()
-                        if (!session) throw new Error('You must be signed in to send feedback.')
-
-                        const { data, error: fnError } = await supabase.functions.invoke('send-feedback', {
-                          body: {
-                            message: feedbackText.trim(),
-                            platform: window.Capacitor?.getPlatform?.() || 'web',
-                            app_version: '1.0.0',
-                          },
-                          headers: { Authorization: `Bearer ${session.access_token}` },
-                        })
-
-                        if (fnError) {
-                          const code = fnError.context?.status || fnError.status || 'fn-error'
-                          throw new Error(`${fnError.message || 'Could not send feedback'} (${code})`)
-                        }
-                        if (!data?.ok) {
-                          throw new Error(data?.error || 'Feedback was not delivered.')
-                        }
-
-                        setFeedbackSent(true)
-                        setFeedbackText('')
-                      } catch (err) {
-                        setFeedbackError(err.message || 'Could not send feedback. Please try again or email support@seniorsafeapp.com.')
-                      } finally {
-                        setFeedbackSending(false)
-                      }
-                    }}
-                    disabled={!feedbackText.trim() || feedbackSending}
-                    className="mt-3 w-full py-3 rounded-xl bg-[#1B365D] text-white font-semibold text-sm disabled:opacity-50"
-                  >
-                    {feedbackSending ? 'Sending...' : 'Submit Feedback'}
-                  </button>
-                  {feedbackError && (
-                    <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2">
-                      <AlertTriangle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-red-700 text-sm font-medium">Feedback didn&rsquo;t send</p>
-                        <p className="text-red-600 text-xs mt-0.5 leading-relaxed">{feedbackError}</p>
-                        <a
-                          href="mailto:support@seniorsafeapp.com?subject=SeniorSafe%20Feedback"
-                          className="text-red-700 text-xs underline mt-1 inline-block"
-                        >
-                          Email support@seniorsafeapp.com instead
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
 
             {/* ───────── About SeniorSafe / Medical Disclaimer ───────── */}
