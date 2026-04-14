@@ -77,14 +77,17 @@ export default function UpgradePage() {
     setError('')
 
     try {
-      // Ensure the auth session is hydrated before invoking the function.
-      // supabase.functions.invoke() auto-attaches the current user's JWT
-      // as Authorization: Bearer <access_token>, plus the apikey header.
       const { data: { session } } = await supabase.auth.getSession()
+      console.log('DEBUG session:', session?.access_token ? 'JWT present' : 'JWT MISSING')
+      console.log('DEBUG user:', session?.user?.email)
+
       if (!session) throw new Error('Not logged in')
 
       const { data, error: fnError } = await supabase.functions.invoke('create-checkout', {
         body: { plan, ...(isMember && adminUserId ? { admin_user_id: adminUserId } : {}) },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       })
 
       if (fnError) {
