@@ -158,10 +158,10 @@ export default function FamilyInvitePage() {
               {atFreeLimit && (
                 <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-4 text-center">
                   <p className="text-yellow-800 font-semibold text-sm mb-1">
-                    Free plan limit reached ({FREE_MEMBER_LIMIT} member)
+                    Free plan limit reached (1 invited family member)
                   </p>
                   <p className="text-yellow-700 text-sm mb-3 leading-relaxed">
-                    Upgrade to Premium for unlimited family members.
+                    Upgrade to Premium for unlimited invited family members.
                   </p>
                   <button
                     onClick={() => navigate('/upgrade')}

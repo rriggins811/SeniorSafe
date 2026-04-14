@@ -13,7 +13,7 @@ const CHECKOUT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/crea
 const FREE_FEATURES = [
   { icon: Heart,  text: 'Daily "I\'m Okay" check-in' },
   { icon: Bell,   text: '"I Need Help" emergency SMS alerts' },
-  { icon: Users,  text: '1 family member' },
+  { icon: Users,  text: '1 invited family member (unlimited on Premium)' },
   { icon: Bot,    text: '10 AI messages per month' },
   { icon: Shield, text: 'Emergency Info card' },
 ]
@@ -49,20 +49,27 @@ export default function UpgradePage() {
       if (!user) { navigate('/signin'); return }
       supabase.from('user_profile').select('subscription_tier, role, invited_by').eq('user_id', user.id).single()
         .then(async ({ data }) => {
-          if (data?.role === 'member' && data?.invited_by) {
-            setIsMember(true)
-            setAdminUserId(data.invited_by)
-            // Load admin's profile for display + tier check
-            const { data: adminProfile } = await supabase
-              .from('user_profile')
-              .select('senior_name, subscription_tier')
-              .eq('user_id', data.invited_by)
-              .single()
-            setAdminSeniorName(adminProfile?.senior_name || '')
-            setTier(adminProfile?.subscription_tier || 'free')
-          } else {
-            setTier(data?.subscription_tier || 'free')
+          // Role guard: only admins can manage billing
+          if (data && data.role !== 'admin') {
+            // Look up admin's first_name (root of invited_by chain)
+            let adminFirstName = ''
+            if (data.invited_by) {
+              const { data: adminProfile } = await supabase
+                .from('user_profile')
+                .select('first_name')
+                .eq('user_id', data.invited_by)
+                .single()
+              adminFirstName = adminProfile?.first_name || ''
+            }
+            const who = adminFirstName ? `your family admin (${adminFirstName})` : 'your family admin'
+            navigate('/dashboard', {
+              replace: true,
+              state: { upgradeMessage: `Your family admin manages billing. Reach out to ${who} to upgrade your family.` },
+            })
+            return
           }
+
+          setTier(data?.subscription_tier || 'free')
         })
     })
   }, [navigate])
@@ -86,7 +93,11 @@ export default function UpgradePage() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Checkout failed')
+      if (!res.ok) {
+        const code = data.code || data.error_code || res.status
+        const detail = data.error || data.message || 'Unable to start checkout.'
+        throw new Error(`${detail} (${code}). If this keeps happening, text Ryan at (336) 553-8933 or email support@seniorsafeapp.com.`)
+      }
 
       // Redirect to Stripe Checkout
       window.location.href = data.url

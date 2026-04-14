@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import {
   Shield, CheckCircle, Pill, Calendar, MessageCircle,
   Phone, Heart, LogOut, ChevronRight, Users, AlertTriangle, Settings, Lock, Sparkles,
@@ -12,6 +12,16 @@ import BottomNav from '../components/BottomNav'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [redirectMessage, setRedirectMessage] = useState(location.state?.upgradeMessage || '')
+
+  // Clear location.state once consumed so refresh doesn't re-show the message
+  useEffect(() => {
+    if (location.state?.upgradeMessage) {
+      window.history.replaceState({}, '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [familyName, setFamilyName] = useState('')
@@ -196,17 +206,40 @@ export default function DashboardPage() {
         .limit(4)
         .then(({ data }) => setQuickDialContacts(data || []))
 
-      // Check for recent failed notifications (last 48 hours)
-      const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-      supabase.from('notification_log')
-        .select('created_at')
-        .eq('status', 'failed')
-        .gte('created_at', twoDaysAgo)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .then(({ data }) => {
-          if (data?.length) setFailedNotification(data[0])
-        })
+      // Failed notification banner — gate on:
+      //  1) at least one OTHER family member exists
+      //  2) at least one of those members has a phone number
+      //  3) actual delivery failure in the last 24 hours
+      //  4) banner not dismissed in the last 24 hours (localStorage)
+      ;(async () => {
+        const dismissedAt = parseInt(localStorage.getItem('seniorsafe_notif_banner_dismissed_at') || '0', 10)
+        if (dismissedAt && Date.now() - dismissedAt < 24 * 60 * 60 * 1000) return
+
+        // Look up other family members (same family_name, excluding self)
+        const { data: pSelf } = await supabase.from('user_profile')
+          .select('family_name')
+          .eq('user_id', user.id)
+          .single()
+        if (!pSelf?.family_name) return
+
+        const { data: family } = await supabase.from('user_profile')
+          .select('user_id, phone')
+          .eq('family_name', pSelf.family_name)
+          .neq('user_id', user.id)
+
+        if (!family || family.length === 0) return
+        const anyHasPhone = family.some(m => m.phone && m.phone.trim().length > 0)
+        if (!anyHasPhone) return
+
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const { data: failed } = await supabase.from('notification_log')
+          .select('created_at')
+          .eq('status', 'failed')
+          .gte('created_at', oneDayAgo)
+          .order('created_at', { ascending: false })
+          .limit(1)
+        if (failed?.length) setFailedNotification(failed[0])
+      })()
 
       // Fetch today's daily quote/joke (cycles by day of year)
       // Goal: expand daily_quotes table to 365 entries over time
@@ -579,23 +612,29 @@ export default function DashboardPage() {
 
       <div className="px-4 pt-5 pb-4 max-w-lg mx-auto flex flex-col gap-5">
 
-        {/* Emergency 911 button — always visible above the fold */}
-        <a
-          href="tel:911"
-          className="w-full rounded-2xl py-4 flex items-center justify-center gap-3 bg-red-600 shadow-md active:scale-[0.98] transition-all"
-        >
-          <Phone size={22} color="white" strokeWidth={2} />
-          <span className="text-white font-bold" style={{ fontSize: '18px' }}>Emergency? Call 911</span>
-        </a>
+        {/* Redirect message (e.g., non-admin sent back from /upgrade) */}
+        {redirectMessage && (
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 flex items-start gap-3">
+            <AlertTriangle size={20} color="#2563EB" className="flex-shrink-0 mt-0.5" />
+            <p className="text-blue-800 text-sm flex-1 leading-relaxed">{redirectMessage}</p>
+            <button
+              onClick={() => setRedirectMessage('')}
+              aria-label="Dismiss"
+              className="text-blue-400 text-lg leading-none px-1"
+            >
+              &times;
+            </button>
+          </div>
+        )}
 
         {/* Failed notification alert banner */}
         {failedNotification && (
-          <div
-            className="bg-orange-50 border-2 border-orange-300 rounded-2xl p-4 flex items-start gap-3 cursor-pointer"
-            onClick={() => { setFailedNotification(null); navigate('/profile') }}
-          >
+          <div className="bg-orange-50 border-2 border-orange-300 rounded-2xl p-4 flex items-start gap-3">
             <AlertTriangle size={20} color="#D97706" className="flex-shrink-0 mt-0.5" />
-            <div>
+            <div
+              className="flex-1 cursor-pointer"
+              onClick={() => { setFailedNotification(null); navigate('/profile') }}
+            >
               <p className="text-orange-800 font-semibold text-sm">Notification delivery issue</p>
               <p className="text-orange-700 text-sm mt-0.5 leading-relaxed">
                 We had trouble delivering a notification on{' '}
@@ -604,6 +643,17 @@ export default function DashboardPage() {
               </p>
               <p className="text-orange-600 text-xs mt-1 underline">Tap to review settings</p>
             </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                localStorage.setItem('seniorsafe_notif_banner_dismissed_at', Date.now().toString())
+                setFailedNotification(null)
+              }}
+              aria-label="Dismiss"
+              className="text-orange-400 text-lg leading-none px-1"
+            >
+              &times;
+            </button>
           </div>
         )}
 
