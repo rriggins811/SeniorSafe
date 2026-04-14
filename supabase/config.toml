@@ -1,0 +1,11 @@
+# Supabase project config
+# Function-level overrides go here.
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.send-sms]
+verify_jwt = false
+
+[functions.send-feedback]
+verify_jwt = false
