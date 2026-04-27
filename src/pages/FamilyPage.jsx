@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Users, ImagePlus, Send, Trash2, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Users, ImagePlus, Send, Trash2, X, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
 import BottomNav from '../components/BottomNav'
 import EmptyChat from '../components/illustrations/EmptyChat'
 import EmptyPhotos from '../components/illustrations/EmptyPhotos'
@@ -26,6 +28,7 @@ function humanTs(ts) {
 }
 
 export default function FamilyPage() {
+  const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [familyName, setFamilyName] = useState('')
   const [profileName, setProfileName] = useState('')
@@ -133,6 +136,7 @@ export default function FamilyPage() {
 
   async function postMessage(e) {
     e.preventDefault()
+    dismissKeyboard()
     if ((!newMsg.trim() && !msgPhoto) || !user) return
     setPosting(true)
 
@@ -226,7 +230,10 @@ export default function FamilyPage() {
   // Family Hub is accessible to all tiers (free users get up to 3 family members)
 
   return (
-    <div className="h-screen bg-[#FAF8F4] flex flex-col overflow-hidden">
+    <div
+      className="bg-[#FAF8F4] flex flex-col overflow-hidden"
+      style={{ height: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))' }}
+    >
       {/* Hidden inputs */}
       <input ref={msgPhotoRef} type="file" accept="image/*" onChange={handleMsgPhotoSelect} className="hidden" />
       <input ref={photoUploadRef} type="file" accept="image/*" onChange={uploadPhoto} className="hidden" />
@@ -234,6 +241,13 @@ export default function FamilyPage() {
       {/* Header */}
       <div className="bg-[#1B365D] px-5 pt-12 pb-0 flex-shrink-0">
         <div className="max-w-lg mx-auto">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-white/70 text-sm mb-3 active:text-white"
+            aria-label="Back to home"
+          >
+            <ArrowLeft size={16} /> Back
+          </button>
           <div className="flex items-center gap-3 mb-4">
             <div className="bg-white/15 rounded-xl p-2">
               <Users size={20} color="#D4A843" strokeWidth={1.5} />

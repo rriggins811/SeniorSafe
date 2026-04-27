@@ -4,6 +4,7 @@ import { Shield, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { isNative } from '../lib/platform'
 import { Browser } from '@capacitor/browser'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
 
 const NATIVE_REDIRECT = 'com.rigginsstrategicsolutions.seniorsafe://auth/callback'
 
@@ -30,6 +31,7 @@ export default function SignInPage() {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    dismissKeyboard()
     setError('')
     setLoading(true)
 
@@ -107,6 +109,7 @@ export default function SignInPage() {
 
   async function handleResetPassword(e) {
     e.preventDefault()
+    dismissKeyboard()
     setResetError('')
     if (!resetEmail.trim()) {
       setResetError('Please enter your email address.')

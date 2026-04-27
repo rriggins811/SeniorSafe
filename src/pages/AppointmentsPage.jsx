@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Trash2, Calendar, X, ChevronDown, ChevronUp, Download,
 import { supabase } from '../lib/supabase'
 import { googleCalendarUrl } from '../lib/calendar'
 import { openExternalLink } from '../lib/platform'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
 
 const APPT_TYPES = ['Medical', 'Dental', 'Vision', 'Therapy', 'Other']
 
@@ -110,6 +111,7 @@ export default function AppointmentsPage() {
 
   async function handleAdd(e) {
     e.preventDefault()
+    dismissKeyboard()
     if (!form.title.trim() || !form.appointment_date || !user) return
     setSaving(true)
     const { error } = await supabase.from('appointments').insert({

@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Trash2, Pill, X, Check, Lock, Calendar } from 'lucide-
 import { supabase } from '../lib/supabase'
 import { googleCalendarUrl, addMinutes } from '../lib/calendar'
 import { openExternalLink } from '../lib/platform'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
 
 const FREQUENCIES = ['Once daily', 'Twice daily', 'Three times daily', 'As needed']
 
@@ -106,6 +107,7 @@ export default function MedicationsPage() {
 
   async function handleAddMed(e) {
     e.preventDefault()
+    dismissKeyboard()
     if (!form.med_name.trim() || !user) return
     setSaving(true)
     const { error } = await supabase.from('medications').insert({

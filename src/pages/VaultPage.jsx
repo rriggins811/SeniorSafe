@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 import { openExternalLink } from '../lib/platform'
 import EmptyVault from '../components/illustrations/EmptyVault'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
 
 const CATEGORIES = ['Legal', 'Financial', 'Medical', 'Property', 'Personal']
 const FILTER_TABS = ['All', ...CATEGORIES]
@@ -170,6 +171,7 @@ export default function VaultPage() {
   }
 
   async function handleUploadConfirm() {
+    dismissKeyboard()
     if (!pendingFile || !label.trim() || !user) return
     setUploading(true)
 

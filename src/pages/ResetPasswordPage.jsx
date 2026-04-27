@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shield, CheckCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate()
@@ -30,6 +31,7 @@ export default function ResetPasswordPage() {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    dismissKeyboard()
     setError('')
 
     if (password.length < 6) {

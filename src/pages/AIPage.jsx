@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 import AIMark from '../components/AIMark'
 import EmptyConversations from '../components/illustrations/EmptyConversations'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
 
 const AI_CHAT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/ai-chat'
 const FREE_LIMIT = 10
@@ -293,6 +294,7 @@ export default function AIPage() {
   // ─── Send message ──────────────────────────────────────────────────
 
   async function sendMessage(text, bypassEmergencyCheck = false) {
+    dismissKeyboard()
     const userText = (text || input).trim()
     if (!userText || loading) return
 
@@ -543,7 +545,10 @@ export default function AIPage() {
   // ═══════════════════════════════════════════════════════════════════
 
   return (
-    <div className="h-screen bg-[#FAF8F4] flex flex-col overflow-hidden">
+    <div
+      className="bg-[#FAF8F4] flex flex-col overflow-hidden"
+      style={{ height: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))' }}
+    >
 
       {/* ─── Header ─────────────────────────────────────────────── */}
       <div className="bg-[#1B365D] px-4 pt-12 pb-4 flex-shrink-0">

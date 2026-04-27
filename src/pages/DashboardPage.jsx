@@ -9,6 +9,7 @@ import { sendSMS } from '../lib/sms'
 import { isPremium, trialDaysRemaining } from '../lib/subscription'
 import { registerPushNotifications } from '../lib/pushNotifications'
 import BottomNav from '../components/BottomNav'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -376,6 +377,7 @@ export default function DashboardPage() {
   }
 
   async function saveCheckinNote() {
+    dismissKeyboard()
     if (!lastCheckinId || !checkinNote.trim() || noteSaving) return
     setNoteSaving(true)
 

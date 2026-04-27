@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { generateFamilyCode } from '../lib/familyCode'
 import { isNative } from '../lib/platform'
 import { Browser } from '@capacitor/browser'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
 
 const NATIVE_REDIRECT = 'com.rigginsstrategicsolutions.seniorsafe://auth/callback'
 
@@ -128,6 +129,7 @@ export default function SignUpPage() {
 
   // ─── Code validation for Path B ───────────────────────────────────
   async function handleValidateCode() {
+    dismissKeyboard()
     const code = form.inviteCode.trim().toUpperCase()
     if (code.length < 4) { setError('Please enter a valid family code.'); return }
 
@@ -146,6 +148,7 @@ export default function SignUpPage() {
 
   // ─── Create admin account (Path A + C) ────────────────────────────
   async function createAdminAccount() {
+    dismissKeyboard()
     if (!form.firstName.trim() || !form.email.trim() || !form.password) {
       setError('Please fill in all fields.')
       return
@@ -211,6 +214,7 @@ export default function SignUpPage() {
 
   // ─── Create member account (Path B) ───────────────────────────────
   async function createMemberAccount() {
+    dismissKeyboard()
     if (!form.firstName.trim() || !form.email.trim() || !form.password) {
       setError('Please fill in all required fields.')
       return

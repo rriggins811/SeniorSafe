@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Settings, Clock, Lock, Trash2, AlertTriangle, Phone, Plus, X, Pencil, Mail, LogOut, CreditCard, HelpCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { isIOS, isAndroid } from '../lib/platform'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
 
 const SUPABASE_FN_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1'
 
@@ -76,6 +77,7 @@ export default function ProfilePage() {
 
   async function handleSave(e) {
     e.preventDefault()
+    dismissKeyboard()
     if (!user) return
     setSaving(true)
 
@@ -113,6 +115,7 @@ export default function ProfilePage() {
 
   async function handleChangePassword(e) {
     e.preventDefault()
+    dismissKeyboard()
     setPwError('')
     setPwMessage('')
 
@@ -226,6 +229,7 @@ export default function ProfilePage() {
   }
 
   async function saveQuickDialContact() {
+    dismissKeyboard()
     if (!editingContact || !user) return
     setQdSaving(true)
     const { label, name, phone, id } = editingContact
