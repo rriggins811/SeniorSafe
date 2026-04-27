@@ -65,28 +65,27 @@ serve(async (req) => {
   }
 
   try {
-    // --- Auth: verify the caller has a valid Supabase JWT ---
+    // --- Auth: manually verify the JWT via the service-role admin client ---
+    // (verify_jwt is disabled at the gateway so we avoid stale-cache 401s.)
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    const token = authHeader.replace('Bearer ', '')
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    )
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      console.error('Auth error:', authError)
+      return new Response(JSON.stringify({ error: 'Invalid token', detail: authError?.message }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    console.log('Authenticated user:', user.id, user.email)
 
     // --- Validate input ---
     const { to, message, notification_type } = await req.json()
@@ -107,7 +106,7 @@ serve(async (req) => {
     }
 
     // --- Load user's family_name for notification log ---
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from('user_profile')
       .select('family_name')
       .eq('user_id', user.id)

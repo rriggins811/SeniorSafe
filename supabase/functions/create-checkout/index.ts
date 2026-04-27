@@ -47,20 +47,33 @@ serve(async (req: Request) => {
   }
 
   try {
-    // ---- Auth: get the logged-in user ----
-    const authHeader = req.headers.get('Authorization') || ''
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    )
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
-    if (authErr || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    // ---- Auth: manually verify the JWT using the service-role client ----
+    // (verify_jwt is disabled at the gateway for this function so we can
+    // return a useful error and avoid stale gateway-cache 401s.)
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
         status: 401,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
+    const token = authHeader.replace('Bearer ', '')
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    )
+
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    if (authError || !user) {
+      console.error('Auth error:', authError)
+      return new Response(JSON.stringify({ error: 'Invalid token', details: authError?.message }), {
+        status: 401,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+
+    console.log('Authenticated user:', user.id, user.email)
 
     // ---- Parse body ----
     const { plan, admin_user_id } = await req.json() // plan: 'monthly'|'annual', admin_user_id: optional
@@ -78,10 +91,6 @@ serve(async (req: Request) => {
     if (admin_user_id) {
       // A family member is paying for their admin's plan.
       // Verify the requesting user is actually a member of that admin.
-      const supabaseAdmin = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      )
       const { data: memberProfile } = await supabaseAdmin
         .from('user_profile')
         .select('invited_by')
@@ -99,11 +108,7 @@ serve(async (req: Request) => {
     }
 
     // ---- Check if user is still in trial (offer Stripe trial if so) ----
-    const supabaseServiceRole = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    )
-    const { data: targetProfile } = await supabaseServiceRole
+    const { data: targetProfile } = await supabaseAdmin
       .from('user_profile')
       .select('trial_status, trial_start_date')
       .eq('user_id', targetUserId)
