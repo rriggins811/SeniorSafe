@@ -119,7 +119,7 @@ export default function PrivacyPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+    <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
       {/* Header */}
       <div className="bg-[#1B365D] px-5 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">

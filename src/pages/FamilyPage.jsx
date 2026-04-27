@@ -2,6 +2,28 @@ import { useState, useEffect, useRef } from 'react'
 import { Users, ImagePlus, Send, Trash2, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
+import EmptyChat from '../components/illustrations/EmptyChat'
+import EmptyPhotos from '../components/illustrations/EmptyPhotos'
+
+// Stable warm accent ring colors so siblings can be distinguished without the chat looking like a playroom.
+const AVATAR_RING_COLORS = ['#F5E1E6', '#D4A843', '#F9F6F1', '#DCE1EB']
+function ringColorFor(name) {
+  if (!name) return AVATAR_RING_COLORS[0]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0
+  return AVATAR_RING_COLORS[Math.abs(hash) % AVATAR_RING_COLORS.length]
+}
+
+// Friendlier timestamp: "Today, 12:33 PM" / "Apr 14, 11:53 AM"
+function humanTs(ts) {
+  const d = new Date(ts)
+  const now = new Date()
+  const sameDay = d.toDateString() === now.toDateString()
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  if (sameDay) return `Today, ${time}`
+  const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return `${dateStr}, ${time}`
+}
 
 export default function FamilyPage() {
   const [user, setUser] = useState(null)
@@ -198,15 +220,13 @@ export default function FamilyPage() {
   }
 
   function formatTs(ts) {
-    const d = new Date(ts)
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
-      ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    return humanTs(ts)
   }
 
   // Family Hub is accessible to all tiers (free users get up to 3 family members)
 
   return (
-    <div className="h-screen bg-[#F5F5F5] flex flex-col overflow-hidden">
+    <div className="h-screen bg-[#FAF8F4] flex flex-col overflow-hidden">
       {/* Hidden inputs */}
       <input ref={msgPhotoRef} type="file" accept="image/*" onChange={handleMsgPhotoSelect} className="hidden" />
       <input ref={photoUploadRef} type="file" accept="image/*" onChange={uploadPhoto} className="hidden" />
@@ -219,21 +239,24 @@ export default function FamilyPage() {
               <Users size={20} color="#D4A843" strokeWidth={1.5} />
             </div>
             <div>
-              <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Family Hub</h1>
-              <p className="text-white/60 text-sm">Messages &amp; Photos</p>
+              <h1 className="text-white" style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700 }}>Family Hub</h1>
+              <p className="text-white/70 text-sm italic">Messages and photos</p>
             </div>
           </div>
           {/* Tabs */}
-          <div className="flex gap-1">
+          <div className="flex gap-6 border-b border-white/10">
             {['messages', 'photos'].map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`flex-1 py-2.5 text-sm font-semibold capitalize rounded-t-xl transition-colors ${
-                  tab === t ? 'bg-[#F5F5F5] text-[#1B365D]' : 'text-white/60'
+                className={`relative py-3 text-sm font-semibold capitalize transition-colors ${
+                  tab === t ? 'text-white' : 'text-white/50'
                 }`}
               >
                 {t}
+                {tab === t && (
+                  <span className="absolute left-0 right-0 -bottom-px h-[2px] bg-[#D4A843] rounded-full" aria-hidden="true" />
+                )}
               </button>
             ))}
           </div>
@@ -247,68 +270,74 @@ export default function FamilyPage() {
           <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
             <div className="max-w-lg mx-auto flex flex-col gap-3">
               {msgLoading ? (
-                <p className="text-center text-gray-400 py-16" style={{ fontSize: '16px' }}>Loading...</p>
+                <p className="text-center text-[#6B645A] italic py-16" style={{ fontSize: '16px' }}>Just a sec, getting your family hub ready.</p>
               ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center py-20 text-center gap-3">
-                  <div className="bg-gray-100 rounded-2xl p-5">
-                    <Users size={44} color="#9CA3AF" strokeWidth={1.5} />
+                <div className="flex flex-col items-center py-16 text-center gap-3">
+                  <div className="w-40 h-40">
+                    <EmptyChat />
                   </div>
-                  <p className="text-gray-600 font-semibold" style={{ fontSize: '17px' }}>
-                    Be the first to post a message!
+                  <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>
+                    Start the conversation.
                   </p>
-                  <p className="text-gray-400" style={{ fontSize: '15px' }}>
+                  <p className="text-[#6B645A] italic max-w-xs" style={{ fontSize: '15px' }}>
                     Share updates, encouragement, and news with your family.
                   </p>
                 </div>
               ) : (
-                messages.map(msg => (
-                  <div key={msg.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-[#1B365D] flex items-center justify-center flex-shrink-0">
-                          <span className="text-white text-xs font-bold">
-                            {msg.author_name?.[0]?.toUpperCase() || 'F'}
-                          </span>
+                messages.map(msg => {
+                  const ringColor = ringColorFor(msg.author_name)
+                  return (
+                    <div key={msg.id} className="bg-white rounded-2xl p-4 shadow-[0_2px_6px_rgba(45,42,36,0.06)] border border-[#E7E2D8]">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className="w-9 h-9 rounded-full bg-[#FAF8F4] flex items-center justify-center flex-shrink-0"
+                            style={{ boxShadow: `inset 0 0 0 2px ${ringColor}` }}
+                          >
+                            <span className="text-[#1B365D] text-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                              {msg.author_name?.[0]?.toUpperCase() || 'F'}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-[#1B365D] font-semibold text-sm">{msg.author_name}</p>
+                            <p className="text-[#6B645A] text-xs">{formatTs(msg.created_at)}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[#1B365D] font-semibold text-sm">{msg.author_name}</p>
-                          <p className="text-gray-400 text-xs">{formatTs(msg.created_at)}</p>
-                        </div>
+                        {msg.user_id === user?.id && (
+                          <button onClick={() => deleteMessage(msg.id)} className="p-1 text-[#B0AAA0] hover:text-[#B5483F] flex-shrink-0">
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
-                      {msg.user_id === user?.id && (
-                        <button onClick={() => deleteMessage(msg.id)} className="p-1 text-gray-300 hover:text-red-500 flex-shrink-0">
-                          <Trash2 size={15} />
-                        </button>
+                      {msg.message_text && (
+                        <p className="mt-3 text-[#2D2A24] leading-relaxed" style={{ fontSize: '16px' }}>
+                          {msg.message_text}
+                        </p>
+                      )}
+                      {msg.photo_url && (
+                        <img
+                          src={msg.photo_url}
+                          alt="attachment"
+                          className="mt-3 w-full rounded-xl object-cover max-h-64"
+                        />
                       )}
                     </div>
-                    {msg.message_text && (
-                      <p className="mt-3 text-gray-700 leading-relaxed" style={{ fontSize: '16px' }}>
-                        {msg.message_text}
-                      </p>
-                    )}
-                    {msg.photo_url && (
-                      <img
-                        src={msg.photo_url}
-                        alt="attachment"
-                        className="mt-3 w-full rounded-xl object-cover max-h-64"
-                      />
-                    )}
-                  </div>
-                ))
+                  )
+                })
               )}
               <div ref={messagesEndRef} />
             </div>
           </div>
 
           {/* Post message form — anchored above BottomNav, rises with iOS keyboard via Capacitor body resize */}
-          <div className="flex-shrink-0 bg-white border-t border-gray-200 px-4 py-3">
+          <div className="flex-shrink-0 bg-white border-t border-[#E7E2D8] px-4 py-3">
             <div className="max-w-lg mx-auto">
               {msgPhoto && (
                 <div className="relative w-20 h-20 mb-2">
                   <img src={msgPhoto.previewUrl} alt="preview" className="w-full h-full object-cover rounded-xl" />
                   <button
                     onClick={() => { URL.revokeObjectURL(msgPhoto.previewUrl); setMsgPhoto(null) }}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center"
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#1B365D] rounded-full flex items-center justify-center"
                   >
                     <X size={10} color="white" />
                   </button>
@@ -318,22 +347,24 @@ export default function FamilyPage() {
                 <button
                   type="button"
                   onClick={() => msgPhotoRef.current?.click()}
-                  className="flex-shrink-0 w-11 h-11 rounded-2xl bg-[#F5F5F5] flex items-center justify-center"
+                  className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#FAF8F4] border border-[#E7E2D8] flex items-center justify-center"
+                  aria-label="Attach photo"
                 >
                   <ImagePlus size={20} color="#1B365D" strokeWidth={1.5} />
                 </button>
                 <textarea
                   value={newMsg}
                   onChange={e => setNewMsg(e.target.value)}
-                  placeholder="Write a message to your family..."
+                  placeholder="Say something to your family..."
                   rows={1}
-                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-2xl resize-none focus:outline-none focus:border-[#1B365D]"
+                  className="flex-1 px-4 py-3 bg-[#FAF8F4] border border-[#E7E2D8] rounded-2xl resize-none focus:outline-none focus:border-[#1B365D] text-[#2D2A24] placeholder:italic placeholder:text-[#6B645A]"
                   style={{ fontSize: '16px', maxHeight: '100px' }}
                 />
                 <button
                   type="submit"
                   disabled={posting || (!newMsg.trim() && !msgPhoto)}
-                  className="flex-shrink-0 w-11 h-11 rounded-2xl bg-[#1B365D] flex items-center justify-center disabled:opacity-40"
+                  className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#1B365D] flex items-center justify-center disabled:opacity-40"
+                  aria-label="Send"
                 >
                   <Send size={18} color="#D4A843" strokeWidth={2} />
                 </button>
@@ -347,33 +378,33 @@ export default function FamilyPage() {
       {tab === 'photos' && (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-lg mx-auto px-4 py-4">
-            {/* Upload button */}
+            {/* Upload button — single primary action */}
             <button
               onClick={() => photoUploadRef.current?.click()}
               disabled={uploading}
-              className="w-full py-4 rounded-xl border-2 border-dashed border-[#1B365D] flex items-center justify-center gap-2 text-[#1B365D] font-semibold mb-4 disabled:opacity-60"
+              className="w-full py-4 rounded-xl bg-[#1B365D] flex items-center justify-center gap-2 text-white font-semibold mb-4 disabled:opacity-60 shadow-[0_2px_6px_rgba(27,54,93,0.15)]"
               style={{ fontSize: '16px' }}
             >
               <ImagePlus size={20} strokeWidth={1.5} />
-              {uploading ? 'Uploading...' : 'Upload Photo'}
+              {uploading ? 'Uploading...' : 'Add a Photo'}
             </button>
 
             {photoLoading ? (
-              <p className="text-center text-gray-400 py-16" style={{ fontSize: '16px' }}>Loading...</p>
+              <p className="text-center text-[#6B645A] italic py-16" style={{ fontSize: '16px' }}>Just a sec, getting your family hub ready.</p>
             ) : photos.length === 0 ? (
-              <div className="flex flex-col items-center py-16 text-center gap-3">
-                <div className="bg-gray-100 rounded-2xl p-5">
-                  <ImagePlus size={44} color="#9CA3AF" strokeWidth={1.5} />
+              <div className="flex flex-col items-center py-12 text-center gap-3">
+                <div className="w-40 h-40">
+                  <EmptyPhotos />
                 </div>
-                <p className="text-gray-600 font-semibold" style={{ fontSize: '17px' }}>No photos yet.</p>
-                <p className="text-gray-400" style={{ fontSize: '15px' }}>Upload your first family photo.</p>
+                <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>No photos yet.</p>
+                <p className="text-[#6B645A] italic max-w-xs" style={{ fontSize: '15px' }}>Share one with your family.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 {photos.map(photo => (
                   <div
                     key={photo.id}
-                    className="relative aspect-square rounded-xl overflow-hidden bg-gray-100"
+                    className="relative aspect-square rounded-xl overflow-hidden bg-[#F9F6F1] border border-[#E7E2D8]"
                     onClick={() => setSelectedPhoto(photo)}
                   >
                     <img src={photo.photo_url} alt="" className="w-full h-full object-cover" />

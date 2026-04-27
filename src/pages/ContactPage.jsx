@@ -6,7 +6,7 @@ export default function ContactPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+    <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
       {/* Header */}
       <div className="bg-[#1B365D] px-6 pt-12 pb-8">
         <div className="max-w-sm mx-auto">
@@ -64,7 +64,7 @@ export default function ContactPage() {
           href="sms:3365538933?body=Hi Ryan, I have a quick question about my transition: "
           className="w-full flex items-center gap-4 bg-white border-2 border-[#1B365D] rounded-2xl px-6 py-5 shadow-sm active:opacity-90 no-underline"
         >
-          <div className="bg-[#F5F5F5] rounded-xl p-3">
+          <div className="bg-[#FAF8F4] rounded-xl p-3">
             <HelpCircle size={28} color="#1B365D" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col items-start">

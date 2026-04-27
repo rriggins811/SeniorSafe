@@ -402,7 +402,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* Large code display */}
-          <div className="bg-[#F5F5F5] rounded-2xl p-6 flex flex-col items-center gap-4">
+          <div className="bg-[#FAF8F4] rounded-2xl p-6 flex flex-col items-center gap-4">
             <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Family Code</p>
             <p className="text-4xl font-bold tracking-[0.25em] text-[#1B365D]">
               {familyCode}
@@ -460,7 +460,7 @@ export default function OnboardingPage() {
           </p>
         </div>
 
-        <div className="bg-[#F5F5F5] rounded-2xl p-5 flex flex-col gap-4">
+        <div className="bg-[#FAF8F4] rounded-2xl p-5 flex flex-col gap-4">
           <p className="text-[#1B365D] font-semibold text-base">Here's what you'll get:</p>
           <div className="flex flex-col gap-3">
             <FeatureRow emoji="✓" text="Daily check-in notifications" />
@@ -534,7 +534,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* Large code display */}
-          <div className="bg-[#F5F5F5] rounded-2xl p-6 flex flex-col items-center gap-4">
+          <div className="bg-[#FAF8F4] rounded-2xl p-6 flex flex-col items-center gap-4">
             <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Your Family Code</p>
             <p className="text-4xl font-bold tracking-[0.25em] text-[#1B365D]">
               {familyCode}
@@ -736,7 +736,7 @@ export default function OnboardingPage() {
             </p>
           </div>
 
-          <div className="bg-[#F5F5F5] rounded-2xl p-6 flex flex-col items-center gap-4">
+          <div className="bg-[#FAF8F4] rounded-2xl p-6 flex flex-col items-center gap-4">
             <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Family Code</p>
             <p className="text-4xl font-bold tracking-[0.25em] text-[#1B365D]">
               {familyCode}

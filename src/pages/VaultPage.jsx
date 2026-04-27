@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, Camera, Trash2, FileText, X, FolderLock, Lock, Eye, EyeOff } from 'lucide-react'
+import { Upload, Camera, Trash2, FileText, X, FolderLock, Lock, Eye, EyeOff, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
 import { openExternalLink } from '../lib/platform'
+import EmptyVault from '../components/illustrations/EmptyVault'
 
 const CATEGORIES = ['Legal', 'Financial', 'Medical', 'Property', 'Personal']
 const FILTER_TABS = ['All', ...CATEGORIES]
@@ -34,6 +35,7 @@ export default function VaultPage() {
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState(null)
   const [togglingShare, setTogglingShare] = useState(false)
+  const [showAddSheet, setShowAddSheet] = useState(false)
 
   // Modal state
   const [pendingFile, setPendingFile] = useState(null) // { file, previewUrl }
@@ -237,7 +239,7 @@ export default function VaultPage() {
   // Show upgrade prompt for free tier (null = still loading, show nothing yet)
   if (subscriptionTier === 'free') {
     return (
-      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+      <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
         <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
           <div className="max-w-lg mx-auto flex items-center gap-3">
             <div className="bg-white/15 rounded-xl p-2">
@@ -275,7 +277,7 @@ export default function VaultPage() {
   // Member view: admin hasn't shared vault
   if (isMember && adminVaultShared === false) {
     return (
-      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+      <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
         <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
           <div className="max-w-lg mx-auto flex items-center gap-3">
             <div className="bg-white/15 rounded-xl p-2">
@@ -307,7 +309,7 @@ export default function VaultPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col pb-20">
+    <div className="min-h-screen bg-[#FAF8F4] flex flex-col pb-20">
       {/* Hidden file inputs — admin only */}
       {isAdmin && (
         <>
@@ -346,86 +348,51 @@ export default function VaultPage() {
         </div>
       </div>
 
-      {/* Vault sharing toggle — admin only */}
-      {isAdmin && (
-        <div className="px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0">
-          <div className="max-w-lg mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {vaultShared
-                ? <Eye size={20} className="text-[#D4A843] shrink-0" />
-                : <EyeOff size={20} className="text-gray-400 shrink-0" />
-              }
-              <div>
-                <p className="text-[#1B365D] text-sm font-semibold leading-tight">Share my vault with family</p>
-                <p className="text-gray-400 text-xs mt-0.5">Allow family members to view your documents</p>
-              </div>
-            </div>
-            <button
-              onClick={toggleVaultSharing}
-              disabled={togglingShare}
-              className={`relative w-12 h-7 rounded-full transition-colors duration-200 flex-shrink-0 ${
-                vaultShared ? 'bg-[#D4A843]' : 'bg-gray-300'
-              } disabled:opacity-50`}
-              aria-label={vaultShared ? 'Disable vault sharing' : 'Enable vault sharing'}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform duration-200 ${
-                  vaultShared ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Member read-only banner */}
       {isMember && (
-        <div className="px-4 py-2 bg-[#D4A843]/10 border-b border-[#D4A843]/20 flex-shrink-0">
+        <div className="px-4 py-2 bg-[#D4A843]/10 border-b border-[#D4A843]/30 flex-shrink-0">
           <div className="max-w-lg mx-auto flex items-center gap-2">
             <Eye size={14} className="text-[#D4A843] shrink-0" />
-            <p className="text-[#1B365D] text-xs font-medium">View only — shared by your family admin</p>
+            <p className="text-[#1B365D] text-xs font-medium italic">View only, shared by your family admin.</p>
           </div>
         </div>
       )}
 
-      {/* Upload buttons — admin only */}
+      {/* Single primary action — admin only */}
       {isAdmin && (
-        <div className="px-4 py-4 bg-white border-b border-gray-200 flex-shrink-0">
-          <div className="max-w-lg mx-auto flex gap-3">
+        <div className="px-4 py-4 bg-[#FAF8F4] border-b border-[#E7E2D8] flex-shrink-0">
+          <div className="max-w-lg mx-auto">
             <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl bg-[#1B365D] text-white font-semibold text-base"
+              onClick={() => setShowAddSheet(true)}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-[#1B365D] text-white font-semibold text-base shadow-[0_2px_6px_rgba(27,54,93,0.15)]"
             >
-              <Upload size={20} />
-              Upload File
-            </button>
-            <button
-              onClick={() => cameraInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-base bg-white"
-            >
-              <Camera size={20} />
-              Take Photo
+              <Plus size={20} strokeWidth={2.5} />
+              Add a Document
             </button>
           </div>
         </div>
       )}
 
-      {/* Category filter tabs */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200">
-        <div className="max-w-lg mx-auto flex overflow-x-auto no-scrollbar">
-          {FILTER_TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                filter === tab
-                  ? 'border-[#1B365D] text-[#1B365D]'
-                  : 'border-transparent text-gray-400'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+      {/* Category filter pills */}
+      <div className="flex-shrink-0 bg-[#FAF8F4] border-b border-[#E7E2D8]">
+        <div className="max-w-lg mx-auto flex gap-2 overflow-x-auto no-scrollbar px-4 py-3">
+          {FILTER_TABS.map(tab => {
+            const active = filter === tab
+            return (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
+                  active
+                    ? 'bg-[#1B365D] text-white'
+                    : 'bg-white text-[#6B645A] border border-[#E7E2D8]'
+                }`}
+              >
+                {active && <span className="block w-1.5 h-1.5 rounded-full bg-[#D4A843]" aria-hidden="true" />}
+                {tab}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -433,16 +400,18 @@ export default function VaultPage() {
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="max-w-lg mx-auto flex flex-col gap-3">
           {loading ? (
-            <p className="text-center text-gray-400 py-16 text-base">Loading...</p>
+            <p className="text-center text-[#6B645A] italic py-16 text-base">One moment, pulling your documents.</p>
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="bg-gray-200 rounded-2xl p-5 mb-4">
-                <FolderLock size={44} color="#9CA3AF" strokeWidth={1.5} />
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+              <div className="w-40 h-40">
+                <EmptyVault />
               </div>
-              <p className="text-gray-600 text-base font-medium">No documents yet.</p>
-              <p className="text-gray-400 text-sm mt-1 leading-relaxed">
+              <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>
+                {isAdmin ? 'Your vault is empty.' : 'Nothing shared yet.'}
+              </p>
+              <p className="text-[#6B645A] italic text-sm leading-relaxed max-w-xs">
                 {isAdmin
-                  ? <>Tap <strong>Upload File</strong> or <strong>Take Photo</strong> to get started.</>
+                  ? 'Start with one document. You decide which.'
                   : 'No shared documents to show yet.'
                 }
               </p>
@@ -566,6 +535,75 @@ export default function VaultPage() {
           </div>
         </div>
       )}
+
+      {/* Add Document bottom sheet */}
+      {showAddSheet && (
+        <div
+          className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center"
+          onClick={() => setShowAddSheet(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-white rounded-t-3xl p-5 pb-8 flex flex-col gap-3 shadow-[0_-8px_24px_rgba(0,0,0,0.12)]"
+            onClick={e => e.stopPropagation()}
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
+          >
+            <div className="w-10 h-1 rounded-full bg-[#E7E2D8] mx-auto mb-2" aria-hidden="true" />
+            <h3 className="text-[#1B365D] text-center" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>Add a Document</h3>
+            <button
+              onClick={() => { setShowAddSheet(false); fileInputRef.current?.click() }}
+              className="w-full flex items-center gap-3 px-4 py-4 rounded-xl border border-[#E7E2D8] bg-[#FAF8F4] text-[#1B365D]"
+            >
+              <Upload size={20} />
+              <span className="font-semibold">Choose a file</span>
+            </button>
+            <button
+              onClick={() => { setShowAddSheet(false); cameraInputRef.current?.click() }}
+              className="w-full flex items-center gap-3 px-4 py-4 rounded-xl border border-[#E7E2D8] bg-[#FAF8F4] text-[#1B365D]"
+            >
+              <Camera size={20} />
+              <span className="font-semibold">Take a photo</span>
+            </button>
+            <button
+              onClick={() => setShowAddSheet(false)}
+              className="w-full mt-1 py-3 rounded-xl text-[#6B645A] font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* De-emphasized vault sharing toggle (admin only, footer) */}
+      {isAdmin && !loading && (
+        <div className="px-4 pb-4 pt-1 bg-[#FAF8F4] border-t border-[#E7E2D8]">
+          <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              {vaultShared
+                ? <Eye size={16} className="text-[#D4A843] shrink-0" />
+                : <EyeOff size={16} className="text-[#6B645A] shrink-0" />
+              }
+              <p className="text-[#6B645A] text-xs italic truncate">
+                {vaultShared ? 'Family can view your vault.' : 'Vault is private to you.'}
+              </p>
+            </div>
+            <button
+              onClick={toggleVaultSharing}
+              disabled={togglingShare}
+              className={`relative w-10 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
+                vaultShared ? 'bg-[#D4A843]' : 'bg-[#E7E2D8]'
+              } disabled:opacity-50`}
+              aria-label={vaultShared ? 'Disable vault sharing' : 'Enable vault sharing'}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                  vaultShared ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      )}
+
       <BottomNav />
     </div>
   )

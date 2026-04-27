@@ -193,8 +193,8 @@ export default function SignInPage() {
           <div className="bg-[#1B365D] rounded-2xl p-3">
             <Shield size={32} color="#D4A843" strokeWidth={1.5} />
           </div>
-          <h1 className="text-2xl font-bold text-[#1B365D]">Welcome back</h1>
-          <p className="text-sm text-gray-500 text-center">Sign in to your SeniorSafe account.</p>
+          <h1 className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 700 }}>Welcome back</h1>
+          <p className="text-[#6B645A] italic text-center" style={{ fontSize: '15px' }}>Sign in to your SeniorSafe account.</p>
         </div>
 
         {/* Form */}

@@ -273,7 +273,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col pb-8">
+    <div className="min-h-screen bg-[#FAF8F4] flex flex-col pb-8">
       {/* Header */}
       <div className="bg-[#1B365D] px-5 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
@@ -765,7 +765,7 @@ export default function ProfilePage() {
                       type="button"
                       disabled={deleteText !== 'DELETE' || deleting}
                       onClick={handleDeleteAccount}
-                      className="flex-1 py-3 rounded-xl bg-red-600 text-white font-semibold text-sm disabled:opacity-40"
+                      className="flex-1 py-3 rounded-xl bg-[#B5483F] text-white font-semibold text-sm disabled:opacity-40"
                     >
                       {deleting ? 'Deleting...' : 'Confirm Delete'}
                     </button>

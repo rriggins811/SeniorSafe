@@ -170,7 +170,7 @@ export default function SupportPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-10">
+    <div className="min-h-screen bg-[#FAF8F4] pb-10">
       {/* Header */}
       <div className="bg-[#1B365D] text-white px-4 pt-12 pb-6">
         <div className="flex items-center gap-3 mb-3">

@@ -25,7 +25,7 @@ export default class ErrorBoundary extends Component {
           justifyContent: 'center',
           padding: '24px',
           textAlign: 'center',
-          backgroundColor: '#F5F5F5',
+          backgroundColor: '#FAF8F4',
           fontFamily: 'system-ui, -apple-system, sans-serif',
         }}>
           <div style={{

@@ -81,7 +81,7 @@ export default function FamilyInvitePage() {
   const atFreeLimit = subscriptionTier === 'free' && members.length >= FREE_MEMBER_LIMIT
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col pb-8">
+    <div className="min-h-screen bg-[#FAF8F4] flex flex-col pb-8">
       {/* Header */}
       <div className="bg-[#1B365D] px-5 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
@@ -123,7 +123,7 @@ export default function FamilyInvitePage() {
                   Your Family Invite Code
                 </p>
 
-                <div className="bg-[#F5F5F5] rounded-xl py-6 flex items-center justify-center mb-4">
+                <div className="bg-[#FAF8F4] rounded-xl py-6 flex items-center justify-center mb-4">
                   <span
                     className="text-[#1B365D] font-bold tracking-[0.25em] select-all"
                     style={{ fontSize: '34px' }}

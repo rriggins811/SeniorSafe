@@ -119,9 +119,9 @@ export default function EmergencyPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+    <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
       {/* Header */}
-      <div className="bg-red-600 px-5 pt-12 pb-5 flex-shrink-0">
+      <div className="bg-[#B5483F] px-5 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
           <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-white/80 text-sm mb-4">
             <ArrowLeft size={16} /> Back
@@ -265,7 +265,7 @@ export default function EmergencyPage() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="w-full py-4 rounded-xl bg-red-600 text-white font-semibold text-lg disabled:opacity-50"
+                  className="w-full py-4 rounded-xl bg-[#B5483F] text-white font-semibold text-lg disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save Emergency Info'}
                 </button>

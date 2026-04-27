@@ -207,7 +207,7 @@ export default function UpgradePage() {
   // Already paid
   if (tier === 'paid') {
     return (
-      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+      <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
         <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
           <div className="max-w-lg mx-auto flex items-center gap-3">
             <button onClick={() => navigate('/dashboard')} className="text-white">
@@ -236,7 +236,7 @@ export default function UpgradePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+    <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
       {/* Header */}
       <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto flex items-center gap-3">

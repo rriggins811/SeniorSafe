@@ -57,8 +57,8 @@ export default function BottomNav({ inline = false }) {
   const isFree = tier === 'free'
 
   const wrapClass = inline
-    ? 'bg-white border-t border-gray-200 flex-shrink-0'
-    : 'fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200'
+    ? 'bg-[#FAF8F4] border-t border-[#E7E2D8] flex-shrink-0'
+    : 'fixed bottom-0 left-0 right-0 z-40 bg-[#FAF8F4] border-t border-[#E7E2D8]'
 
   return (
     <nav className={wrapClass} style={!inline ? { paddingBottom: 'env(safe-area-inset-bottom)' } : undefined}>
@@ -74,9 +74,11 @@ export default function BottomNav({ inline = false }) {
               key={path}
               onClick={() => navigate(path)}
               className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 min-h-[60px] transition-colors ${
-                active ? 'text-[#1B365D]' : 'text-gray-400'
+                active ? 'text-[#1B365D]' : 'text-[#6B645A]'
               }`}
             >
+              {/* Active gold dot indicator above icon */}
+              <span className={`block w-1 h-1 rounded-full ${active ? 'bg-[#D4A843]' : 'bg-transparent'}`} aria-hidden="true" />
               <div className="relative">
                 <Icon size={22} strokeWidth={active ? 2.5 : 1.5} />
                 {locked && (
@@ -84,7 +86,7 @@ export default function BottomNav({ inline = false }) {
                 )}
                 {showBadge && (
                   <span
-                    className="absolute -top-2 -right-3 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#EF4444] text-white text-[10px] font-bold px-1 leading-none"
+                    className="absolute -top-2 -right-3 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#B5483F] text-white text-[10px] font-bold px-1 leading-none"
                   >
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>

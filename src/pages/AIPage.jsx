@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Send, Bot, Plus, Menu, X, Trash2, MessageSquare,
+  Send, Plus, Menu, X, Trash2, MessageSquare,
   Volume2, VolumeX, Mic, MicOff, ArrowLeft,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import BottomNav from '../components/BottomNav'
+import AIMark from '../components/AIMark'
+import EmptyConversations from '../components/illustrations/EmptyConversations'
 
 const AI_CHAT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/ai-chat'
 const FREE_LIMIT = 10
@@ -496,14 +498,13 @@ export default function AIPage() {
 
   if (aiConsent === false) {
     return (
-      <div className="min-h-screen bg-[#F5F5F5] flex flex-col">
+      <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
         <div className="flex-1 flex items-center justify-center px-6 py-12">
           <div className="bg-white rounded-2xl shadow-lg p-6 max-w-sm w-full flex flex-col gap-5">
             <div className="flex flex-col items-center gap-3 text-center">
-              <div className="bg-[#1B365D] rounded-2xl p-4">
-                <Bot size={36} color="#D4A843" strokeWidth={1.5} />
-              </div>
-              <h2 className="text-[#1B365D] text-xl font-bold">About SeniorSafe AI</h2>
+              <AIMark size={56} />
+              <h2 className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 700 }}>About SeniorSafe AI</h2>
+              <p className="text-[#6B645A] italic text-sm">Your everyday helper</p>
             </div>
             <div className="text-gray-600 text-sm leading-relaxed flex flex-col gap-3">
               <p>
@@ -542,7 +543,7 @@ export default function AIPage() {
   // ═══════════════════════════════════════════════════════════════════
 
   return (
-    <div className="h-screen bg-[#F5F5F5] flex flex-col overflow-hidden">
+    <div className="h-screen bg-[#FAF8F4] flex flex-col overflow-hidden">
 
       {/* ─── Header ─────────────────────────────────────────────── */}
       <div className="bg-[#1B365D] px-4 pt-12 pb-4 flex-shrink-0">
@@ -562,12 +563,12 @@ export default function AIPage() {
             >
               <Menu size={22} />
             </button>
-            <div className="bg-[#D4A843] rounded-xl p-2">
-              <Bot size={22} color="#1B365D" strokeWidth={1.5} />
+            <div className="rounded-full">
+              <AIMark size={36} />
             </div>
             <div>
-              <h1 className="text-white text-lg font-bold leading-tight">SeniorSafe AI</h1>
-              <p className="text-white/50 text-xs">Your personal assistant</p>
+              <h1 className="text-white leading-tight" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>SeniorSafe AI</h1>
+              <p className="text-white/60 text-xs italic">Your everyday helper</p>
             </div>
           </div>
 
@@ -662,23 +663,20 @@ export default function AIPage() {
               {/* Empty state */}
               {messages.length === 0 && (
                 <div className="flex flex-col items-center gap-4 py-8 text-center">
-                  <div className="bg-[#D4A843] rounded-2xl p-4">
-                    <Bot size={36} color="#1B365D" strokeWidth={1.5} />
-                  </div>
-                  <p className="text-[#1B365D] font-semibold text-xl">
-                    Hi{firstName ? `, ${firstName}` : ''}!
+                  <AIMark size={64} />
+                  <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 700 }}>
+                    {firstName ? `Hi ${firstName}, how can I help today?` : 'Hi! How can I help today?'}
                   </p>
-                  <p className="text-gray-500 text-lg leading-relaxed max-w-sm">
-                    I&apos;m here to help with anything you need. Ask me about recipes,
-                    help with an email, questions about your family&apos;s transition,
-                    or anything else on your mind.
+                  <p className="text-[#6B645A] italic leading-relaxed max-w-sm" style={{ fontSize: '17px' }}>
+                    I&apos;m here for anything on your mind. Ask about recipes, help with an email, questions about your family&apos;s transition, or whatever else.
                   </p>
                   <div className="flex flex-col gap-3 w-full max-w-sm mt-2">
                     {STARTER_PROMPTS.map(q => (
                       <button
                         key={q}
                         onClick={() => sendMessage(q)}
-                        className="w-full text-left px-5 py-4 rounded-xl border-2 border-[#1B365D]/20 bg-white text-[#1B365D] font-medium text-lg leading-snug active:scale-[0.98] transition-transform"
+                        className="w-full text-left pl-5 pr-5 py-4 rounded-xl bg-[#FAF8F4] border-l-4 border-[#D4A843] text-[#1B365D] font-medium leading-snug shadow-[0_1px_3px_rgba(45,42,36,0.05)]"
+                        style={{ fontSize: '17px' }}
                       >
                         {q}
                       </button>
@@ -691,8 +689,8 @@ export default function AIPage() {
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-[#D4A843] flex items-center justify-center flex-shrink-0 mt-1 mr-2">
-                      <Bot size={16} color="#1B365D" strokeWidth={2} />
+                    <div className="flex-shrink-0 mt-1 mr-2">
+                      <AIMark size={32} />
                     </div>
                   )}
                   <div
@@ -711,8 +709,8 @@ export default function AIPage() {
               {/* Thinking indicator (gentle pulse, not spinner) */}
               {loading && !streaming && (
                 <div className="flex justify-start">
-                  <div className="w-8 h-8 rounded-full bg-[#D4A843] flex items-center justify-center flex-shrink-0 mt-1 mr-2">
-                    <Bot size={16} color="#1B365D" strokeWidth={2} />
+                  <div className="flex-shrink-0 mt-1 mr-2">
+                    <AIMark size={32} />
                   </div>
                   <div className="bg-white rounded-2xl rounded-bl-sm px-5 py-4 shadow-sm flex items-center gap-2">
                     <div className="flex gap-1.5">
@@ -734,7 +732,7 @@ export default function AIPage() {
             <div className="flex-shrink-0 bg-red-50 border-t-2 border-red-400 px-4 py-4">
               <div className="max-w-2xl mx-auto flex flex-col gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#B5483F] flex items-center justify-center flex-shrink-0">
                     <span className="text-white text-lg font-bold">!</span>
                   </div>
                   <div>
@@ -746,7 +744,7 @@ export default function AIPage() {
                 </div>
                 <a
                   href="tel:911"
-                  className="w-full py-4 rounded-xl bg-red-600 text-white font-bold text-lg text-center flex items-center justify-center gap-2 active:scale-[0.98]"
+                  className="w-full py-4 rounded-xl bg-[#B5483F] text-white font-bold text-lg text-center flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
                   Call 911
                 </a>
@@ -788,28 +786,28 @@ export default function AIPage() {
                     sendMessage(input)
                   }
                 }}
-                placeholder={listening ? 'Listening...' : PLACEHOLDERS[placeholderIdx]}
+                placeholder={listening ? 'Listening...' : "What's on your mind?"}
                 rows={1}
                 disabled={loading || isAtLimit}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-2xl resize-none focus:outline-none focus:border-[#1B365D] text-lg leading-relaxed"
-                style={{ maxHeight: '120px' }}
+                className="flex-1 px-4 py-3 bg-[#FAF8F4] border border-[#E7E2D8] rounded-2xl resize-none focus:outline-none focus:border-[#1B365D] text-[#2D2A24] leading-relaxed placeholder:italic placeholder:text-[#6B645A]"
+                style={{ maxHeight: '120px', fontSize: '17px' }}
               />
 
               <button
                 type="submit"
                 disabled={loading || !input.trim() || isAtLimit}
-                className="flex-shrink-0 h-12 px-5 rounded-2xl bg-[#D4A843] text-[#1B365D] font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.97] transition-transform"
+                className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#1B365D] flex items-center justify-center disabled:opacity-40"
+                aria-label="Send"
               >
-                <Send size={18} strokeWidth={2} />
-                <span className="hidden sm:inline">Send</span>
+                <Send size={18} color="#D4A843" strokeWidth={2} />
               </button>
             </form>
 
-            {/* Usage counter */}
-            <p className={`text-center text-xs mt-2 max-w-2xl mx-auto ${counterColor}`}>
+            {/* Usage counter (muted footer pill) */}
+            <p className={`text-center text-[11px] mt-2 max-w-2xl mx-auto ${counterColor}`}>
               {tier === 'free'
                 ? `${usageCount} of ${FREE_LIMIT} free messages used`
-                : `${usageCount} / ${PAID_LIMIT} messages this month`
+                : `${usageCount} of ${PAID_LIMIT} this month`
               }
               {isAtLimit && tier === 'free' && (
                 <button
@@ -820,8 +818,8 @@ export default function AIPage() {
                 </button>
               )}
             </p>
-            <p className="text-center text-xs text-gray-400 mt-0.5 max-w-2xl mx-auto">
-              Powered by Anthropic AI · Not legal or medical advice.
+            <p className="text-center text-[11px] italic text-[#6B645A] mt-0.5 max-w-2xl mx-auto">
+              Powered by Anthropic AI. Not legal or medical advice.
             </p>
           </div>
         </div>
@@ -839,9 +837,11 @@ export default function AIPage() {
 function ConversationList({ groups, activeId, onSelect, onDelete }) {
   if (groups.length === 0) {
     return (
-      <div className="text-center py-10 text-gray-400 text-sm">
-        <MessageSquare size={28} className="mx-auto mb-2 opacity-40" />
-        <p>Your conversations will appear here</p>
+      <div className="text-center py-10 px-4 flex flex-col items-center gap-3">
+        <div className="w-28 h-28 opacity-90">
+          <EmptyConversations />
+        </div>
+        <p className="text-[#6B645A] italic text-sm">No conversations yet. Try a question above.</p>
       </div>
     )
   }

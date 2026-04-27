@@ -530,15 +530,15 @@ export default function DashboardPage() {
   const showMemberWarning = isMember && adminCheckInLoaded && !adminCheckIn && new Date().getHours() >= 10
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-20">
+    <div className="min-h-screen bg-[#FAF8F4] pb-20">
       {/* Header */}
       <div className="bg-[#1B365D] px-5 pt-12 pb-5">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <Shield size={22} color="#D4A843" strokeWidth={1.5} />
             <div>
-              <p className="text-[#D4A843] text-xs font-semibold tracking-wide">SENIORSAFE</p>
-              <h1 className="text-white font-bold leading-tight" style={{ fontSize: '18px' }}>
+              <p className="text-[#D4A843] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.16em' }}>SENIORSAFE</p>
+              <h1 className="text-white leading-tight" style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 700 }}>
                 {displayName}
               </h1>
             </div>
@@ -884,15 +884,15 @@ export default function DashboardPage() {
 
             {/* Daily quote/joke — paid tier */}
             {alreadyCheckedIn && isPremium(subscriptionTier) && dailyQuote && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
-                <p className="text-amber-700 text-xs font-bold uppercase tracking-wide text-center mb-3">
-                  {dailyQuote.type === 'quote' ? '💡 Daily Inspiration' : '😄 Daily Laugh'}
+              <div className="bg-[#F5E1E6]/40 border border-[#E7E2D8] rounded-2xl p-5 shadow-[0_2px_6px_rgba(45,42,36,0.06)]">
+                <p className="text-[#D4A843] font-semibold text-center mb-3" style={{ fontSize: '11px', letterSpacing: '0.16em' }}>
+                  {dailyQuote.type === 'quote' ? 'DAILY INSPIRATION' : 'DAILY LAUGH'}
                 </p>
-                <p className="text-gray-700 text-base italic leading-relaxed text-center">
+                <p className="text-[#1B365D] leading-relaxed text-center" style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontStyle: 'italic' }}>
                   &ldquo;{dailyQuote.content}&rdquo;
                 </p>
                 {dailyQuote.author && (
-                  <p className="text-gray-400 text-sm text-right mt-2">— {dailyQuote.author}</p>
+                  <p className="text-[#6B645A] text-sm italic text-right mt-2">{dailyQuote.author}</p>
                 )}
               </div>
             )}
@@ -912,7 +912,7 @@ export default function DashboardPage() {
             {/* I Need Help button — available to all tiers */}
             <button
               onClick={() => setHelpModal(true)}
-              className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 bg-red-600 shadow-sm active:scale-[0.98] transition-all"
+              className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 bg-[#B5483F] shadow-sm active:scale-[0.98] transition-all"
             >
               <span className="text-white font-semibold" style={{ fontSize: '17px' }}>🆘 I Need Help</span>
             </button>
@@ -1152,7 +1152,7 @@ export default function DashboardPage() {
                 </p>
                 <a
                   href="tel:911"
-                  className="w-full py-4 rounded-xl bg-red-600 text-white font-bold text-lg text-center block"
+                  className="w-full py-4 rounded-xl bg-[#B5483F] text-white font-bold text-lg text-center block"
                 >
                   📞 Call 911
                 </a>
@@ -1172,7 +1172,7 @@ export default function DashboardPage() {
                 </p>
                 <a
                   href="tel:911"
-                  className="w-full py-4 rounded-xl bg-red-600 text-white font-bold text-lg text-center block"
+                  className="w-full py-4 rounded-xl bg-[#B5483F] text-white font-bold text-lg text-center block"
                 >
                   📞 Call 911
                 </a>
@@ -1198,7 +1198,7 @@ export default function DashboardPage() {
                   <button
                     onClick={sendHelpAlert}
                     disabled={helpSending}
-                    className="w-full py-4 rounded-xl bg-red-600 text-white font-bold text-lg disabled:opacity-60"
+                    className="w-full py-4 rounded-xl bg-[#B5483F] text-white font-bold text-lg disabled:opacity-60"
                   >
                     {helpSending ? 'Sending...' : 'Yes, Send Alert'}
                   </button>
