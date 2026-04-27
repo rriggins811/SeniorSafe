@@ -27,3 +27,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local tooling caches (Claude Code, Vercel CLI, Supabase CLI)
+.claude/
+.vercel/
+supabase/.temp/
+
+# Firebase / Google services config (contains secrets, Android-side)
+android/app/google-services.json
