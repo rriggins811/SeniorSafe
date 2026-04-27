@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase'
 import { isIOS, isAndroid } from '../lib/platform'
 import { purchaseMonthly as rcPurchaseMonthly, restorePurchases as rcRestorePurchases, isNativePlatform, checkEntitlement } from '../utils/purchases'
 
+const MARK_IAP_PAID_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/mark-iap-paid'
+
 const FREE_FEATURES = [
   { icon: Heart,  text: 'Daily "I\'m Okay" check-in' },
   { icon: Bell,   text: '"I Need Help" emergency SMS alerts' },
@@ -112,17 +114,35 @@ export default function UpgradePage() {
     setIapLoading(true)
     setError('')
     try {
-      await rcPurchaseMonthly()
+      const customerInfo = await rcPurchaseMonthly()
 
-      // Purchase succeeded — update Supabase
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const userId = isMember && adminUserId ? adminUserId : user.id
-        await supabase.from('user_profile').update({
-          subscription_tier: 'paid',
-          subscription_source: 'revenuecat',
-          updated_at: new Date().toISOString(),
-        }).eq('user_id', userId)
+      // Purchase succeeded — call edge function to upgrade in Supabase
+      // (Direct Supabase update is blocked by protect_user_profile_columns trigger)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not logged in')
+
+      // Pull metadata from RevenueCat customerInfo if available
+      const entitlement = customerInfo?.entitlements?.active?.['SeniorSafeApp Pro']
+      const body = {
+        originalTransactionId: entitlement?.originalPurchaseDate ? String(entitlement?.productIdentifier || '') : null,
+        productId: entitlement?.productIdentifier || 'com.rigginsstrategicsolutions.seniorsafe.monthly',
+        expiresDate: entitlement?.expirationDate || null,
+        adminUserId: isMember && adminUserId ? adminUserId : null,
+      }
+
+      const res = await fetch(MARK_IAP_PAID_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify(body),
+      })
+
+      const result = await res.json()
+      if (!res.ok || !result?.success) {
+        throw new Error(`Purchase succeeded but account update failed: ${result?.error || res.statusText}`)
       }
 
       setTier('paid')
@@ -146,16 +166,28 @@ export default function UpgradePage() {
       const hasEntitlement = await checkEntitlement()
 
       if (hasEntitlement) {
-        // Restore succeeded — update Supabase
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          const userId = isMember && adminUserId ? adminUserId : user.id
-          await supabase.from('user_profile').update({
-            subscription_tier: 'paid',
-            subscription_source: 'revenuecat',
-            updated_at: new Date().toISOString(),
-          }).eq('user_id', userId)
+        // Restore succeeded — call edge function to upgrade in Supabase
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) throw new Error('Not logged in')
+
+        const res = await fetch(MARK_IAP_PAID_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            productId: 'com.rigginsstrategicsolutions.seniorsafe.monthly',
+            adminUserId: isMember && adminUserId ? adminUserId : null,
+          }),
+        })
+
+        const result = await res.json()
+        if (!res.ok || !result?.success) {
+          throw new Error(`Restore succeeded but account update failed: ${result?.error || res.statusText}`)
         }
+
         setTier('paid')
       } else {
         setError('No active subscription found to restore.')
