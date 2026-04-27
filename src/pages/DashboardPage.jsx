@@ -796,7 +796,7 @@ export default function DashboardPage() {
             <button
               onClick={handleCheckIn}
               disabled={checkInStatus === 'loading' || alreadyCheckedIn}
-              className={`w-full rounded-2xl py-7 flex flex-col items-center gap-2 shadow-md transition-all active:scale-[0.98] ${
+              className={`w-full rounded-2xl py-7 flex flex-col items-center gap-2 shadow-md transition-colors ${
                 isSent || alreadyCheckedIn ? 'bg-green-500' : 'bg-[#1B365D]'
               }`}
             >
@@ -849,7 +849,8 @@ export default function DashboardPage() {
                   onChange={e => setCheckinNote(e.target.value)}
                   placeholder='e.g. Going to the store'
                   maxLength={200}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-gray-800 text-sm"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-gray-800"
+                  style={{ fontSize: '16px' }}
                 />
                 <div className="flex gap-2">
                   <button
