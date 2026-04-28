@@ -1,9 +1,17 @@
 /**
  * Check if a subscription tier has premium access.
- * 'paid' and 'trial' both grant full access.
+ * 'paid', 'trial', and 'premium_plus' all grant full Premium feature access.
  */
 export function isPremium(tier) {
-  return tier === 'paid' || tier === 'trial'
+  return tier === 'paid' || tier === 'trial' || tier === 'premium_plus'
+}
+
+/**
+ * Premium+ tier ($39.99/month) unlocks Maggie AI.
+ * Free / Premium / Trial users still get SeniorSafe AI (the daily buddy).
+ */
+export function isPremiumPlus(tier) {
+  return tier === 'premium_plus'
 }
 
 /**

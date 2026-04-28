@@ -9,7 +9,7 @@ import SignInPage from './pages/SignInPage'
 import OnboardingPage from './pages/OnboardingPage'
 import DashboardPage from './pages/DashboardPage'
 import VaultPage from './pages/VaultPage'
-import AIPage from './pages/AIPage'
+import AIRouter from './components/AIRouter'
 import ContactPage from './pages/ContactPage'
 import MedicationsPage from './pages/MedicationsPage'
 import AppointmentsPage from './pages/AppointmentsPage'
@@ -156,7 +156,7 @@ export default function App() {
         <Route path="/onboarding"  element={<P skipOnboardingCheck><OnboardingPage /></P>} />
         <Route path="/dashboard"   element={<P><DashboardPage /></P>} />
         <Route path="/vault"       element={<P><VaultPage /></P>} />
-        <Route path="/ai"          element={<P><AIPage /></P>} />
+        <Route path="/ai"          element={<P><AIRouter /></P>} />
         <Route path="/contact"     element={<P><ContactPage /></P>} />
         <Route path="/medications" element={<P><MedicationsPage /></P>} />
         <Route path="/appointments" element={<P><AppointmentsPage /></P>} />
