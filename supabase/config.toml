@@ -13,3 +13,6 @@ verify_jwt = false
 [functions.maggie-chat]
 verify_jwt = false
 
+[functions.summarize-conversation]
+verify_jwt = false
+

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Send, ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { Send, ArrowLeft, Plus, Trash2, Menu, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
 import BottomNav from '../components/BottomNav'
@@ -9,6 +9,7 @@ import EmptyConversations from '../components/illustrations/EmptyConversations'
 import MaggieConsentModal from '../components/MaggieConsentModal'
 
 const MAGGIE_CHAT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/maggie-chat'
+const SUMMARIZE_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/summarize-conversation'
 
 const STARTER_PROMPTS = [
   "We're starting to look at assisted living. Where do we begin?",
@@ -36,6 +37,13 @@ export default function MaggiePage() {
   const [usedToday, setUsedToday] = useState(0)
   const [dailyLimit, setDailyLimit] = useState(100)
   const [tierError, setTierError] = useState('')
+  // Phase 1.0c cold-load fix: don't auto-restore the previous conversation.
+  // Show a small "Continue last" link in the empty state instead.
+  const [lastConvSummary, setLastConvSummary] = useState(null) // { id, title, updated_at }
+  const [restoringConv, setRestoringConv] = useState(false)
+  // Phase 1.5 conversation sidebar
+  const [conversations, setConversations] = useState([]) // recent 30
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -93,23 +101,20 @@ export default function MaggiePage() {
         return
       }
 
-      // Load most recent conversation; if none, leave blank for the empty state
+      // Phase 1.0c: do NOT auto-restore the previous conversation. Default
+      // to a fresh "+ New" empty state. We do still note the most recent
+      // conversation so the empty state can offer a "Continue last" link.
+      // Phase 1.5: also pull the top 30 for the sidebar history list.
       const { data: convs } = await supabase
         .from('maggie_conversations')
         .select('id, title, updated_at')
         .eq('user_id', authUser.id)
         .order('updated_at', { ascending: false })
-        .limit(1)
+        .limit(30)
 
-      if (convs && convs.length > 0) {
-        const conv = convs[0]
-        setConversation(conv)
-        const { data: msgs } = await supabase
-          .from('maggie_messages')
-          .select('role, content')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: true })
-        if (!cancelled) setMessages(msgs || [])
+      if (!cancelled && convs && convs.length > 0) {
+        setConversations(convs)
+        setLastConvSummary(convs[0])
       }
 
       if (!cancelled) setAuthChecked(true)
@@ -158,6 +163,8 @@ export default function MaggiePage() {
       return null
     }
     setConversation(created)
+    // Push into the sidebar list so the user sees their new conversation appear.
+    setConversations(prev => [created, ...prev])
     return created
   }, [conversation, user])
 
@@ -298,9 +305,91 @@ export default function MaggiePage() {
 
   async function startNewConversation() {
     dismissKeyboard()
+    // Phase 1.5 auto-summary: fire-and-forget the compaction job for the
+    // conversation we're leaving. Only worth running if there was a real
+    // exchange (>= 2 messages = at least one turn each side).
+    if (conversation?.id && messages.length >= 2) {
+      triggerSummarize(conversation.id, 'maggie')
+    }
+    // Bump lastConvSummary so the "Continue last" link points at what we
+    // just left (in case the user changes their mind before sending).
+    if (conversation?.id) {
+      setLastConvSummary({
+        id: conversation.id,
+        title: conversation.title,
+        updated_at: new Date().toISOString(),
+      })
+    }
     setConversation(null)
     setMessages([])
     setInput('')
+  }
+
+  async function triggerSummarize(convId, source) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      // Fire and forget. We don't block the UI on the response.
+      fetch(SUMMARIZE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ conversation_id: convId, source }),
+      }).catch(err => console.error('summarize fetch error', err))
+    } catch (err) {
+      console.error('summarize trigger failed', err)
+    }
+  }
+
+  async function restoreLastConversation() {
+    if (!lastConvSummary || restoringConv) return
+    await loadConversation(lastConvSummary)
+  }
+
+  async function loadConversation(conv) {
+    if (!conv?.id || restoringConv) return
+    // If user is currently in a different conversation with messages, summarize it first.
+    if (conversation?.id && conversation.id !== conv.id && messages.length >= 2) {
+      triggerSummarize(conversation.id, 'maggie')
+    }
+    setRestoringConv(true)
+    setSidebarOpen(false)
+    const { data: msgs } = await supabase
+      .from('maggie_messages')
+      .select('role, content')
+      .eq('conversation_id', conv.id)
+      .order('created_at', { ascending: true })
+    setConversation(conv)
+    setMessages(msgs || [])
+    setRestoringConv(false)
+  }
+
+  async function deleteConversation(convId) {
+    if (!convId) return
+    if (!window.confirm('Delete this conversation? This cannot be undone.')) return
+    await supabase.from('maggie_conversations').delete().eq('id', convId)
+    setConversations(prev => prev.filter(c => c.id !== convId))
+    if (conversation?.id === convId) {
+      setConversation(null)
+      setMessages([])
+    }
+    if (lastConvSummary?.id === convId) {
+      setLastConvSummary(null)
+    }
+  }
+
+  function formatLastConvDate(iso) {
+    if (!iso) return ''
+    const d = new Date(iso)
+    const now = new Date()
+    const sameDay = d.toDateString() === now.toDateString()
+    if (sameDay) return `today, ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
+    if (d.toDateString() === yesterday.toDateString()) return 'yesterday'
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
   // ────────────────────────────────────────────────────────────────────
@@ -343,6 +432,13 @@ export default function MaggiePage() {
           </button>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 -ml-2 rounded-lg text-white/80 active:text-white"
+                aria-label="Open conversation history"
+              >
+                <Menu size={22} />
+              </button>
               <AIMark size={36} />
               <div className="min-w-0">
                 <h1 className="text-white leading-tight" style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 700 }}>
@@ -397,6 +493,20 @@ export default function MaggiePage() {
                   </button>
                 ))}
               </div>
+
+              {lastConvSummary && lastConvSummary.id !== conversation?.id && (
+                <button
+                  type="button"
+                  onClick={restoreLastConversation}
+                  disabled={restoringConv}
+                  className="mt-2 text-[#6B645A] italic text-sm underline disabled:opacity-60"
+                  aria-label="Continue your last conversation"
+                >
+                  {restoringConv
+                    ? 'Loading...'
+                    : `Continue your last conversation (${formatLastConvDate(lastConvSummary.updated_at)})`}
+                </button>
+              )}
             </div>
           ) : (
             messages.map((msg, i) => (
@@ -464,6 +574,84 @@ export default function MaggiePage() {
           Powered by Anthropic AI. Maggie is not licensed. For legal, financial, or medical decisions, consult a pro in your state.
         </p>
       </div>
+
+      {/* Conversation history drawer */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-50 flex"
+          role="dialog"
+          aria-label="Conversation history"
+        >
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            className="relative w-80 max-w-[85vw] h-full bg-[#FAF8F4] flex flex-col shadow-2xl border-r border-[#E7E2D8]"
+            style={{ paddingTop: 'env(safe-area-inset-top)' }}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#E7E2D8] bg-white">
+              <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 700 }}>
+                Your conversations
+              </p>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-1 text-[#6B645A]"
+                aria-label="Close history"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <button
+              onClick={() => { startNewConversation(); setSidebarOpen(false) }}
+              className="m-3 py-3 rounded-xl bg-[#1B365D] text-white font-semibold flex items-center justify-center gap-2"
+            >
+              <Plus size={16} /> New conversation
+            </button>
+            <div className="flex-1 overflow-y-auto px-3 pb-4">
+              {conversations.length === 0 ? (
+                <p className="text-[#6B645A] italic text-sm text-center px-4 py-8">
+                  No conversations yet. Tap "New conversation" to start.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {conversations.map(c => {
+                    const isActive = conversation?.id === c.id
+                    return (
+                      <li
+                        key={c.id}
+                        className={`group flex items-start gap-2 rounded-xl px-3 py-2.5 ${
+                          isActive ? 'bg-[#F5E1E6]/60' : 'bg-white/50'
+                        }`}
+                      >
+                        <button
+                          onClick={() => loadConversation(c)}
+                          className="flex-1 text-left min-w-0"
+                        >
+                          <p className="text-[#1B365D] text-sm font-medium truncate">{c.title || 'New conversation'}</p>
+                          <p className="text-[#6B645A] text-xs italic mt-0.5">{formatLastConvDate(c.updated_at)}</p>
+                        </button>
+                        <button
+                          onClick={() => deleteConversation(c.id)}
+                          className="p-1 text-[#B0AAA0] hover:text-[#B5483F] opacity-0 group-hover:opacity-100 active:opacity-100"
+                          aria-label="Delete conversation"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+
+              <p className="text-[#6B645A] italic text-xs text-center px-4 mt-6 leading-relaxed">
+                Older conversations roll off after 30. Maggie still remembers your family's situation in the running summary, even after specific chats are archived.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BottomNav inline />
     </div>

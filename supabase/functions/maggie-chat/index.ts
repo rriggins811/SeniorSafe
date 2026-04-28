@@ -1,17 +1,10 @@
 // Maggie chat edge function (Premium+ tier, Claude Sonnet 4.6).
-// Phase 1.0a deploy. Prompts loaded from maggie_prompts table at cold start
-// and cached in module memory. Books deferred to Phase 1.0b. All book
+// Phase 1.0c: prompts loaded from maggie_prompts table with a 60-second
+// in-memory cache TTL so prompt updates propagate within a minute without
+// requiring a function redeploy. Books deferred to Phase 1.0b. All book
 // frameworks (5 Personas, Riggins Rules, Transition Tax, Authority Shift,
 // predator scenarios, Complete Loops, Great Medicare Myth) are baked into
 // the system prompt and KB so behavior is preserved.
-//
-// Why prompts live in maggie_prompts (a Supabase table) rather than as
-// imported .ts files in the function bundle: the prompt + KB are ~135KB of
-// content. Inlining them in the deploy bundle was hitting size limits in
-// the deployment pipeline. Hosting them in a row each and reading on cold
-// start (cached in module memory thereafter) is one DB round-trip per warm
-// container, with the rest of the requests free. Editing the prompt no
-// longer requires a function redeploy: UPDATE the row.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
@@ -48,26 +41,33 @@ const supabaseAdmin = createClient(
 // ---------------------------------------------------------------------------
 const DAILY_LIMIT = 100        // soft per-user cap (not advertised; abuse stop)
 const FAMILY_CONTEXT_TOKEN_CAP = 3000
+const PROMPT_CACHE_TTL_MS = 60_000  // 60s; prompt edits propagate within a minute
 
 // Off-topic detection heuristic: Maggie's prompt instructs her to redirect
-// off-topic users back to SeniorSafe AI. We detect that redirect in her
+// off-topic users back to SeniorSafe AI (for elder-facing tasks) or general
+// AI tools (for non-elder-facing tasks). We detect either redirect in her
 // response so admin can see how often it fires per user.
 const OFF_TOPIC_MARKERS = [
   'served by SeniorSafe AI',
   "I'm Maggie, the Premium+ specialist",
   'SeniorSafe AI is the right starting point',
   'Premium+ specialist for senior transitions',
+  // Phase 1.0c: when Maggie redirects an adult child to Google for general tasks
+  'general-purpose AI like ChatGPT or Claude',
 ]
 
 // ---------------------------------------------------------------------------
-// Prompt asset loader (cached per warm container).
-// First call queries maggie_prompts; subsequent calls use the cache.
+// Prompt asset loader (cached per warm container with 60s TTL).
+// First call queries maggie_prompts; subsequent calls within 60s use the cache.
+// Edits to the maggie_prompts table propagate within a minute.
 // ---------------------------------------------------------------------------
 let cachedSystemPrompt: string | null = null
 let cachedKnowledgeBase: string | null = null
+let cachedAt = 0
 
 async function loadPrompts(): Promise<{ systemPrompt: string; knowledgeBase: string }> {
-  if (cachedSystemPrompt && cachedKnowledgeBase) {
+  const now = Date.now()
+  if (cachedSystemPrompt && cachedKnowledgeBase && (now - cachedAt) < PROMPT_CACHE_TTL_MS) {
     return { systemPrompt: cachedSystemPrompt, knowledgeBase: cachedKnowledgeBase }
   }
 
@@ -80,16 +80,21 @@ async function loadPrompts(): Promise<{ systemPrompt: string; knowledgeBase: str
     throw new Error(`Failed to load Maggie prompts: ${error?.message || 'no data'}`)
   }
 
+  let sp: string | null = null
+  let kb: string | null = null
   for (const row of data) {
-    if (row.name === 'system_prompt_v1') cachedSystemPrompt = row.content
-    else if (row.name === 'knowledge_base_v1') cachedKnowledgeBase = row.content
+    if (row.name === 'system_prompt_v1') sp = row.content
+    else if (row.name === 'knowledge_base_v1') kb = row.content
   }
 
-  if (!cachedSystemPrompt || !cachedKnowledgeBase) {
+  if (!sp || !kb) {
     throw new Error('Maggie prompts table missing required rows (system_prompt_v1, knowledge_base_v1)')
   }
 
-  return { systemPrompt: cachedSystemPrompt, knowledgeBase: cachedKnowledgeBase }
+  cachedSystemPrompt = sp
+  cachedKnowledgeBase = kb
+  cachedAt = now
+  return { systemPrompt: sp, knowledgeBase: kb }
 }
 
 // ---------------------------------------------------------------------------

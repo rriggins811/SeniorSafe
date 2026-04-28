@@ -226,6 +226,28 @@ export default function AIPage() {
   // ─── Conversation CRUD ─────────────────────────────────────────────
 
   function startNewChat() {
+    // Phase 1.5 auto-summary: fire-and-forget compaction for the conversation
+    // we're leaving so its key facts land in family_context. Only worth running
+    // if there was a real exchange (>= 2 messages).
+    if (activeConvId && messages.length >= 2) {
+      ;(async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session) return
+          fetch('https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/summarize-conversation', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ conversation_id: activeConvId, source: 'senior_safe' }),
+          }).catch(err => console.error('summarize fetch error', err))
+        } catch (err) {
+          console.error('summarize trigger failed', err)
+        }
+      })()
+    }
     setActiveConvId(null)
     setMessages([])
     setSidebarOpen(false)
