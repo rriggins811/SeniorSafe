@@ -1,25 +1,20 @@
 // Maggie chat edge function (Premium+ tier, Claude Sonnet 4.6).
-// Mirrors the structure of ai-chat (the Haiku SeniorSafe AI buddy) but is a
-// distinct function with its own model, rate limits, system prompt, and
-// memory. Both AIs coexist in the app per the two-AI architecture decision
-// (April 27, 2026).
+// Phase 1.0a deploy. Prompts loaded from maggie_prompts table at cold start
+// and cached in module memory. Books deferred to Phase 1.0b. All book
+// frameworks (5 Personas, Riggins Rules, Transition Tax, Authority Shift,
+// predator scenarios, Complete Loops, Great Medicare Myth) are baked into
+// the system prompt and KB so behavior is preserved.
 //
-// Engineering invariants (non-negotiable, from project_compass_economics.md):
-//   * Prompt caching MUST be on for system prompt, knowledge base, and books
-//   * Per-user daily soft cap (default 100 msgs/day) prevents runaway cost
-//   * Family context is capped at ~3000 tokens with summary writes after
-//     each conversation (Phase 1 stores raw summary; auto-summary refinement
-//     loop is Phase 1.5 work)
-//   * Token usage logged per user for admin telemetry
-//   * Off-topic redirects tracked (the prompt redirects mis-users to
-//     SeniorSafe AI; we increment a counter so admin can spot abuse)
+// Why prompts live in maggie_prompts (a Supabase table) rather than as
+// imported .ts files in the function bundle: the prompt + KB are ~135KB of
+// content. Inlining them in the deploy bundle was hitting size limits in
+// the deployment pipeline. Hosting them in a row each and reading on cold
+// start (cached in module memory thereafter) is one DB round-trip per warm
+// container, with the rest of the requests free. Editing the prompt no
+// longer requires a function redeploy: UPDATE the row.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { SYSTEM_PROMPT } from "./prompts/system_prompt.ts"
-import { KNOWLEDGE_BASE } from "./prompts/knowledge_base.ts"
-import { BOOK_OTHER_SIDE } from "./prompts/book_other_side.ts"
-import { BOOK_UNHEARD } from "./prompts/book_unheard.ts"
 
 // ---------------------------------------------------------------------------
 // CORS
@@ -63,6 +58,39 @@ const OFF_TOPIC_MARKERS = [
   'SeniorSafe AI is the right starting point',
   'Premium+ specialist for senior transitions',
 ]
+
+// ---------------------------------------------------------------------------
+// Prompt asset loader (cached per warm container).
+// First call queries maggie_prompts; subsequent calls use the cache.
+// ---------------------------------------------------------------------------
+let cachedSystemPrompt: string | null = null
+let cachedKnowledgeBase: string | null = null
+
+async function loadPrompts(): Promise<{ systemPrompt: string; knowledgeBase: string }> {
+  if (cachedSystemPrompt && cachedKnowledgeBase) {
+    return { systemPrompt: cachedSystemPrompt, knowledgeBase: cachedKnowledgeBase }
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('maggie_prompts')
+    .select('name, content')
+    .in('name', ['system_prompt_v1', 'knowledge_base_v1'])
+
+  if (error || !data) {
+    throw new Error(`Failed to load Maggie prompts: ${error?.message || 'no data'}`)
+  }
+
+  for (const row of data) {
+    if (row.name === 'system_prompt_v1') cachedSystemPrompt = row.content
+    else if (row.name === 'knowledge_base_v1') cachedKnowledgeBase = row.content
+  }
+
+  if (!cachedSystemPrompt || !cachedKnowledgeBase) {
+    throw new Error('Maggie prompts table missing required rows (system_prompt_v1, knowledge_base_v1)')
+  }
+
+  return { systemPrompt: cachedSystemPrompt, knowledgeBase: cachedKnowledgeBase }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -245,16 +273,26 @@ serve(async (req) => {
       return jsonResponse({ error: 'ANTHROPIC_API_KEY not configured' }, 500, corsHeaders)
     }
 
+    // Load Maggie's prompt assets from maggie_prompts table (cached after first request).
+    let systemPrompt: string
+    let knowledgeBase: string
+    try {
+      const prompts = await loadPrompts()
+      systemPrompt = prompts.systemPrompt
+      knowledgeBase = prompts.knowledgeBase
+    } catch (err) {
+      return jsonResponse({ error: `Prompt load failed: ${(err as Error).message}` }, 500, corsHeaders)
+    }
+
     const perUserContext = buildPerUserContext(profile, familySummary, recentTopics)
 
-    // System payload uses 4 cache breakpoints. Each block is independently
-    // cached on Anthropic's side with a 5-minute TTL. Per-user context
-    // (last block) is NOT cached.
+    // System payload uses 2 cache breakpoints in Phase 1.0a (system prompt
+    // + knowledge base). Phase 1.0b will add the two book bodies as
+    // additional cached blocks once the asset-loading mechanism is in place.
+    // Per-user context (last block) is NOT cached.
     const systemPayload = [
-      { type: 'text', text: SYSTEM_PROMPT,    cache_control: { type: 'ephemeral' } },
-      { type: 'text', text: KNOWLEDGE_BASE,   cache_control: { type: 'ephemeral' } },
-      { type: 'text', text: BOOK_OTHER_SIDE,  cache_control: { type: 'ephemeral' } },
-      { type: 'text', text: BOOK_UNHEARD,     cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: systemPrompt,    cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: knowledgeBase,   cache_control: { type: 'ephemeral' } },
       { type: 'text', text: perUserContext },
     ]
 
