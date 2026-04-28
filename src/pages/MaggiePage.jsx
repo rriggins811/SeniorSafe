@@ -54,12 +54,29 @@ export default function MaggiePage() {
       }
       setUser(authUser)
 
+      // Tier gate: /maggie is Premium+ only. Non-Premium+ users (deep links,
+      // direct URL nav) get bounced back to the daily-buddy /ai surface.
       const { data: profile } = await supabase
         .from('user_profile')
-        .select('first_name')
+        .select('first_name, subscription_tier, role, invited_by')
         .eq('user_id', authUser.id)
         .single()
       if (profile?.first_name) setFirstName(profile.first_name)
+
+      let effectiveTier = profile?.subscription_tier || 'free'
+      if (profile?.role === 'member' && profile?.invited_by) {
+        const { data: admin } = await supabase
+          .from('user_profile')
+          .select('subscription_tier')
+          .eq('user_id', profile.invited_by)
+          .single()
+        if (admin?.subscription_tier) effectiveTier = admin.subscription_tier
+      }
+      if (cancelled) return
+      if (effectiveTier !== 'premium_plus') {
+        navigate('/ai', { replace: true })
+        return
+      }
 
       // Consent check: if no row, show modal once
       const { data: consent } = await supabase
@@ -349,7 +366,7 @@ export default function MaggiePage() {
         </div>
       </div>
 
-      {/* Tier-required banner (rare, just in case AIRouter and edge function disagree) */}
+      {/* Tier-required banner (rare; the in-page tier gate handles most cases, this catches edge-function-side rejections) */}
       {tierError && (
         <div className="bg-[#F5E1E6]/40 border-b border-[#E7E2D8] px-4 py-3">
           <p className="text-[#1B365D] text-sm">{tierError}</p>

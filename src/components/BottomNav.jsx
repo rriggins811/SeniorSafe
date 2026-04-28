@@ -2,13 +2,21 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Home, FolderLock, Users, Bot, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import AIMark from './AIMark'
 
-const NAV_TABS = [
-  { label: 'Home',   icon: Home,       path: '/dashboard', premium: false },
-  { label: 'Vault',  icon: FolderLock, path: '/vault',     premium: true  },
-  { label: 'Family', icon: Users,      path: '/family',    premium: false },
-  { label: 'AI',     icon: Bot,        path: '/ai',        premium: false },
+// Base tabs visible to every tier.
+const BASE_NAV_TABS = [
+  { label: 'Home',   icon: Home,       path: '/dashboard', premium: false, kind: 'lucide' },
+  { label: 'Vault',  icon: FolderLock, path: '/vault',     premium: true,  kind: 'lucide' },
+  { label: 'Family', icon: Users,      path: '/family',    premium: false, kind: 'lucide' },
+  { label: 'AI',     icon: Bot,        path: '/ai',        premium: false, kind: 'lucide' },
 ]
+
+// Inserted as a 5th tab when subscription_tier === 'premium_plus'.
+// Maggie sits ALONGSIDE the daily-buddy SeniorSafe AI, not in place of it.
+const MAGGIE_TAB = {
+  label: 'Maggie', icon: null, path: '/maggie', premium: false, kind: 'aimark',
+}
 
 // inline=true: renders as a normal flow element (use inside h-screen flex-col layouts)
 // inline=false (default): fixed to bottom of viewport
@@ -24,7 +32,6 @@ export default function BottomNav({ inline = false }) {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user || cancelled) return
 
-      // Fetch tier and last_family_read_at in one query
       const { data: profile } = await supabase
         .from('user_profile')
         .select('subscription_tier, last_family_read_at, family_name, family_code, role, invited_by')
@@ -32,15 +39,25 @@ export default function BottomNav({ inline = false }) {
         .single()
 
       if (cancelled) return
-      setTier(profile?.subscription_tier || 'free')
 
-      // Get the family_name for querying family_messages
+      // Members inherit their admin's tier (where the family subscription lives).
+      let effectiveTier = profile?.subscription_tier || 'free'
+      if (profile?.role === 'member' && profile?.invited_by) {
+        const { data: admin } = await supabase
+          .from('user_profile')
+          .select('subscription_tier')
+          .eq('user_id', profile.invited_by)
+          .single()
+        if (admin?.subscription_tier) effectiveTier = admin.subscription_tier
+      }
+      if (cancelled) return
+      setTier(effectiveTier)
+
       const familyName = profile?.family_name
       const lastRead = profile?.last_family_read_at || new Date(0).toISOString()
 
       if (!familyName) return
 
-      // Count unread messages: created after last_family_read_at, not by current user
       const { count } = await supabase
         .from('family_messages')
         .select('id', { count: 'exact', head: true })
@@ -52,9 +69,14 @@ export default function BottomNav({ inline = false }) {
     })
 
     return () => { cancelled = true }
-  }, [pathname]) // Re-check on every navigation
+  }, [pathname])
 
   const isFree = tier === 'free'
+  const isPremiumPlus = tier === 'premium_plus'
+
+  // Premium+ users get the Maggie tab inserted after AI. Other tiers see the
+  // base 4 tabs only (Home, Vault, Family, AI).
+  const tabs = isPremiumPlus ? [...BASE_NAV_TABS, MAGGIE_TAB] : BASE_NAV_TABS
 
   const wrapClass = inline
     ? 'bg-[#FAF8F4] border-t border-[#E7E2D8] flex-shrink-0'
@@ -63,8 +85,8 @@ export default function BottomNav({ inline = false }) {
   return (
     <nav className={wrapClass} style={!inline ? { paddingBottom: 'env(safe-area-inset-bottom)' } : undefined}>
       <div className="flex max-w-lg mx-auto">
-        {NAV_TABS.map((tab) => {
-          const { label, path, premium } = tab
+        {tabs.map((tab) => {
+          const { label, path, premium, kind } = tab
           const Icon = tab.icon
           const active = pathname === path
           const locked = isFree && premium
@@ -80,7 +102,11 @@ export default function BottomNav({ inline = false }) {
               {/* Active gold dot indicator above icon */}
               <span className={`block w-1 h-1 rounded-full ${active ? 'bg-[#D4A843]' : 'bg-transparent'}`} aria-hidden="true" />
               <div className="relative">
-                <Icon size={22} strokeWidth={active ? 2.5 : 1.5} />
+                {kind === 'aimark' ? (
+                  <AIMark size={22} />
+                ) : (
+                  <Icon size={22} strokeWidth={active ? 2.5 : 1.5} />
+                )}
                 {locked && (
                   <Lock size={10} strokeWidth={2.5} className="absolute -top-1 -right-2.5 text-[#D4A843]" />
                 )}
