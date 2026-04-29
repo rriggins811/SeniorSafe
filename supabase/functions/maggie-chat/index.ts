@@ -52,8 +52,10 @@ const OFF_TOPIC_MARKERS = [
   "I'm Maggie, the Premium+ specialist",
   'SeniorSafe AI is the right starting point',
   'Premium+ specialist for senior transitions',
-  // Phase 1.0c: when Maggie redirects an adult child to Google for general tasks
-  'general-purpose AI like ChatGPT or Claude',
+  // Phase 1.0d: off-topic now redirects to SeniorSafe AI in this same app
+  // (reversed from 1.0c which sent users to Google/ChatGPT — keep customers in-ecosystem)
+  'SeniorSafe AI tab in this same app',
+  'Slide over to that tab',
 ]
 
 // ---------------------------------------------------------------------------
@@ -169,6 +171,15 @@ serve(async (req) => {
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
+  }
+
+  // Phase 1.0d warm-ping: no-auth no-op handler so MaggiePage can warm the
+  // container on mount before the user types. Cold containers were returning
+  // raw "Anthropic error 403" on the first real message; warming + retry
+  // (below) makes the first request feel instant and never user-hostile.
+  const url = new URL(req.url)
+  if (req.method === 'GET' || url.searchParams.get('warmup') === '1') {
+    return new Response('ok', { status: 200, headers: corsHeaders })
   }
 
   try {
@@ -301,7 +312,7 @@ serve(async (req) => {
       { type: 'text', text: perUserContext },
     ]
 
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+    const anthropicInit = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -315,12 +326,25 @@ serve(async (req) => {
         system: systemPayload,
         messages,
       }),
-    })
+    }
+
+    let anthropicRes = await fetch('https://api.anthropic.com/v1/messages', anthropicInit)
+
+    // Phase 1.0d cold-start handling: on Anthropic 4xx, retry once after 1s.
+    // Cold containers occasionally return transient auth/rate errors on the
+    // first request; the retry almost always succeeds.
+    if (!anthropicRes.ok && anthropicRes.status >= 400 && anthropicRes.status < 500) {
+      const firstErr = await anthropicRes.text().catch(() => '')
+      console.warn(`Anthropic ${anthropicRes.status} on first try, retrying after 1s. Body: ${firstErr.slice(0, 500)}`)
+      await new Promise(r => setTimeout(r, 1000))
+      anthropicRes = await fetch('https://api.anthropic.com/v1/messages', anthropicInit)
+    }
 
     if (!anthropicRes.ok) {
-      const err = await anthropicRes.json().catch(() => ({}))
+      const errBody = await anthropicRes.text().catch(() => '')
+      console.error(`Anthropic still failing after retry: ${anthropicRes.status}. Body: ${errBody.slice(0, 500)}`)
       return jsonResponse({
-        error: (err as any)?.error?.message || `Anthropic error ${anthropicRes.status}`,
+        error: 'One sec, Maggie is getting ready. Try again in a moment.',
       }, 502, corsHeaders)
     }
 

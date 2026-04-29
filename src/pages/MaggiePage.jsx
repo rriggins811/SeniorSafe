@@ -123,6 +123,13 @@ export default function MaggiePage() {
     return () => { cancelled = true }
   }, [])
 
+  // Phase 1.0d: warm the maggie-chat container on mount so the user's first
+  // message doesn't pay cold-start latency or hit a transient cold-container
+  // 4xx. Fire and forget — failures are silent.
+  useEffect(() => {
+    fetch(`${MAGGIE_CHAT_URL}?warmup=1`, { method: 'GET' }).catch(() => {})
+  }, [])
+
   // Auto-scroll to newest message
   useEffect(() => {
     if (messagesEndRef.current) {
