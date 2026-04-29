@@ -128,6 +128,7 @@ export default function UpgradePage() {
         productId: entitlement?.productIdentifier || 'com.rigginsstrategicsolutions.seniorsafe.monthly',
         expiresDate: entitlement?.expirationDate || null,
         adminUserId: isMember && adminUserId ? adminUserId : null,
+        platform: isIOS() ? 'apple' : 'google',
       }
 
       const res = await fetch(MARK_IAP_PAID_URL, {
@@ -180,6 +181,7 @@ export default function UpgradePage() {
           body: JSON.stringify({
             productId: 'com.rigginsstrategicsolutions.seniorsafe.monthly',
             adminUserId: isMember && adminUserId ? adminUserId : null,
+            platform: isIOS() ? 'apple' : 'google',
           }),
         })
 

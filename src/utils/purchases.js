@@ -2,7 +2,7 @@ import { Purchases } from '@revenuecat/purchases-capacitor'
 import { Capacitor } from '@capacitor/core'
 
 const APPLE_API_KEY = 'appl_TzwbAuYsqyTfHLRocmJpjzNSPnL'
-const ANDROID_API_KEY = 'ANDROID_KEY_PLACEHOLDER'
+const ANDROID_API_KEY = 'goog_FpPwzuruOoVoRGRxFWbkKMudxgq'
 const ENTITLEMENT_ID = 'SeniorSafeApp Pro'
 
 export function isNativePlatform() {
