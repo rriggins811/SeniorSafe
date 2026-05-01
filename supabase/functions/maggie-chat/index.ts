@@ -16,6 +16,10 @@ const ALLOWED_ORIGINS = [
   'https://app.seniorsafeapp.com',
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
+  'http://localhost',
+  'https://localhost',
+  'capacitor://localhost',
+  'ionic://localhost',
 ]
 
 function getCorsHeaders(req: Request) {
