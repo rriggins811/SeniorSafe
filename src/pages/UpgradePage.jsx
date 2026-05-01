@@ -6,7 +6,16 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { isIOS, isAndroid } from '../lib/platform'
-import { purchaseMonthly as rcPurchaseMonthly, restorePurchases as rcRestorePurchases, isNativePlatform, checkEntitlement } from '../utils/purchases'
+import {
+  purchaseMonthly as rcPurchaseMonthly,
+  purchasePremiumPlus as rcPurchasePremiumPlus,
+  restorePurchases as rcRestorePurchases,
+  isNativePlatform,
+  checkEntitlement,
+  checkPremiumPlusEntitlement,
+  PREMIUM_PRODUCT_ID,
+  PREMIUM_PLUS_PRODUCT_ID,
+} from '../utils/purchases'
 
 const MARK_IAP_PAID_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/mark-iap-paid'
 
@@ -30,6 +39,14 @@ const PAID_FEATURES = [
   { icon: Pill,       text: 'Automated SMS reminders so your loved one never misses a dose' },
 ]
 
+// Build 27: Premium+ tier features.
+const PAID_PLUS_FEATURES = [
+  { icon: Sparkles, text: 'Everything in Premium, plus:' },
+  { icon: Bot,      text: 'Maggie — a tactical AI specialist for adult children navigating a parent\'s senior transition (housing, Medicare, exploitation prevention, Blueprint planning)' },
+  { icon: Heart,    text: 'Persistent family memory — Maggie remembers your family\'s situation across every conversation, so you never have to re-explain' },
+  { icon: FolderLock, text: 'Blueprint planning tools, surfaced when relevant to your conversation' },
+]
+
 export default function UpgradePage() {
   const navigate = useNavigate()
   const [plan, setPlan] = useState('monthly') // 'monthly' or 'annual'
@@ -40,6 +57,7 @@ export default function UpgradePage() {
   const [adminUserId, setAdminUserId] = useState(null)
   const [adminSeniorName, setAdminSeniorName] = useState('')
   const [iapLoading, setIapLoading] = useState(false)
+  const [iapPlusLoading, setIapPlusLoading] = useState(false)
   const [restoring, setRestoring] = useState(false)
 
   const onNativeStore = isNativePlatform()
@@ -159,15 +177,70 @@ export default function UpgradePage() {
     }
   }
 
+  // Build 27: Premium+ purchase. Mirrors handleIAPPurchase but buys the
+  // premium_plus_monthly RevenueCat package and forwards the Premium+
+  // productId to mark-iap-paid so the edge function sets tier='premium_plus'
+  // (not 'paid'). Apple StoreKit handles Premium → Premium+ upgrade
+  // proration automatically because both products are in the same Apple
+  // subscription group (ID 22003343); we just call purchasePackage().
+  async function handlePremiumPlusPurchase() {
+    setIapPlusLoading(true)
+    setError('')
+    try {
+      const customerInfo = await rcPurchasePremiumPlus()
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not logged in')
+
+      const entitlement = customerInfo?.entitlements?.active?.['premium_plus']
+      const body = {
+        originalTransactionId: entitlement?.originalPurchaseDate ? String(entitlement?.productIdentifier || '') : null,
+        productId: entitlement?.productIdentifier || PREMIUM_PLUS_PRODUCT_ID,
+        expiresDate: entitlement?.expirationDate || null,
+        adminUserId: isMember && adminUserId ? adminUserId : null,
+        platform: isIOS() ? 'apple' : 'google',
+      }
+
+      const res = await fetch(MARK_IAP_PAID_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify(body),
+      })
+
+      const result = await res.json()
+      if (!res.ok || !result?.success) {
+        throw new Error(`Purchase succeeded but account update failed: ${result?.error || res.statusText}`)
+      }
+
+      setTier('premium_plus')
+    } catch (err) {
+      if (err?.code === 'PURCHASE_CANCELLED' || err?.message?.toLowerCase().includes('cancel')) {
+        setIapPlusLoading(false)
+        return
+      }
+      setError(err.message || 'Premium+ purchase failed. Please try again.')
+    } finally {
+      setIapPlusLoading(false)
+    }
+  }
+
   async function handleRestore() {
     setRestoring(true)
     setError('')
     try {
       await rcRestorePurchases()
-      const hasEntitlement = await checkEntitlement()
+      // Build 27: detect WHICH tier was restored so we forward the correct
+      // productId to mark-iap-paid. checkPremiumPlusEntitlement() takes
+      // priority — Premium+ users only have the premium_plus entitlement,
+      // not SeniorSafeApp Pro.
+      const hasPremiumPlus = await checkPremiumPlusEntitlement()
+      const hasAnyPaid = hasPremiumPlus || (await checkEntitlement())
 
-      if (hasEntitlement) {
-        // Restore succeeded — call edge function to upgrade in Supabase
+      if (hasAnyPaid) {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) throw new Error('Not logged in')
 
@@ -179,7 +252,7 @@ export default function UpgradePage() {
             'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({
-            productId: 'com.rigginsstrategicsolutions.seniorsafe.monthly',
+            productId: hasPremiumPlus ? PREMIUM_PLUS_PRODUCT_ID : PREMIUM_PRODUCT_ID,
             adminUserId: isMember && adminUserId ? adminUserId : null,
             platform: isIOS() ? 'apple' : 'google',
           }),
@@ -190,7 +263,7 @@ export default function UpgradePage() {
           throw new Error(`Restore succeeded but account update failed: ${result?.error || res.statusText}`)
         }
 
-        setTier('paid')
+        setTier(hasPremiumPlus ? 'premium_plus' : 'paid')
       } else {
         setError('No active subscription found to restore.')
       }
@@ -206,8 +279,8 @@ export default function UpgradePage() {
   const annualMonthly = '$11.99'
   const savingsPercent = '20%'
 
-  // Already paid
-  if (tier === 'paid') {
+  // Build 27: Premium+ success state (top tier, no further upgrade).
+  if (tier === 'premium_plus') {
     return (
       <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
         <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
@@ -220,11 +293,11 @@ export default function UpgradePage() {
         </div>
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center gap-5">
           <div className="bg-green-100 rounded-2xl p-5">
-            <CheckCircle size={40} className="text-green-600" strokeWidth={1.5} />
+            <Sparkles size={40} className="text-green-600" strokeWidth={1.5} />
           </div>
-          <h2 className="text-[#1B365D] text-xl font-bold">You&apos;re on Premium!</h2>
+          <h2 className="text-[#1B365D] text-xl font-bold">You&apos;re on Premium+!</h2>
           <p className="text-gray-500 text-base leading-relaxed max-w-xs">
-            You have full access to all SeniorSafe features. Thank you for supporting your family&apos;s safety.
+            You have everything in Premium plus Maggie, family memory, and Blueprint tools. Thank you for supporting your family&apos;s safety.
           </p>
           <button
             onClick={() => navigate('/dashboard')}
@@ -232,6 +305,90 @@ export default function UpgradePage() {
           >
             Back to Dashboard
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Premium subscriber — still eligible to upgrade to Premium+.
+  // On native, show an in-app Premium+ upgrade CTA (Apple/Google handle
+  // the proration via the same subscription group). On web, send them
+  // back to the dashboard for now (web Premium+ via Stripe is a future
+  // ticket).
+  if (tier === 'paid') {
+    return (
+      <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
+        <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
+          <div className="max-w-lg mx-auto flex items-center gap-3">
+            <button onClick={() => navigate('/dashboard')} className="text-white">
+              <ArrowLeft size={22} />
+            </button>
+            <h1 className="text-white text-xl font-bold">Your Plan</h1>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-10">
+          <div className="max-w-lg mx-auto flex flex-col items-center text-center gap-5">
+            <div className="bg-green-100 rounded-2xl p-5">
+              <CheckCircle size={40} className="text-green-600" strokeWidth={1.5} />
+            </div>
+            <h2 className="text-[#1B365D] text-xl font-bold">You&apos;re on Premium</h2>
+            <p className="text-gray-500 text-base leading-relaxed max-w-xs">
+              You have full access to SeniorSafe&apos;s Premium features. Thank you for supporting your family&apos;s safety.
+            </p>
+
+            {onNativeStore && (
+              <div className="w-full bg-white rounded-2xl p-5 shadow-sm mt-2 text-left">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={18} className="text-[#D4A843]" />
+                  <h3 className="text-[#1B365D] font-bold text-base">Add Premium+ for Maggie</h3>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                  Premium+ adds Maggie, our tactical AI specialist for adult children navigating a parent&apos;s senior transition, plus persistent family memory and Blueprint tools.
+                </p>
+                <ul className="flex flex-col gap-2.5 mb-4">
+                  {PAID_PLUS_FEATURES.slice(1).map((feat, i) => {
+                    const Icon = feat.icon
+                    return (
+                      <li key={i} className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[#D4A843]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Icon size={13} className="text-[#D4A843]" strokeWidth={2} />
+                        </div>
+                        <span className="text-gray-700 text-[14px] leading-snug">{feat.text}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <p className="text-center text-2xl font-bold text-[#1B365D] mb-1">
+                  $39.99<span className="text-base font-normal text-gray-400">/mo total</span>
+                </p>
+                <p className="text-center text-gray-400 text-xs mb-3">
+                  Billed monthly via {isIOS() ? 'Apple' : 'Google Play'}. Cancel anytime.
+                </p>
+                <button
+                  onClick={handlePremiumPlusPurchase}
+                  disabled={iapPlusLoading}
+                  className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
+                >
+                  {iapPlusLoading ? 'Processing...' : 'Upgrade to Premium+'}
+                </button>
+                {error && (
+                  <p className="text-red-500 text-sm text-center mt-3">{error}</p>
+                )}
+                <p className="text-gray-400 text-[11px] text-center mt-3 leading-relaxed">
+                  {isIOS()
+                    ? 'Payment is charged to your Apple ID. Subscription auto-renews unless canceled at least 24 hours before the end of the current period. Manage in Settings > Apple ID > Subscriptions.'
+                    : 'Payment processed by Google Play. Subscription auto-renews. Cancel anytime in Play Store > Subscriptions.'}
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="w-full max-w-xs py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg mt-2"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -249,7 +406,7 @@ export default function UpgradePage() {
             <h1 className="text-white text-xl font-bold leading-tight">
               {isMember && adminSeniorName
                 ? `Upgrade ${adminSeniorName}'s Plan`
-                : 'Upgrade to Premium'}
+                : 'Upgrade Your Plan'}
             </h1>
             <p className="text-white/60 text-sm">
               {isMember
@@ -347,16 +504,54 @@ export default function UpgradePage() {
             </ul>
           </div>
 
-          {/* CTA button — Apple IAP on iOS, Stripe on web */}
+          {/* CTA section — native gives Premium + Premium+ both, web is Stripe Premium */}
           {onNativeStore ? (
             <>
               <button
                 onClick={handleIAPPurchase}
-                disabled={iapLoading}
+                disabled={iapLoading || iapPlusLoading}
                 className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
               >
-                {iapLoading ? 'Processing...' : `Subscribe — ${monthlyPrice}/month`}
+                {iapLoading ? 'Processing...' : `Subscribe to Premium — ${monthlyPrice}/month`}
               </button>
+
+              {/* Build 27: Premium+ tier card with its own Subscribe button. */}
+              <div className="bg-white rounded-2xl p-5 shadow-sm border-2 border-[#D4A843]/40">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={18} className="text-[#D4A843]" />
+                  <h3 className="text-[#1B365D] font-bold text-base">Or go all-in with Premium+</h3>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                  Premium+ adds <span className="font-semibold text-[#1B365D]">Maggie</span>, our tactical AI specialist for adult children navigating a parent&apos;s senior transition, plus persistent family memory and Blueprint planning tools.
+                </p>
+                <ul className="flex flex-col gap-2.5 mb-4">
+                  {PAID_PLUS_FEATURES.slice(1).map((feat, i) => {
+                    const Icon = feat.icon
+                    return (
+                      <li key={i} className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[#D4A843]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Icon size={13} className="text-[#D4A843]" strokeWidth={2} />
+                        </div>
+                        <span className="text-gray-700 text-[14px] leading-snug">{feat.text}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <p className="text-center text-2xl font-bold text-[#1B365D] mb-1">
+                  $39.99<span className="text-base font-normal text-gray-400">/mo</span>
+                </p>
+                <p className="text-center text-gray-400 text-xs mb-3">
+                  Billed monthly via {isIOS() ? 'Apple' : 'Google Play'}. Cancel anytime.
+                </p>
+                <button
+                  onClick={handlePremiumPlusPurchase}
+                  disabled={iapPlusLoading || iapLoading}
+                  className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-bold text-lg disabled:opacity-50 shadow-lg"
+                >
+                  {iapPlusLoading ? 'Processing...' : 'Subscribe to Premium+'}
+                </button>
+              </div>
+
               <button
                 onClick={handleRestore}
                 disabled={restoring}

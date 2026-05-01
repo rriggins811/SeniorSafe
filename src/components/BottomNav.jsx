@@ -12,8 +12,10 @@ const BASE_NAV_TABS = [
   { label: 'AI',     icon: Bot,        path: '/ai',        premium: false, kind: 'lucide' },
 ]
 
-// Inserted as a 5th tab when subscription_tier === 'premium_plus'.
 // Maggie sits ALONGSIDE the daily-buddy SeniorSafe AI, not in place of it.
+// Build 27: Maggie tab is visible to ALL tiers — tapping routes free /
+// Premium users to the Premium+ paywall; Premium+ users get the chat
+// directly. The tier gate is enforced inside MaggiePage, not here.
 const MAGGIE_TAB = {
   label: 'Maggie', icon: null, path: '/maggie', premium: false, kind: 'aimark',
 }
@@ -72,11 +74,11 @@ export default function BottomNav({ inline = false }) {
   }, [pathname])
 
   const isFree = tier === 'free'
-  const isPremiumPlus = tier === 'premium_plus'
 
-  // Premium+ users get the Maggie tab inserted after AI. Other tiers see the
-  // base 4 tabs only (Home, Vault, Family, AI).
-  const tabs = isPremiumPlus ? [...BASE_NAV_TABS, MAGGIE_TAB] : BASE_NAV_TABS
+  // Build 27: 5-tab layout for everyone. Maggie tab is visible to all
+  // tiers — non-Premium+ users get bounced to the upgrade page from
+  // MaggiePage (so they can see what they're missing).
+  const tabs = [...BASE_NAV_TABS, MAGGIE_TAB]
 
   const wrapClass = inline
     ? 'bg-[#FAF8F4] border-t border-[#E7E2D8] flex-shrink-0'

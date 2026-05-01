@@ -9,7 +9,22 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 //
 // Accepts optional `platform` field ('apple' or 'google') to store purchase
 // metadata in the correct platform-specific columns.
+//
+// Build 27: branches subscription_tier on productId. Premium+ products
+// (com.rigginsstrategicsolutions.seniorsafe.premiumplus.*) set tier to
+// 'premium_plus'; everything else sets tier to 'paid' (Premium-equivalent).
+// Family members of an admin inherit the admin's tier.
 // ---------------------------------------------------------------------------
+
+// Premium+ product IDs across platforms. Any productId in this list maps to
+// subscription_tier='premium_plus'; otherwise 'paid'.
+const PREMIUM_PLUS_PRODUCT_IDS = new Set<string>([
+  'com.rigginsstrategicsolutions.seniorsafe.premiumplus.monthly',
+])
+
+function tierForProductId(productId: string | null): 'premium_plus' | 'paid' {
+  return productId && PREMIUM_PLUS_PRODUCT_IDS.has(productId) ? 'premium_plus' : 'paid'
+}
 
 const ALLOWED_ORIGINS = [
   'https://app.seniorsafeapp.com',
@@ -94,8 +109,12 @@ serve(async (req: Request) => {
     const targetUserId = adminUserId || user.id
 
     // ---- Build update payload ----
+    // Build 27: branch tier on productId. A Premium+ purchase MUST set
+    // subscription_tier='premium_plus' so MaggiePage's gate
+    // (effectiveTier === 'premium_plus') unlocks Maggie.
+    const tier = tierForProductId(productId)
     const update: Record<string, unknown> = {
-      subscription_tier: 'paid',
+      subscription_tier: tier,
       subscription_source: 'revenuecat',
       subscription_platform: platform,
     }
@@ -126,9 +145,12 @@ serve(async (req: Request) => {
       })
     }
 
-    console.log(`User ${targetUserId} upgraded to paid via ${platform} IAP (caller ${user.id})`)
+    console.log(`User ${targetUserId} upgraded to ${tier} via ${platform} IAP (productId=${productId || 'unknown'}, caller ${user.id})`)
 
     // ---- Also upgrade family members ----
+    // Family members inherit the admin's tier. A Premium+ admin's family
+    // members get 'premium_plus' too (so they can use Maggie under the
+    // family subscription).
     const { data: members } = await supabaseAdmin
       .from('user_profile')
       .select('user_id')
@@ -138,10 +160,10 @@ serve(async (req: Request) => {
       for (const m of members) {
         await supabaseAdmin
           .from('user_profile')
-          .update({ subscription_tier: 'paid' })
+          .update({ subscription_tier: tier })
           .eq('user_id', m.user_id)
       }
-      console.log(`Upgraded ${members.length} family member(s) for ${targetUserId}`)
+      console.log(`Upgraded ${members.length} family member(s) to ${tier} for ${targetUserId}`)
     }
 
     return new Response(JSON.stringify({

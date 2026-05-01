@@ -81,8 +81,11 @@ export default function MaggiePage() {
         if (admin?.subscription_tier) effectiveTier = admin.subscription_tier
       }
       if (cancelled) return
+      // Build 27: route non-Premium+ users to the paywall (not to /ai)
+      // so they see exactly what they get if they upgrade. Apple HIG 3.1.1
+      // requires the IAP path to be in-app; the UpgradePage handles that.
       if (effectiveTier !== 'premium_plus') {
-        navigate('/ai', { replace: true })
+        navigate('/upgrade', { replace: true })
         return
       }
 
