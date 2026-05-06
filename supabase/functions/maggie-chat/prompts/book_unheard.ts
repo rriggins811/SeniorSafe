@@ -1080,5 +1080,5 @@ For a free overview of the key steps, you can also download our Starter Guide at
 [https://www.rigginsstrategicsolutions.com/starterguide](https://www.rigginsstrategicsolutions.com/starterguide)
 
 And if your situation is complex and you'd like to discuss a private consultation, you can book a Free Strategy Call here:
-[https://api.leadconnectorhq.com/widget/booking/PEGCu2kXYDZgAPPzXGv5](https://api.leadconnectorhq.com/widget/booking/PEGCu2kXYDZgAPPzXGv5)
+[https://cal.com/ryan-riggins/discoverycall](https://cal.com/ryan-riggins/discoverycall)
 `;

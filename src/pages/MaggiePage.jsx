@@ -7,6 +7,7 @@ import BottomNav from '../components/BottomNav'
 import AIMark from '../components/AIMark'
 import EmptyConversations from '../components/illustrations/EmptyConversations'
 import MaggieConsentModal from '../components/MaggieConsentModal'
+import { canAccessMaggie } from '../lib/subscription'
 
 const MAGGIE_CHAT_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/maggie-chat'
 const SUMMARIZE_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/summarize-conversation'
@@ -81,10 +82,12 @@ export default function MaggiePage() {
         if (admin?.subscription_tier) effectiveTier = admin.subscription_tier
       }
       if (cancelled) return
-      // Build 27: route non-Premium+ users to the paywall (not to /ai)
-      // so they see exactly what they get if they upgrade. Apple HIG 3.1.1
-      // requires the IAP path to be in-app; the UpgradePage handles that.
-      if (effectiveTier !== 'premium_plus') {
+      // Build 27: route users without Maggie access to the paywall (not to
+      // /ai) so they see exactly what they get if they upgrade. Apple HIG
+      // 3.1.1 requires the IAP path to be in-app; the UpgradePage handles
+      // that. Trial users (the 14-day Blueprint-signup trial) get Maggie
+      // for the full trial window — see canAccessMaggie.
+      if (!canAccessMaggie(effectiveTier)) {
         navigate('/upgrade', { replace: true })
         return
       }

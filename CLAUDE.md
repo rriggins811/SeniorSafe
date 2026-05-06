@@ -156,7 +156,7 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 
 ### Tier 1: Digital Products (80% of focus)
 1. **FREE** — Simple Blueprint (primary lead magnet, email capture via GHL at rigginsstrategicsolutions.com/simpleblueprint)
-2. **$47** — Senior Transition Blueprint Core (19 modules, 90+ tools) at seniortransitionblueprint.com
+2. **$47** — Senior Transition Blueprint Core (21 modules, 71 tools) at blueprint.rigginsstrategicsolutions.com
 3. **$297** — Senior Transition Blueprint Premium (Core + personalized plan + 60-min coaching call + 90 days email support)
 4. **$15/month** — SeniorSafe App subscription (currently free beta)
 5. **~$15** — Books on Amazon KDP (2 published — see Books section)
@@ -690,9 +690,9 @@ Git config for this repo:
 * Main site: rigginsstrategicsolutions.com
 * Simple Blueprint (lead magnet): rigginsstrategicsolutions.com/simpleblueprint
 * Book Resources (email capture): rigginsstrategicsolutions.com/bookresources
-* Blueprint purchase: rigginsstrategicsolutions.com/the-blueprint
+* Blueprint purchase: blueprint.rigginsstrategicsolutions.com/pricing
 * Starter Guide: rigginsstrategicsolutions.com/starterguide
-* Booking: https://api.leadconnectorhq.com/widget/booking/PEGCu2kXYDZgAPPzXGv5
+* Booking: https://cal.com/ryan-riggins/discoverycall
 * App (production): app.seniorsafeapp.com
 * App (beta): senior-safe-hazel.vercel.app
 * GHL landing pages: go.rigginsstrategicsolutions.com

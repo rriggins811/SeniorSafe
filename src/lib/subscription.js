@@ -7,11 +7,20 @@ export function isPremium(tier) {
 }
 
 /**
- * Premium+ tier ($39.99/month) unlocks Maggie AI.
- * Free / Premium / Trial users still get SeniorSafe AI (the daily buddy).
+ * Premium+ tier ($39.99/month) unlocks Maggie AI as a paid entitlement.
+ * Stays narrowly scoped to the paid tier — used by RevenueCat / billing UI.
  */
 export function isPremiumPlus(tier) {
   return tier === 'premium_plus'
+}
+
+/**
+ * Maggie access gate. Premium+ paid users AND trial users (the 14-day
+ * Blueprint-signup trial that grants the full Premium+ experience) both
+ * unlock Maggie. Used by MaggiePage UI and the maggie-chat edge function.
+ */
+export function canAccessMaggie(tier) {
+  return tier === 'premium_plus' || tier === 'trial'
 }
 
 /**

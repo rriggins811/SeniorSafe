@@ -233,9 +233,11 @@ serve(async (req) => {
       }
     }
 
-    // Maggie is Premium+ ONLY. Free / Premium users get bounced with a
-    // friendly "you're on the wrong AI for this tier" message.
-    if (effectiveTier !== 'premium_plus') {
+    // Maggie is Premium+ — and trial users (the 14-day Blueprint-signup
+    // trial) get the full Premium+ experience for the trial window. Free /
+    // Premium users get bounced with a friendly "you're on the wrong AI for
+    // this tier" message.
+    if (effectiveTier !== 'premium_plus' && effectiveTier !== 'trial') {
       return jsonResponse({
         error: 'tier_required',
         message: "Maggie is part of Premium+ ($39.99/month). On Premium and Free, the in-app SeniorSafe AI is your daily buddy. Upgrade to Premium+ when you're ready.",
