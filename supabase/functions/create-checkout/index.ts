@@ -25,10 +25,25 @@ function getCorsHeaders(req: Request) {
 // ---------------------------------------------------------------------------
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2023-10-16' })
 
-// Read price IDs from Supabase secrets, trim whitespace for safety
-const PRICE_MAP: Record<string, string> = {
-  monthly: (Deno.env.get('STRIPE_PRICE_MONTHLY')?.trim()) || 'price_REPLACE_ME_MONTHLY',
-  annual:  (Deno.env.get('STRIPE_PRICE_ANNUAL')?.trim())  || 'price_REPLACE_ME_ANNUAL',
+// Price map: tier × plan → live Stripe price ID.
+// Env vars win when set, hardcoded live IDs as fallback. Stripe price IDs are
+// public identifiers (they ship to the browser in any Checkout flow), so
+// baking them into the function source is safe and removes a "you must set
+// secrets first" deploy step. To override later, set Supabase function
+// secrets STRIPE_PRICE_MONTHLY / STRIPE_PRICE_ANNUAL / STRIPE_PRICE_PLUS_MONTHLY
+// / STRIPE_PRICE_PLUS_ANNUAL.
+type Tier = 'premium' | 'premium_plus'
+type Plan = 'monthly' | 'annual'
+
+const PRICE_MAP: Record<Tier, Record<Plan, string>> = {
+  premium: {
+    monthly: (Deno.env.get('STRIPE_PRICE_MONTHLY')?.trim()) || 'price_REPLACE_ME_MONTHLY',
+    annual:  (Deno.env.get('STRIPE_PRICE_ANNUAL')?.trim())  || 'price_REPLACE_ME_ANNUAL',
+  },
+  premium_plus: {
+    monthly: (Deno.env.get('STRIPE_PRICE_PLUS_MONTHLY')?.trim()) || 'price_1TUSe3FoeumweL6DtmuRCVpD',
+    annual:  (Deno.env.get('STRIPE_PRICE_PLUS_ANNUAL')?.trim())  || 'price_1TUSeoFoeumweL6DluScBwCU',
+  },
 }
 
 serve(async (req: Request) => {
@@ -76,8 +91,22 @@ serve(async (req: Request) => {
     console.log('Authenticated user:', user.id, user.email)
 
     // ---- Parse body ----
-    const { plan, admin_user_id } = await req.json() // plan: 'monthly'|'annual', admin_user_id: optional
-    const priceId = PRICE_MAP[plan]
+    // tier defaults to 'premium' for backward compat with existing callers
+    // that only sent { plan }.
+    const body = await req.json()
+    const plan: Plan = body.plan
+    const tier: Tier = (body.tier as Tier) || 'premium'
+    const admin_user_id: string | undefined = body.admin_user_id
+
+    if (tier !== 'premium' && tier !== 'premium_plus') {
+      return new Response(JSON.stringify({ error: 'Invalid tier. Use "premium" or "premium_plus".' }), {
+        status: 400,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const tierMap = PRICE_MAP[tier]
+    const priceId = tierMap[plan]
     if (!priceId) {
       return new Response(JSON.stringify({ error: 'Invalid plan. Use "monthly" or "annual".' }), {
         status: 400,
@@ -142,6 +171,7 @@ serve(async (req: Request) => {
         supabase_user_id: targetUserId,
         paid_by: user.id,
         plan: plan,
+        tier: tier,
       },
     }
 
