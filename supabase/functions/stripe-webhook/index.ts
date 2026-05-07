@@ -49,63 +49,97 @@ function resolveTier(metadataTier: string | undefined, fallbackPriceId?: string)
 }
 
 // ---------------------------------------------------------------------------
-// Make.com Kit-tagging fan-out
+// Direct Kit (formerly ConvertKit) v4 tag application
 // ---------------------------------------------------------------------------
-// Posts subscription lifecycle events to the Make.com scenarios that own Kit
-// tag application:
-//   premium webhook → "RSS Kit · Stripe Premium/Premium+ Tag" (Branch A
-//                     paid → seniorsafe-premium, Branch B premium_plus →
-//                     seniorsafe-premium-plus)
-//   churn webhook   → "RSS Kit · Stripe Subscription Canceled → Churn Tag"
-//                     (applies seniorsafe-churned)
-// Webhook URLs are public Make endpoints (anyone with the URL can POST to
-// them), so hardcoding as fallbacks is safe. Override via Supabase secrets
-// MAKE_KIT_PREMIUM_WEBHOOK_URL / MAKE_KIT_CHURN_WEBHOOK_URL if Ryan ever
-// rotates the Make scenarios.
-// v2 hook URLs (May 7 cutover): the original v1 hooks (81bd21b5..., ltdpsb34...)
-// hit the same broken-webhook-resource pattern as the legacy SMS scenario hook
-// 2262870 — 40s ModuleTimeoutError on every execution despite curl returning
-// 200. Recreated with fresh hookIds (2275870, 2275871) and the scenarios
-// rewired via Make MCP. Old v1 URLs left intact for forensic comparison; safe
-// to remove from this fallback once v2 verified stable.
-const MAKE_KIT_PREMIUM_WEBHOOK_URL =
-  Deno.env.get('MAKE_KIT_PREMIUM_WEBHOOK_URL')?.trim() ||
-  'https://hook.us2.make.com/kyk70rx9ffdwv4vv8mlc2v1pdjme42za'
-const MAKE_KIT_CHURN_WEBHOOK_URL =
-  Deno.env.get('MAKE_KIT_CHURN_WEBHOOK_URL')?.trim() ||
-  'https://hook.us2.make.com/jglmpgstnpkn7tebyt6972rc6hip886g'
+// Replaces the previous Make.com fan-out (scenarios 4994124 / 4994125)
+// which exhibited a broken-webhook-resource pattern: every execution
+// produced a 40-second ModuleTimeoutError at gateway:CustomWebHook with
+// transfer=0 bytes despite the gateway returning 200 to the caller.
+// Recreating the hooks (v1 → v2) did not fix it. Bypass Make entirely —
+// post directly to Kit's v4 API.
+//
+// Tag IDs are provisioned in Ryan's Kit account:
+//   seniorsafe-premium       → 19444470 (paid tier)
+//   seniorsafe-premium-plus  → 19444472 (premium_plus tier)
+//   seniorsafe-churned       → 19444482 (any tier on cancel)
+//
+// Auth: Kit v4 expects X-Kit-Api-Key (NOT Authorization: Bearer — that
+// header is reserved for OAuth flows). Set via Supabase secret KIT_API_KEY.
+const KIT_TAG_SENIORSAFE_PREMIUM = 19444470
+const KIT_TAG_SENIORSAFE_PREMIUM_PLUS = 19444472
+const KIT_TAG_SENIORSAFE_CHURNED = 19444482
+const KIT_API_BASE = 'https://api.kit.com/v4'
 
-// Best-effort POST. Logs on failure but never throws — webhook fan-out
-// must not block the user's payment confirmation, and Make scenarios are
-// non-critical (Kit tagging can be backfilled if a single fan-out drops).
-async function postKitWebhook(
-  url: string,
-  payload: Record<string, unknown>,
+// Best-effort 2-step Kit tag application:
+//   1. POST /v4/subscribers with {email_address, first_name} → returns
+//      subscriber.id (idempotent — finds existing by email if present)
+//   2. POST /v4/tags/:tag_id/subscribers/:subscriber_id → applies tag
+// Logs on failure but never throws — webhook fan-out must not block the
+// user's payment confirmation. Kit tag application is idempotent so this
+// is safe to retry/double-fire.
+async function kitAddTag(
+  subscriber: { email: string; firstName?: string | null },
+  tagId: number,
   label: string,
 ): Promise<void> {
+  const key = Deno.env.get('KIT_API_KEY')
+  if (!key || /PLACEHOLDER/i.test(key)) {
+    console.warn(`[kit ${label}] skipped, KIT_API_KEY not set`)
+    return
+  }
   try {
-    const res = await fetch(url, {
+    const createRes = await fetch(`${KIT_API_BASE}/subscribers`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: {
+        'X-Kit-Api-Key': key,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email_address: subscriber.email,
+        first_name: subscriber.firstName ?? undefined,
+      }),
       signal: AbortSignal.timeout(5000),
     })
-    if (!res.ok) {
-      console.warn(`[kit-fanout ${label}] ${res.status} ${res.statusText}`)
+    if (!createRes.ok) {
+      const text = await createRes.text().catch(() => '')
+      console.warn(
+        `[kit ${label}] create ${createRes.status} ${createRes.statusText} ${text.slice(0, 200)}`,
+      )
+      return
+    }
+    const createBody = (await createRes.json()) as {
+      subscriber?: { id?: number }
+    }
+    const subscriberId = createBody.subscriber?.id
+    if (!subscriberId) {
+      console.warn(`[kit ${label}] create returned no subscriber id`)
+      return
+    }
+    const tagRes = await fetch(
+      `${KIT_API_BASE}/tags/${tagId}/subscribers/${subscriberId}`,
+      {
+        method: 'POST',
+        headers: { 'X-Kit-Api-Key': key },
+        signal: AbortSignal.timeout(5000),
+      },
+    )
+    if (!tagRes.ok) {
+      const text = await tagRes.text().catch(() => '')
+      console.warn(
+        `[kit ${label}] tag ${tagRes.status} ${tagRes.statusText} ${text.slice(0, 200)}`,
+      )
     }
   } catch (err) {
     console.warn(
-      `[kit-fanout ${label}] failed: ${
-        err instanceof Error ? err.message : 'unknown'
-      }`,
+      `[kit ${label}] failed: ${err instanceof Error ? err.message : 'unknown'}`,
     )
   }
 }
 
-// Pull email + names for Make webhook payload. Email lives on auth.users;
+// Pull email + names for Kit tag application. Email lives on auth.users;
 // first/last live on user_profile. Returns null fields rather than throwing
-// if any lookup misses — the webhook still fires (Make scenario can dedupe
-// by email alone).
+// if any lookup misses — kitAddTag handles a missing first_name fine
+// (Kit dedupes subscribers by email).
 async function lookupSubscriberFields(userId: string): Promise<{
   email: string | null
   firstName: string | null
@@ -297,23 +331,20 @@ serve(async (req: Request) => {
         console.log(`✅ Updated ${members.length} family member(s) to ${tier}`)
       }
 
-      // Fan out to Make.com Kit-tagging scenario. The scenario routes by
-      // tier: 'paid' → seniorsafe-premium, 'premium_plus' → seniorsafe-premium-plus.
-      // Best-effort, never blocks.
+      // Apply Kit lifecycle tag directly. Routes by tier:
+      //   'paid'         → seniorsafe-premium       (19444470)
+      //   'premium_plus' → seniorsafe-premium-plus  (19444472)
+      // Best-effort, never blocks. (Bypass of broken Make Scenario 2.)
       const fields = await lookupSubscriberFields(userId)
-      if (fields.email) {
-        await postKitWebhook(MAKE_KIT_PREMIUM_WEBHOOK_URL, {
-          kind: 'subscription_created',
-          email: fields.email,
-          firstName: fields.firstName,
-          lastName: fields.lastName,
-          tier,
-          amount_usd: typeof session.amount_total === 'number'
-            ? Math.round(session.amount_total / 100)
-            : null,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscriptionId,
-        }, `kit-premium-${tier}`)
+      if (fields.email && (tier === 'paid' || tier === 'premium_plus')) {
+        const kitTagId = tier === 'premium_plus'
+          ? KIT_TAG_SENIORSAFE_PREMIUM_PLUS
+          : KIT_TAG_SENIORSAFE_PREMIUM
+        await kitAddTag(
+          { email: fields.email, firstName: fields.firstName },
+          kitTagId,
+          `seniorsafe-${tier}`,
+        )
       }
 
       break
@@ -414,23 +445,20 @@ serve(async (req: Request) => {
         console.log(`⬇️ Downgraded ${members.length} family member(s) to free`)
       }
 
-      // Fan out to Make.com Kit churn scenario. Applies seniorsafe-churned
-      // tag (Kit automation can read prior_tier from the payload to branch
-      // winback messaging if desired).
+      // Apply seniorsafe-churned Kit tag directly. (Bypass of broken Make
+      // Scenario 3.) Kit automation can branch winback messaging on the
+      // tag application event; prior_tier is captured above for analytics
+      // but isn't passed to Kit (Kit doesn't have a custom-field equivalent
+      // for tag-application metadata in the v4 API).
       if (fields.email) {
-        await postKitWebhook(MAKE_KIT_CHURN_WEBHOOK_URL, {
-          kind: 'subscription_canceled',
-          email: fields.email,
-          firstName: fields.firstName,
-          lastName: fields.lastName,
-          prior_tier: priorTier,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscription.id,
-          canceled_at: subscription.canceled_at
-            ? new Date(subscription.canceled_at * 1000).toISOString()
-            : null,
-        }, 'kit-churn')
+        await kitAddTag(
+          { email: fields.email, firstName: fields.firstName },
+          KIT_TAG_SENIORSAFE_CHURNED,
+          'seniorsafe-churned',
+        )
       }
+      // Suppress unused-var warning while we keep priorTier for log/analytics:
+      void priorTier
 
       break
     }
