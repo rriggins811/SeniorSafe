@@ -19,6 +19,83 @@ import {
 
 const MARK_IAP_PAID_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/mark-iap-paid'
 
+// ---------------------------------------------------------------------------
+// Double-billing modal — shared by the web 409 path (user has active native
+// IAP, tried to start a Stripe Checkout) and the native pre-check (user has
+// active Stripe sub, tried to start an IAP). RevenueCat does not auto-sync
+// from Stripe and our stripe-webhook does not cancel native IAPs, so without
+// this gate a user can silently end up with parallel subscriptions.
+// ---------------------------------------------------------------------------
+function DoubleBillingModal({ open, platform, onClose }) {
+  if (!open) return null
+
+  const copy = {
+    apple: {
+      title: 'Existing App Store subscription',
+      body: 'You already have an active SeniorSafe subscription on this Apple ID. To change tiers or cancel, manage it in your iPhone Settings.',
+      ctaLabel: 'Open Settings',
+      ctaUrl: 'app-settings:',
+      ctaTarget: undefined, // app-settings: is a same-app deep link, not a web URL
+      footer: 'iPhone Settings → Apple ID → Subscriptions',
+    },
+    google: {
+      title: 'Existing Google Play subscription',
+      body: 'You already have an active SeniorSafe subscription on this Google account. To change tiers or cancel, manage it in the Play Store.',
+      ctaLabel: 'Open Play Store',
+      ctaUrl: 'https://play.google.com/store/account/subscriptions',
+      ctaTarget: '_blank',
+      footer: 'Play Store → Account → Subscriptions',
+    },
+    stripe: {
+      title: 'Existing web subscription',
+      body: 'You already have an active SeniorSafe subscription managed on the web. Sign in there to change tiers, switch to Premium+, or cancel.',
+      ctaLabel: 'Open in browser',
+      ctaUrl: 'https://app.seniorsafeapp.com/upgrade',
+      ctaTarget: '_blank',
+      footer: 'Same login as the app',
+    },
+  }
+  const c = copy[platform] || copy.stripe
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/55 z-50 flex items-end sm:items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3 mb-3">
+          <div className="bg-[#D4A843]/15 rounded-xl p-2 flex-shrink-0">
+            <Shield size={20} className="text-[#D4A843]" strokeWidth={1.5} />
+          </div>
+          <h2 className="text-[#1B365D] font-bold text-lg leading-tight pt-1">{c.title}</h2>
+        </div>
+        <p className="text-gray-700 text-sm leading-relaxed mb-3">{c.body}</p>
+        <p className="text-gray-500 text-xs mb-5">{c.footer}</p>
+        <div className="flex flex-col gap-2">
+          <a
+            href={c.ctaUrl}
+            target={c.ctaTarget}
+            rel={c.ctaTarget === '_blank' ? 'noopener noreferrer' : undefined}
+            onClick={onClose}
+            className="w-full py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base text-center"
+          >
+            {c.ctaLabel}
+          </a>
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-xl bg-gray-100 text-gray-700 font-semibold text-base"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const FREE_FEATURES = [
   { icon: Heart,  text: 'Daily "I\'m Okay" check-in' },
   { icon: Bell,   text: '"I Need Help" emergency SMS alerts' },
@@ -60,6 +137,11 @@ export default function UpgradePage() {
   const [iapPlusLoading, setIapPlusLoading] = useState(false)
   const [loadingPlus, setLoadingPlus] = useState(false)
   const [restoring, setRestoring] = useState(false)
+  // Double-billing modal: shown when web user has active native IAP (409
+  // from create-checkout) OR when native user has active Stripe sub (gated
+  // before rcPurchase fires). platform: 'apple' | 'google' | 'stripe'.
+  const [billingModalOpen, setBillingModalOpen] = useState(false)
+  const [billingModalPlatform, setBillingModalPlatform] = useState('stripe')
 
   const onNativeStore = isNativePlatform()
 
@@ -113,6 +195,24 @@ export default function UpgradePage() {
       })
 
       if (fnError) {
+        // C.3: detect the structured 409 ('existing_subscription') and route
+        // to the platform-specific double-billing modal instead of the
+        // generic error toast. supabase-js wraps the response on
+        // fnError.context — read the body to find the error envelope.
+        if (fnError.context && typeof fnError.context.json === 'function') {
+          try {
+            const body = await fnError.context.json()
+            if (body?.error === 'existing_subscription' && (body.platform === 'apple' || body.platform === 'google')) {
+              setBillingModalPlatform(body.platform)
+              setBillingModalOpen(true)
+              setLoading(false)
+              setLoadingPlus(false)
+              return
+            }
+          } catch {
+            // body wasn't JSON — fall through to generic error
+          }
+        }
         const code = fnError.context?.status || fnError.status || 'fn-error'
         const detail = fnError.message || 'Unable to start checkout.'
         throw new Error(`${detail} (${code}). If this keeps happening, text Ryan at (336) 553-8933 or email support@seniorsafeapp.com.`)
@@ -131,10 +231,40 @@ export default function UpgradePage() {
     }
   }
 
+  // C.4: refuse a native IAP purchase if the user already has an active
+  // Stripe subscription (created via the web /upgrade flow). RevenueCat does
+  // not auto-sync from Stripe, so this is the only place the native side can
+  // see the existing web sub. Returns true if the gate fired.
+  async function blockIfStripeSub() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return false
+    const { data: profile } = await supabase
+      .from('user_profile')
+      .select('subscription_platform, stripe_subscription_id, subscription_tier')
+      .eq('user_id', user.id)
+      .single()
+    if (
+      profile?.subscription_platform === 'stripe' &&
+      profile?.stripe_subscription_id &&
+      profile?.subscription_tier && profile.subscription_tier !== 'free'
+    ) {
+      setBillingModalPlatform('stripe')
+      setBillingModalOpen(true)
+      return true
+    }
+    return false
+  }
+
   async function handleIAPPurchase() {
     setIapLoading(true)
     setError('')
     try {
+      // C.4 pre-check
+      if (await blockIfStripeSub()) {
+        setIapLoading(false)
+        return
+      }
+
       const customerInfo = await rcPurchaseMonthly()
 
       // Purchase succeeded — call edge function to upgrade in Supabase
@@ -190,6 +320,13 @@ export default function UpgradePage() {
     setIapPlusLoading(true)
     setError('')
     try {
+      // C.4 pre-check (same gate — Stripe-paid Premium user tapping native
+      // Premium+ upgrade card on the success page would otherwise double-bill)
+      if (await blockIfStripeSub()) {
+        setIapPlusLoading(false)
+        return
+      }
+
       const customerInfo = await rcPurchasePremiumPlus()
 
       const { data: { session } } = await supabase.auth.getSession()
@@ -324,6 +461,12 @@ export default function UpgradePage() {
   // ticket).
   if (tier === 'paid') {
     return (
+      <>
+      <DoubleBillingModal
+        open={billingModalOpen}
+        platform={billingModalPlatform}
+        onClose={() => setBillingModalOpen(false)}
+      />
       <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
         <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
           <div className="max-w-lg mx-auto flex items-center gap-3">
@@ -398,10 +541,17 @@ export default function UpgradePage() {
           </div>
         </div>
       </div>
+      </>
     )
   }
 
   return (
+    <>
+    <DoubleBillingModal
+      open={billingModalOpen}
+      platform={billingModalPlatform}
+      onClose={() => setBillingModalOpen(false)}
+    />
     <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
       {/* Header */}
       <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
@@ -660,5 +810,6 @@ export default function UpgradePage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
