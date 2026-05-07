@@ -62,12 +62,18 @@ function resolveTier(metadataTier: string | undefined, fallbackPriceId?: string)
 // them), so hardcoding as fallbacks is safe. Override via Supabase secrets
 // MAKE_KIT_PREMIUM_WEBHOOK_URL / MAKE_KIT_CHURN_WEBHOOK_URL if Ryan ever
 // rotates the Make scenarios.
+// v2 hook URLs (May 7 cutover): the original v1 hooks (81bd21b5..., ltdpsb34...)
+// hit the same broken-webhook-resource pattern as the legacy SMS scenario hook
+// 2262870 — 40s ModuleTimeoutError on every execution despite curl returning
+// 200. Recreated with fresh hookIds (2275870, 2275871) and the scenarios
+// rewired via Make MCP. Old v1 URLs left intact for forensic comparison; safe
+// to remove from this fallback once v2 verified stable.
 const MAKE_KIT_PREMIUM_WEBHOOK_URL =
   Deno.env.get('MAKE_KIT_PREMIUM_WEBHOOK_URL')?.trim() ||
-  'https://hook.us2.make.com/81bd21b5zf97ok2hgbery2c2al65orps'
+  'https://hook.us2.make.com/kyk70rx9ffdwv4vv8mlc2v1pdjme42za'
 const MAKE_KIT_CHURN_WEBHOOK_URL =
   Deno.env.get('MAKE_KIT_CHURN_WEBHOOK_URL')?.trim() ||
-  'https://hook.us2.make.com/ltdpsb34w4wyvzpyhobfwgotuq7joxxy'
+  'https://hook.us2.make.com/jglmpgstnpkn7tebyt6972rc6hip886g'
 
 // Best-effort POST. Logs on failure but never throws — webhook fan-out
 // must not block the user's payment confirmation, and Make scenarios are
