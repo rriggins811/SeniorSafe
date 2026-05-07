@@ -49,6 +49,78 @@ function resolveTier(metadataTier: string | undefined, fallbackPriceId?: string)
 }
 
 // ---------------------------------------------------------------------------
+// Make.com Kit-tagging fan-out
+// ---------------------------------------------------------------------------
+// Posts subscription lifecycle events to the Make.com scenarios that own Kit
+// tag application:
+//   premium webhook → "RSS Kit · Stripe Premium/Premium+ Tag" (Branch A
+//                     paid → seniorsafe-premium, Branch B premium_plus →
+//                     seniorsafe-premium-plus)
+//   churn webhook   → "RSS Kit · Stripe Subscription Canceled → Churn Tag"
+//                     (applies seniorsafe-churned)
+// Webhook URLs are public Make endpoints (anyone with the URL can POST to
+// them), so hardcoding as fallbacks is safe. Override via Supabase secrets
+// MAKE_KIT_PREMIUM_WEBHOOK_URL / MAKE_KIT_CHURN_WEBHOOK_URL if Ryan ever
+// rotates the Make scenarios.
+const MAKE_KIT_PREMIUM_WEBHOOK_URL =
+  Deno.env.get('MAKE_KIT_PREMIUM_WEBHOOK_URL')?.trim() ||
+  'https://hook.us2.make.com/81bd21b5zf97ok2hgbery2c2al65orps'
+const MAKE_KIT_CHURN_WEBHOOK_URL =
+  Deno.env.get('MAKE_KIT_CHURN_WEBHOOK_URL')?.trim() ||
+  'https://hook.us2.make.com/ltdpsb34w4wyvzpyhobfwgotuq7joxxy'
+
+// Best-effort POST. Logs on failure but never throws — webhook fan-out
+// must not block the user's payment confirmation, and Make scenarios are
+// non-critical (Kit tagging can be backfilled if a single fan-out drops).
+async function postKitWebhook(
+  url: string,
+  payload: Record<string, unknown>,
+  label: string,
+): Promise<void> {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) {
+      console.warn(`[kit-fanout ${label}] ${res.status} ${res.statusText}`)
+    }
+  } catch (err) {
+    console.warn(
+      `[kit-fanout ${label}] failed: ${
+        err instanceof Error ? err.message : 'unknown'
+      }`,
+    )
+  }
+}
+
+// Pull email + names for Make webhook payload. Email lives on auth.users;
+// first/last live on user_profile. Returns null fields rather than throwing
+// if any lookup misses — the webhook still fires (Make scenario can dedupe
+// by email alone).
+async function lookupSubscriberFields(userId: string): Promise<{
+  email: string | null
+  firstName: string | null
+  lastName: string | null
+}> {
+  const [{ data: authUser }, { data: profile }] = await Promise.all([
+    supabaseAdmin.auth.admin.getUserById(userId),
+    supabaseAdmin
+      .from('user_profile')
+      .select('first_name, last_name')
+      .eq('user_id', userId)
+      .maybeSingle(),
+  ])
+  return {
+    email: authUser?.user?.email ?? null,
+    firstName: profile?.first_name ?? null,
+    lastName: profile?.last_name ?? null,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helper: update a user's tier + Stripe IDs + billing info
 // ---------------------------------------------------------------------------
 async function updateUserTier(
@@ -219,6 +291,25 @@ serve(async (req: Request) => {
         console.log(`✅ Updated ${members.length} family member(s) to ${tier}`)
       }
 
+      // Fan out to Make.com Kit-tagging scenario. The scenario routes by
+      // tier: 'paid' → seniorsafe-premium, 'premium_plus' → seniorsafe-premium-plus.
+      // Best-effort, never blocks.
+      const fields = await lookupSubscriberFields(userId)
+      if (fields.email) {
+        await postKitWebhook(MAKE_KIT_PREMIUM_WEBHOOK_URL, {
+          kind: 'subscription_created',
+          email: fields.email,
+          firstName: fields.firstName,
+          lastName: fields.lastName,
+          tier,
+          amount_usd: typeof session.amount_total === 'number'
+            ? Math.round(session.amount_total / 100)
+            : null,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
+        }, `kit-premium-${tier}`)
+      }
+
       break
     }
 
@@ -290,6 +381,18 @@ serve(async (req: Request) => {
       const userId = await getUserIdByStripeCustomer(customerId)
       if (!userId) break
 
+      // Capture prior tier + subscriber fields BEFORE the updateUserTier
+      // flip to free, so the Kit churn webhook gets the tier the customer
+      // is churning FROM (so Kit automations can branch e.g. "won-back
+      // premium" vs "won-back premium_plus" if you ever want that).
+      const fields = await lookupSubscriberFields(userId)
+      const { data: priorProfile } = await supabaseAdmin
+        .from('user_profile')
+        .select('subscription_tier')
+        .eq('user_id', userId)
+        .maybeSingle()
+      const priorTier = priorProfile?.subscription_tier ?? null
+
       await updateUserTier(userId, 'free', customerId, subscription.id)
 
       // Downgrade family members too
@@ -303,6 +406,24 @@ serve(async (req: Request) => {
           await updateUserTier(m.user_id, 'free')
         }
         console.log(`⬇️ Downgraded ${members.length} family member(s) to free`)
+      }
+
+      // Fan out to Make.com Kit churn scenario. Applies seniorsafe-churned
+      // tag (Kit automation can read prior_tier from the payload to branch
+      // winback messaging if desired).
+      if (fields.email) {
+        await postKitWebhook(MAKE_KIT_CHURN_WEBHOOK_URL, {
+          kind: 'subscription_canceled',
+          email: fields.email,
+          firstName: fields.firstName,
+          lastName: fields.lastName,
+          prior_tier: priorTier,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscription.id,
+          canceled_at: subscription.canceled_at
+            ? new Date(subscription.canceled_at * 1000).toISOString()
+            : null,
+        }, 'kit-churn')
       }
 
       break
