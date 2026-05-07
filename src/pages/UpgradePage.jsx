@@ -58,6 +58,7 @@ export default function UpgradePage() {
   const [adminSeniorName, setAdminSeniorName] = useState('')
   const [iapLoading, setIapLoading] = useState(false)
   const [iapPlusLoading, setIapPlusLoading] = useState(false)
+  const [loadingPlus, setLoadingPlus] = useState(false)
   const [restoring, setRestoring] = useState(false)
 
   const onNativeStore = isNativePlatform()
@@ -92,19 +93,20 @@ export default function UpgradePage() {
     })
   }, [navigate])
 
-  async function handleCheckout() {
-    setLoading(true)
+  async function handleCheckout(tier = 'premium') {
+    if (tier === 'premium_plus') setLoadingPlus(true)
+    else setLoading(true)
     setError('')
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
       console.log('DEBUG session:', session?.access_token ? 'JWT present' : 'JWT MISSING')
-      console.log('DEBUG user:', session?.user?.email)
+      console.log('DEBUG user:', session?.user?.email, 'tier:', tier, 'plan:', plan)
 
       if (!session) throw new Error('Not logged in')
 
       const { data, error: fnError } = await supabase.functions.invoke('create-checkout', {
-        body: { plan, ...(isMember && adminUserId ? { admin_user_id: adminUserId } : {}) },
+        body: { plan, tier, ...(isMember && adminUserId ? { admin_user_id: adminUserId } : {}) },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -125,6 +127,7 @@ export default function UpgradePage() {
     } catch (err) {
       setError(err.message)
       setLoading(false)
+      setLoadingPlus(false)
     }
   }
 
@@ -278,6 +281,10 @@ export default function UpgradePage() {
   const annualPrice = '$143.88'
   const annualMonthly = '$11.99'
   const savingsPercent = '20%'
+  // Premium+ price display values. Annual = $383.90/yr = $31.99/mo, same 20% savings.
+  const monthlyPlusPrice = '$39.99'
+  const annualPlusPrice = '$383.90'
+  const annualPlusMonthly = '$31.99'
 
   // Build 27: Premium+ success state (top tier, no further upgrade).
   if (tier === 'premium_plus') {
@@ -561,13 +568,70 @@ export default function UpgradePage() {
               </button>
             </>
           ) : (
-            <button
-              onClick={handleCheckout}
-              disabled={loading || tier === null}
-              className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
-            >
-              {tier === null ? 'Loading...' : loading ? 'Redirecting to checkout...' : `Start Premium — ${plan === 'monthly' ? monthlyPrice + '/mo' : annualMonthly + '/mo'}`}
-            </button>
+            <>
+              <button
+                onClick={() => handleCheckout('premium')}
+                disabled={loading || loadingPlus || tier === null}
+                className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
+              >
+                {tier === null ? 'Loading...' : loading ? 'Redirecting to checkout...' : `Start Premium — ${plan === 'monthly' ? monthlyPrice + '/mo' : annualMonthly + '/mo'}`}
+              </button>
+
+              {/* Premium+ tier card — visual parity with native Premium+ card.
+                  Trial users converting to a paid tier most often pick this
+                  because it's the only path that keeps Maggie. */}
+              <div className="relative bg-white rounded-2xl p-5 shadow-sm border-2 border-[#D4A843]/40">
+                <span className="absolute -top-2.5 left-4 bg-[#D4A843] text-[#1B365D] text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
+                  Most popular for trial users
+                </span>
+                <div className="flex items-center gap-2 mb-3 mt-1">
+                  <Sparkles size={18} className="text-[#D4A843]" />
+                  <h3 className="text-[#1B365D] font-bold text-base">Or go all-in with Premium+</h3>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                  Premium+ <span className="font-semibold text-[#1B365D]">includes Maggie</span>, your AI specialist for adult children navigating a parent&apos;s senior transition, plus persistent family memory and Blueprint planning tools.
+                </p>
+                <ul className="flex flex-col gap-2.5 mb-4">
+                  {PAID_PLUS_FEATURES.slice(1).map((feat, i) => {
+                    const Icon = feat.icon
+                    return (
+                      <li key={i} className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[#D4A843]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Icon size={13} className="text-[#D4A843]" strokeWidth={2} />
+                        </div>
+                        <span className="text-gray-700 text-[14px] leading-snug">{feat.text}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+                {plan === 'monthly' ? (
+                  <>
+                    <p className="text-center text-2xl font-bold text-[#1B365D] mb-1">
+                      {monthlyPlusPrice}<span className="text-base font-normal text-gray-400">/mo</span>
+                    </p>
+                    <p className="text-center text-gray-400 text-xs mb-3">
+                      Billed monthly. Cancel anytime.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-center text-2xl font-bold text-[#1B365D] mb-1">
+                      {annualPlusMonthly}<span className="text-base font-normal text-gray-400">/mo</span>
+                    </p>
+                    <p className="text-center text-gray-400 text-xs mb-3">
+                      {annualPlusPrice}/year — billed annually. Save {savingsPercent} vs. monthly.
+                    </p>
+                  </>
+                )}
+                <button
+                  onClick={() => handleCheckout('premium_plus')}
+                  disabled={loading || loadingPlus || tier === null}
+                  className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-bold text-lg disabled:opacity-50 shadow-lg"
+                >
+                  {loadingPlus ? 'Redirecting to checkout...' : `Subscribe to Premium+ — ${plan === 'monthly' ? monthlyPlusPrice + '/mo' : annualPlusMonthly + '/mo'}`}
+                </button>
+              </div>
+            </>
           )}
 
           {error && (
@@ -582,10 +646,16 @@ export default function UpgradePage() {
               : 'Secure payment via Stripe. Cancel anytime from your account settings.'}
           </p>
 
-          <p className="text-center text-xs text-gray-400 pb-4">
+          <p className="text-center text-xs text-gray-400 pb-2">
             <Link to="/terms" className="underline hover:text-gray-600">Terms of Service</Link>
             {' · '}
             <Link to="/privacy" className="underline hover:text-gray-600">Privacy Policy</Link>
+          </p>
+          {/* Realtor disclosure — required by NC Real Estate Commission rules
+              when affiliated activity is referenced. Page mentions Maggie's
+              Blueprint planning tools (real-estate adjacent), so disclose. */}
+          <p className="text-center text-[10px] text-gray-400 pb-4 leading-relaxed">
+            Ryan Riggins · NC Real Estate License #361546 · eXp Realty
           </p>
         </div>
       </div>
