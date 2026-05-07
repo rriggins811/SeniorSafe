@@ -18,18 +18,49 @@ const supabaseAdmin = createClient(
 )
 
 // ---------------------------------------------------------------------------
+// Tier resolution: Stripe-side tier name → user_profile.subscription_tier value
+// ---------------------------------------------------------------------------
+// 'premium' (the create-checkout body name) maps to 'paid' in user_profile.
+// 'premium_plus' maps to 'premium_plus' as-is.
+type Tier = 'free' | 'paid' | 'premium_plus'
+
+// Reverse lookup: live Stripe price ID → user_profile.subscription_tier value.
+// Used as a fallback for events where metadata.tier is missing (legacy
+// subscriptions created before the metadata stamp shipped, or Stripe Customer
+// Portal tier switches that don't carry our metadata). Keep in sync with the
+// PRICE_MAP in create-checkout/index.ts.
+const PRICE_TO_TIER: Record<string, Tier> = {
+  // Premium tier ($14.99/mo, $143.88/yr)
+  'price_1T99bMFoeumweL6DaOZyam4h': 'paid',
+  'price_1T99e4FoeumweL6DuVorGKRY': 'paid',
+  // Premium+ tier ($39.99/mo, $383.90/yr)
+  'price_1TUSe3FoeumweL6DtmuRCVpD': 'premium_plus',
+  'price_1TUSeoFoeumweL6DluScBwCU': 'premium_plus',
+}
+
+function resolveTier(metadataTier: string | undefined, fallbackPriceId?: string): Tier {
+  if (metadataTier === 'premium_plus') return 'premium_plus'
+  if (metadataTier === 'premium') return 'paid'
+  // Fallback: look up by price ID for events that lack metadata.tier
+  if (fallbackPriceId && PRICE_TO_TIER[fallbackPriceId]) return PRICE_TO_TIER[fallbackPriceId]
+  // Conservative default — never accidentally grant Maggie. Caller chose
+  // 'paid' as the safest baseline if metadata + price both missing.
+  return 'paid'
+}
+
+// ---------------------------------------------------------------------------
 // Helper: update a user's tier + Stripe IDs + billing info
 // ---------------------------------------------------------------------------
 async function updateUserTier(
   userId: string,
-  tier: 'free' | 'paid',
+  tier: Tier,
   stripeCustomerId?: string,
   stripeSubscriptionId?: string,
   periodEnd?: string,
   interval?: string,
 ) {
   const update: Record<string, unknown> = { subscription_tier: tier }
-  if (tier === 'paid') update.trial_status = 'converted'
+  if (tier === 'paid' || tier === 'premium_plus') update.trial_status = 'converted'
   if (stripeCustomerId) update.stripe_customer_id = stripeCustomerId
   if (stripeSubscriptionId) update.stripe_subscription_id = stripeSubscriptionId
   if (periodEnd !== undefined) update.subscription_period_end = periodEnd
@@ -153,22 +184,29 @@ serve(async (req: Request) => {
         break
       }
 
-      // Fetch subscription details for billing info
+      // Fetch subscription details for billing info + price ID fallback
       let periodEnd: string | undefined
       let interval: string | undefined
+      let firstPriceId: string | undefined
       if (subscriptionId) {
         try {
           const sub = await stripe.subscriptions.retrieve(subscriptionId)
           periodEnd = new Date(sub.current_period_end * 1000).toISOString()
           interval = sub.items?.data?.[0]?.price?.recurring?.interval || undefined
+          firstPriceId = sub.items?.data?.[0]?.price?.id || undefined
         } catch (subErr) {
           console.error('Could not fetch subscription details:', subErr.message)
         }
       }
 
-      await updateUserTier(userId, 'paid', customerId, subscriptionId, periodEnd, interval)
+      // Resolve tier from session metadata (stamped by create-checkout) with
+      // price-ID fallback for legacy sessions or future portal-driven tier
+      // switches.
+      const tier = resolveTier(session.metadata?.tier, firstPriceId)
 
-      // Also update any family members (invited_by this admin) to 'paid'
+      await updateUserTier(userId, tier, customerId, subscriptionId, periodEnd, interval)
+
+      // Also update any family members (invited_by this admin) to the same tier
       const { data: members } = await supabaseAdmin
         .from('user_profile')
         .select('user_id')
@@ -176,9 +214,9 @@ serve(async (req: Request) => {
 
       if (members?.length) {
         for (const m of members) {
-          await updateUserTier(m.user_id, 'paid')
+          await updateUserTier(m.user_id, tier)
         }
-        console.log(`✅ Updated ${members.length} family member(s) to paid`)
+        console.log(`✅ Updated ${members.length} family member(s) to ${tier}`)
       }
 
       break
@@ -195,11 +233,28 @@ serve(async (req: Request) => {
       const userId = await getUserIdByStripeCustomer(customerId)
       if (!userId) break
 
-      // Active or trialing = paid; anything else = free
+      // Active or trialing = paid/premium_plus; anything else = free
       if (status === 'active' || status === 'trialing') {
         const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
         const interval = subscription.items?.data?.[0]?.price?.recurring?.interval || undefined
-        await updateUserTier(userId, 'paid', customerId, subscription.id, periodEnd, interval)
+        const firstPriceId = subscription.items?.data?.[0]?.price?.id || undefined
+        // Resolve tier from subscription metadata (stamped by create-checkout
+        // via subscription_data.metadata) with price-ID fallback.
+        const tier = resolveTier(subscription.metadata?.tier, firstPriceId)
+        await updateUserTier(userId, tier, customerId, subscription.id, periodEnd, interval)
+
+        // Cascade tier changes to family members (e.g. admin uses Stripe
+        // Customer Portal to upgrade Premium → Premium+, family follows).
+        const { data: members } = await supabaseAdmin
+          .from('user_profile')
+          .select('user_id')
+          .eq('invited_by', userId)
+        if (members?.length) {
+          for (const m of members) {
+            await updateUserTier(m.user_id, tier)
+          }
+          console.log(`🔁 Cascaded tier ${tier} to ${members.length} family member(s)`)
+        }
       } else if (status === 'past_due' || status === 'unpaid') {
         // Give a grace period — don't downgrade immediately on past_due
         // Stripe will retry payment. Only downgrade on explicit cancel/expire.

@@ -136,6 +136,37 @@ serve(async (req: Request) => {
       console.log(`👨‍👩‍👧 Member ${user.id} upgrading admin ${admin_user_id}`)
     }
 
+    // ---- Double-billing prevention ----
+    // RevenueCat does not auto-sync from Stripe and our stripe-webhook does
+    // not cancel native IAP subscriptions. So if a user already has an active
+    // App Store / Play Store subscription, kicking off a Stripe Checkout
+    // would silently double-bill them. Refuse with a structured 409 so the
+    // PWA can show a platform-specific "manage on iPhone Settings / Play
+    // Store" modal instead of the regular error toast.
+    const { data: targetPlatform } = await supabaseAdmin
+      .from('user_profile')
+      .select('subscription_platform, apple_original_transaction_id, google_original_transaction_id, subscription_tier')
+      .eq('user_id', targetUserId)
+      .single()
+
+    const hasActiveAppleIAP =
+      targetPlatform?.subscription_platform === 'apple' &&
+      !!targetPlatform?.apple_original_transaction_id
+    const hasActiveGoogleIAP =
+      targetPlatform?.subscription_platform === 'google' &&
+      !!targetPlatform?.google_original_transaction_id
+
+    if (hasActiveAppleIAP || hasActiveGoogleIAP) {
+      const platform = hasActiveAppleIAP ? 'apple' : 'google'
+      const message = platform === 'apple'
+        ? 'You already have an active SeniorSafe subscription via the App Store. To change tiers or cancel, manage it in your iPhone Settings > Apple ID > Subscriptions.'
+        : 'You already have an active SeniorSafe subscription via Google Play. To change tiers or cancel, manage it in Play Store > Account > Subscriptions.'
+      return new Response(JSON.stringify({ error: 'existing_subscription', platform, message }), {
+        status: 409,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+
     // ---- Check if user is still in trial (offer Stripe trial if so) ----
     const { data: targetProfile } = await supabaseAdmin
       .from('user_profile')
@@ -175,10 +206,25 @@ serve(async (req: Request) => {
       },
     }
 
+    // Stamp tier on the subscription itself (in addition to the session
+    // metadata above). subscription.updated events don't carry session
+    // context, so the webhook needs tier on the subscription object too.
+    // belt + suspenders against price ID changes and Stripe Customer Portal
+    // tier switches.
+    const subscriptionData: Record<string, unknown> = {
+      metadata: {
+        supabase_user_id: targetUserId,
+        plan: plan,
+        tier: tier,
+      },
+    }
+
     // If user is still in trial, sync remaining trial days to Stripe
     if (trialDays > 0) {
-      sessionParams.subscription_data = { trial_period_days: trialDays }
+      subscriptionData.trial_period_days = trialDays
     }
+
+    sessionParams.subscription_data = subscriptionData
 
     const session = await stripe.checkout.sessions.create(sessionParams as any)
 
