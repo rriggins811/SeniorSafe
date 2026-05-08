@@ -23,6 +23,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
 
   // Change password state
+  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [pwLoading, setPwLoading] = useState(false)
@@ -119,6 +120,10 @@ export default function ProfilePage() {
     setPwError('')
     setPwMessage('')
 
+    if (!currentPassword) {
+      setPwError('Please enter your current password.')
+      return
+    }
     if (newPassword.length < 6) {
       setPwError('Password must be at least 6 characters.')
       return
@@ -129,6 +134,30 @@ export default function ProfilePage() {
     }
 
     setPwLoading(true)
+
+    // Verify current password by attempting a fresh sign-in. Supabase
+    // doesn't expose a reauth-only endpoint, so we use signInWithPassword
+    // as the proof-of-possession check. If the email/password combo is
+    // wrong, we abort BEFORE calling updateUser. On success it returns a
+    // new session (Supabase will replace the existing JWT with an
+    // identical one), which is harmless.
+    if (!user?.email) {
+      setPwLoading(false)
+      setPwError('Could not verify account email. Please reload and try again.')
+      return
+    }
+
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    })
+
+    if (verifyError) {
+      setPwLoading(false)
+      setPwError('Current password is incorrect.')
+      return
+    }
+
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     setPwLoading(false)
 
@@ -136,6 +165,7 @@ export default function ProfilePage() {
       setPwError(error.message)
     } else {
       setPwMessage('Password updated successfully!')
+      setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
       setTimeout(() => setPwMessage(''), 4000)
@@ -511,12 +541,25 @@ export default function ProfilePage() {
               </div>
               <div className="flex flex-col gap-3">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current password</label>
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    placeholder="Enter your current password"
+                    autoComplete="current-password"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                    style={{ fontSize: '16px' }}
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">New password</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={e => setNewPassword(e.target.value)}
                     placeholder="At least 6 characters"
+                    autoComplete="new-password"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
                     style={{ fontSize: '16px' }}
                   />
@@ -528,6 +571,7 @@ export default function ProfilePage() {
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter your password"
+                    autoComplete="new-password"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
                     style={{ fontSize: '16px' }}
                   />
@@ -536,7 +580,7 @@ export default function ProfilePage() {
                 {pwMessage && <p className="text-green-600 text-sm font-medium">{pwMessage}</p>}
                 <button
                   type="submit"
-                  disabled={pwLoading || (!newPassword && !confirmPassword)}
+                  disabled={pwLoading || (!currentPassword || !newPassword || !confirmPassword)}
                   className="w-full py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold disabled:opacity-40"
                 >
                   {pwLoading ? 'Updating...' : 'Update Password'}
