@@ -166,6 +166,8 @@ export default function App() {
         <Route path="/emergency"   element={<P><EmergencyPage /></P>} />
         <Route path="/family-invite" element={<P><FamilyInvitePage /></P>} />
         <Route path="/profile"       element={<P><ProfilePage /></P>} />
+        {/* /settings is a common URL guess — redirect to the canonical /profile route. */}
+        <Route path="/settings"      element={<Navigate to="/profile" replace />} />
         <Route path="/upgrade"       element={<P><UpgradePage /></P>} />
         <Route path="/support"       element={<P><SupportPage /></P>} />
         <Route path="/reset-password"  element={<ResetPasswordPage />} />
