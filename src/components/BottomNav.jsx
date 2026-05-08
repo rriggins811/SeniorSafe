@@ -93,10 +93,18 @@ export default function BottomNav({ inline = false }) {
           const active = pathname === path
           const locked = isFree && premium
           const showBadge = label === 'Family' && unreadCount > 0
+          // Screen-reader label. "AI" alone is ambiguous, so we expand it to
+          // "SeniorSafe AI"; other tabs use their visible label as-is. Locked
+          // and unread state already convey via the visible icons; we keep
+          // the aria-label clean here and let aria-current handle active
+          // state.
+          const ariaLabel = label === 'AI' ? 'SeniorSafe AI' : label
           return (
             <button
               key={path}
               onClick={() => navigate(path)}
+              aria-label={ariaLabel}
+              aria-current={active ? 'page' : undefined}
               className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 min-h-[60px] transition-colors ${
                 active ? 'text-[#1B365D]' : 'text-[#6B645A]'
               }`}
