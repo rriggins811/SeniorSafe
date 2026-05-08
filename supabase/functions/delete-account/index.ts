@@ -178,6 +178,31 @@ serve(async (req: Request) => {
     await supabase.from('quick_dial_contacts').delete().eq('user_id', user.id)
     await supabase.from('checkin_alert_logs').delete().eq('admin_id', user.id)
 
+    // Maggie chat (Premium+) — messages FK to conversations, so delete
+    // messages first via the same parent-ID-fetch pattern used for meds.
+    const { data: maggieConvs } = await supabase
+      .from('maggie_conversations')
+      .select('id')
+      .eq('user_id', user.id)
+    if (maggieConvs?.length) {
+      const ids = maggieConvs.map((c: { id: string }) => c.id)
+      await supabase.from('maggie_messages').delete().in('conversation_id', ids)
+    }
+    await supabase.from('maggie_conversations').delete().eq('user_id', user.id)
+    await supabase.from('maggie_consent').delete().eq('user_id', user.id)
+    await supabase.from('maggie_usage').delete().eq('user_id', user.id)
+
+    // SeniorSafe AI (daily-buddy /ai) — same pattern.
+    const { data: aiConvs } = await supabase
+      .from('ai_conversations')
+      .select('id')
+      .eq('user_id', user.id)
+    if (aiConvs?.length) {
+      const ids = aiConvs.map((c: { id: string }) => c.id)
+      await supabase.from('ai_messages').delete().in('conversation_id', ids)
+    }
+    await supabase.from('ai_conversations').delete().eq('user_id', user.id)
+
     // Nudge logs (may not exist — safe to try)
     try { await supabase.from('nudge_logs').delete().eq('admin_id', user.id) } catch { /* ignore */ }
     try { await supabase.from('nudge_logs').delete().eq('member_id', user.id) } catch { /* ignore */ }
