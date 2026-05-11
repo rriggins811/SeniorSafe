@@ -136,6 +136,120 @@ async function kitAddTag(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Meta Conversions API (CAPI) — SeniorSafe Purchase fire
+// ---------------------------------------------------------------------------
+// Standard 'Purchase' event fired server-to-server on checkout.session.completed.
+// Single shared pixel (id 1237498758330884) across rss-site, blueprint-site,
+// and seniorsafeapp.com so Andromeda gets unified signal.
+//
+// Tier → content_name mapping (per Ryan Q5 confirmation):
+//   'paid'         → 'seniorsafe_premium'      ($14.99/mo or $143.88/yr)
+//   'premium_plus' → 'seniorsafe_premium_plus' ($39.99/mo or $383.90/yr)
+//
+// NEVER use 'OrderFormPurchase' — that legacy Squarespace event name is
+// blocked Meta-side.
+//
+// Env: META_PIXEL_ID, META_CAPI_ACCESS_TOKEN, META_GRAPH_API_VERSION
+// (all in Supabase Edge Function secrets, NOT Vercel).
+const META_PIXEL_ID = Deno.env.get('META_PIXEL_ID') ?? '1237498758330884'
+const META_GRAPH_API_VERSION = Deno.env.get('META_GRAPH_API_VERSION') ?? 'v20.0'
+
+async function sha256Hex(value: string): Promise<string> {
+  const data = new TextEncoder().encode(value.trim().toLowerCase())
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+async function fireMetaPurchase(params: {
+  tier: 'paid' | 'premium_plus'
+  email: string | null
+  firstName: string | null
+  lastName: string | null
+  userId: string
+  stripeCustomerId: string | null
+  stripeSubscriptionId: string | null
+  stripeSessionId: string
+  amountTotalCents: number | null
+  currency: string | null
+}): Promise<void> {
+  const accessToken = Deno.env.get('META_CAPI_ACCESS_TOKEN')
+  if (!accessToken || /PLACEHOLDER/i.test(accessToken)) {
+    console.warn('[meta-capi Purchase] skipped, META_CAPI_ACCESS_TOKEN not set')
+    return
+  }
+
+  const contentName =
+    params.tier === 'premium_plus'
+      ? 'seniorsafe_premium_plus'
+      : 'seniorsafe_premium'
+
+  const value =
+    typeof params.amountTotalCents === 'number'
+      ? params.amountTotalCents / 100
+      : 0
+  const currency = (params.currency ?? 'usd').toUpperCase()
+
+  // Hash all PII before send. Meta rejects raw email/name in user_data.
+  const userData: Record<string, string> = {}
+  if (params.email) userData.em = await sha256Hex(params.email)
+  if (params.firstName) userData.fn = await sha256Hex(params.firstName)
+  if (params.lastName) userData.ln = await sha256Hex(params.lastName)
+  userData.external_id = await sha256Hex(params.userId)
+
+  const eventId = `stripe_${params.stripeSessionId}_${Date.now()}`
+
+  const payload = {
+    data: [
+      {
+        event_name: 'Purchase',
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: eventId,
+        event_source_url: 'https://app.seniorsafeapp.com/upgrade',
+        action_source: 'system_generated',
+        user_data: userData,
+        custom_data: {
+          value,
+          currency,
+          content_name: contentName,
+          transaction_id: params.stripeSessionId,
+          ...(params.stripeSubscriptionId
+            ? { subscription_id: params.stripeSubscriptionId }
+            : {}),
+        },
+      },
+    ],
+  }
+
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/${META_GRAPH_API_VERSION}/${META_PIXEL_ID}/events?access_token=${accessToken}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(5000),
+      },
+    )
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      console.warn(
+        `[meta-capi Purchase] ${res.status} ${res.statusText} ${text.slice(0, 300)}`,
+      )
+    } else {
+      console.log(
+        `[meta-capi Purchase] OK content_name=${contentName} value=${value}`,
+      )
+    }
+  } catch (err) {
+    console.warn(
+      `[meta-capi Purchase] failed: ${err instanceof Error ? err.message : 'unknown'}`,
+    )
+  }
+}
+
 // Pull email + names for Kit tag application. Email lives on auth.users;
 // first/last live on user_profile. Returns null fields rather than throwing
 // if any lookup misses — kitAddTag handles a missing first_name fine
@@ -345,6 +459,24 @@ serve(async (req: Request) => {
           kitTagId,
           `seniorsafe-${tier}`,
         )
+      }
+
+      // Meta Purchase CAPI fire. Best-effort, never blocks. Standard
+      // 'Purchase' event with content_name routing 'paid' →
+      // 'seniorsafe_premium', 'premium_plus' → 'seniorsafe_premium_plus'.
+      if (tier === 'paid' || tier === 'premium_plus') {
+        await fireMetaPurchase({
+          tier,
+          email: fields.email,
+          firstName: fields.firstName,
+          lastName: fields.lastName,
+          userId,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          stripeSessionId: session.id,
+          amountTotalCents: session.amount_total ?? null,
+          currency: session.currency ?? null,
+        })
       }
 
       break
