@@ -8,6 +8,20 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import {
+  isConsolidationEnabledFor,
+  normalizeTier,
+  currentMonth,
+  resetDateLabel,
+  loadOrCreateBudget,
+  logCall,
+  isOverCap,
+  buildUsageMetadata,
+  ssAIDollarsSpent,
+  maggieDollarsSpent,
+  type BudgetRow,
+  type TierKey,
+} from '../_shared/budgets.ts'
 
 // ---------------------------------------------------------------------------
 // CORS
@@ -249,6 +263,51 @@ serve(async (req) => {
       return jsonResponse({ error: 'No family code found' }, 400, corsHeaders)
     }
 
+    // -----------------------------------------------------------------------
+    // Phase A budget gate (flag-gated; OFF for all users by default).
+    // For whitelisted users only, hard-block when monthly sonnet spend
+    // hits the per-tier cap ($8 premium_plus, $4 trial combined-pool).
+    // Old behavior is bit-for-bit unchanged when isConsolidationEnabledFor
+    // returns false — none of the helper functions fire.
+    // -----------------------------------------------------------------------
+    const flagOn = isConsolidationEnabledFor(user.id)
+    let budgetRow:   BudgetRow | null = null
+    let budgetMonth: string    | null = null
+    let tierKey:     TierKey   | null = null
+
+    if (flagOn) {
+      tierKey = normalizeTier(effectiveTier)
+      // Tier gate above already restricted to premium_plus/trial, so this
+      // should never null. Defensive only.
+      if (!tierKey) {
+        return jsonResponse({ error: 'internal_tier_normalize_failed' }, 500, corsHeaders)
+      }
+      budgetMonth = currentMonth()
+
+      try {
+        budgetRow = await loadOrCreateBudget(supabaseAdmin, familyCode, tierKey, budgetMonth)
+      } catch (err) {
+        // Best-effort: a transient DB error should NOT regress an active
+        // user's Maggie session. Log loudly with greppable prefix and fall
+        // through to old behavior for this single request. Next request
+        // retries. Future Sentry/Datadog hooks can match on the prefix.
+        console.error('[MAGGIE-BUDGET-LOAD-FAIL]', { user_id: user.id, family_code: familyCode, err })
+      }
+
+      if (budgetRow && isOverCap('maggie', tierKey, budgetRow)) {
+        const meta = buildUsageMetadata('maggie', tierKey, budgetRow)
+        return jsonResponse({
+          error: 'BUDGET_EXCEEDED',
+          message: `You've used 100% of your monthly Maggie budget. Resets ${resetDateLabel()}.`,
+          reset_date:    resetDateLabel(),
+          current_tier:  tierKey,
+          // Premium+ is already at top tier; trial can subscribe.
+          upgrade_url:   tierKey === 'trial' ? '/upgrade' : null,
+          _usage_metadata: meta,
+        }, 429, corsHeaders)
+      }
+    }
+
     // --- Daily rate limit (per user, soft cap, not advertised) ---
     const today = new Date().toISOString().slice(0, 10)
     const { data: usageRow } = await supabaseAdmin
@@ -415,14 +474,39 @@ serve(async (req) => {
           }
         }
 
+        // Phase A: emit fresh _usage_metadata BEFORE [DONE] using a synthetic
+        // post-call row computed locally. The DB log happens in the finally
+        // block so it survives stream-level errors (no cost-leak path).
+        // Maggie-chat is sonnet-only — additions to haiku columns are always 0.
+        if (flagOn && budgetRow && tierKey) {
+          try {
+            const synthRow: BudgetRow = {
+              ...budgetRow,
+              sonnet_input_tokens:          Number(budgetRow.sonnet_input_tokens)          + inputTokens,
+              sonnet_output_tokens:         Number(budgetRow.sonnet_output_tokens)         + outputTokens,
+              sonnet_cache_read_tokens:     Number(budgetRow.sonnet_cache_read_tokens)     + cacheReadTokens,
+              sonnet_cache_creation_tokens: Number(budgetRow.sonnet_cache_creation_tokens) + cacheCreateTokens,
+            }
+            // For trial: combined-pool view reads total_dollars_spent.
+            if (tierKey === 'trial') {
+              synthRow.total_dollars_spent = ssAIDollarsSpent(synthRow) + maggieDollarsSpent(synthRow)
+            }
+            await write('usage_metadata', buildUsageMetadata('maggie', tierKey, synthRow))
+          } catch (err) {
+            // Metadata emit failure shouldn't break the stream — the user
+            // already has their reply. DB log still fires in finally.
+            console.error('[MAGGIE-METADATA-EMIT-FAIL]', err)
+          }
+        }
+
         await write('done', {})
       } catch (err) {
         await write('error', { error: (err as Error).message })
       } finally {
         await writer.close()
 
-        // Telemetry: log usage, off-topic detection, token counts.
-        // This runs after the stream is closed so it never blocks the user.
+        // Existing per-day telemetry — untouched. Runs whether or not the
+        // consolidation flag is on for this user.
         try {
           const offTopic = detectOffTopicRedirect(fullReply) ? 1 : 0
           await supabaseAdmin.rpc('increment_maggie_usage', {
@@ -435,6 +519,30 @@ serve(async (req) => {
           })
         } catch (e) {
           console.error('telemetry log failed', e)
+        }
+
+        // Phase A: persist the monthly budget log. Lives here in finally so
+        // it survives stream-level errors (cost-leak protection). Separate
+        // try block from the per-day telemetry — one path failing must not
+        // skip the other. familyCode is non-null past the early return at
+        // the top of the handler; TS can't narrow across the IIFE closure.
+        if (flagOn && budgetRow && budgetMonth && tierKey) {
+          try {
+            await logCall(
+              supabaseAdmin,
+              familyCode!,
+              budgetMonth,
+              'sonnet',
+              {
+                input_tokens:                inputTokens,
+                output_tokens:               outputTokens,
+                cache_read_input_tokens:     cacheReadTokens,
+                cache_creation_input_tokens: cacheCreateTokens,
+              },
+            )
+          } catch (err) {
+            console.error('[MAGGIE-BUDGET-LOG-FAIL]', { user_id: user.id, family_code: familyCode, err })
+          }
         }
       }
     })()
