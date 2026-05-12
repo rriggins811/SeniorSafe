@@ -1,5 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import {
+  isConsolidationEnabledFor,
+  normalizeTier,
+  currentMonth,
+  resetDateLabel,
+  loadOrCreateBudget,
+  logCall,
+  isOverCap,
+  buildUsageMetadata,
+  ssAIDollarsSpent,
+  maggieDollarsSpent,
+  type BudgetRow,
+  type TierKey,
+} from '../_shared/budgets.ts'
 
 // ---------------------------------------------------------------------------
 // CORS
@@ -236,6 +250,55 @@ serve(async (req) => {
       })
     }
 
+    // Deprecation telemetry: track every /ai-chat call so we can monitor
+    // when consolidation eventually lands and traffic shifts to /maggie-chat.
+    // No behavior change — log line only.
+    console.log('[AI-CHAT-CALL]', {
+      user_id:    user.id,
+      tier:       adminTier,
+      user_agent: req.headers.get('User-Agent') || 'unknown',
+      ts:         new Date().toISOString(),
+    })
+
+    // -----------------------------------------------------------------------
+    // Phase A budget gate (flag-gated; OFF for all users by default).
+    // For whitelisted users only, hard-block when monthly haiku spend
+    // hits the per-tier cap ($4 paid / premium_plus, $4 trial combined-pool).
+    // Free tier skips this entirely — it stays on the existing message-count
+    // limit (FREE_LIMIT = 10 lifetime).
+    // -----------------------------------------------------------------------
+    const flagOn = isConsolidationEnabledFor(user.id)
+    let budgetRow:   BudgetRow | null = null
+    let budgetMonth: string    | null = null
+    let tierKey:     TierKey   | null = null
+
+    if (flagOn) {
+      tierKey = normalizeTier(adminTier)
+      // Free tier returns null from normalizeTier — falls through to the
+      // existing message-count enforcement path. No budget row written.
+      if (tierKey) {
+        budgetMonth = currentMonth()
+        try {
+          budgetRow = await loadOrCreateBudget(supabaseAdmin, familyCode, tierKey, budgetMonth)
+        } catch (err) {
+          console.error('[AI-CHAT-BUDGET-LOAD-FAIL]', { user_id: user.id, family_code: familyCode, err })
+        }
+
+        if (budgetRow && isOverCap('ai', tierKey, budgetRow)) {
+          const meta = buildUsageMetadata('ai', tierKey, budgetRow)
+          return new Response(JSON.stringify({
+            error: 'BUDGET_EXCEEDED',
+            message: `You've used 100% of your monthly SeniorSafe AI budget. Resets ${resetDateLabel()}.`,
+            reset_date:    resetDateLabel(),
+            current_tier:  tierKey,
+            // Premium+ is already at top tier; paid/trial can subscribe up.
+            upgrade_url:   tierKey === 'premium_plus' ? null : '/upgrade',
+            _usage_metadata: meta,
+          }), { status: 429, headers: jsonHeaders })
+        }
+      }
+    }
+
     // ---- Usage check (ai_usage table) ----
     const monthYear = getMonthYear()
     let usageCount = 0
@@ -340,6 +403,15 @@ serve(async (req) => {
     const write = (event: string, data: unknown) =>
       writer.write(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
 
+    // Phase A token capture. Populated by message_start and message_delta
+    // events inside the stream loop. Visible to the finally block so the
+    // budget log can fire even on stream-level errors. Runs whether or not
+    // the consolidation flag is on; values are simply unused when flag off.
+    let inputTokens       = 0
+    let outputTokens      = 0
+    let cacheReadTokens   = 0
+    let cacheCreateTokens = 0
+
     ;(async () => {
       try {
         // Meta event — client updates usage counter
@@ -367,10 +439,45 @@ serve(async (req) => {
             if (json === '[DONE]') continue
             try {
               const evt = JSON.parse(json)
+
+              // Token capture for Phase A budget logging.
+              if (evt.type === 'message_start' && evt.message?.usage) {
+                const u = evt.message.usage
+                inputTokens       = u.input_tokens || 0
+                cacheReadTokens   = u.cache_read_input_tokens || 0
+                cacheCreateTokens = u.cache_creation_input_tokens || 0
+              }
+              if (evt.type === 'message_delta' && evt.usage?.output_tokens != null) {
+                outputTokens = evt.usage.output_tokens
+              }
+
               if (evt.type === 'content_block_delta' && evt.delta?.text) {
                 await write('text', { text: evt.delta.text })
               }
             } catch { /* skip unparseable lines */ }
+          }
+        }
+
+        // Phase A: emit fresh _usage_metadata BEFORE [DONE] using a synthetic
+        // post-call row computed locally. DB log happens in finally so it
+        // survives stream-level errors. Ai-chat is haiku-only — sonnet
+        // columns get no additions.
+        if (flagOn && budgetRow && tierKey) {
+          try {
+            const synthRow: BudgetRow = {
+              ...budgetRow,
+              haiku_input_tokens:          Number(budgetRow.haiku_input_tokens)          + inputTokens,
+              haiku_output_tokens:         Number(budgetRow.haiku_output_tokens)         + outputTokens,
+              haiku_cache_read_tokens:     Number(budgetRow.haiku_cache_read_tokens)     + cacheReadTokens,
+              haiku_cache_creation_tokens: Number(budgetRow.haiku_cache_creation_tokens) + cacheCreateTokens,
+            }
+            // For trial: combined-pool view reads total_dollars_spent.
+            if (tierKey === 'trial') {
+              synthRow.total_dollars_spent = ssAIDollarsSpent(synthRow) + maggieDollarsSpent(synthRow)
+            }
+            await write('usage_metadata', buildUsageMetadata('ai', tierKey, synthRow))
+          } catch (err) {
+            console.error('[AI-CHAT-METADATA-EMIT-FAIL]', err)
           }
         }
 
@@ -379,6 +486,29 @@ serve(async (req) => {
         await write('error', { error: (err as Error).message })
       } finally {
         await writer.close()
+
+        // Phase A: persist the monthly budget log. Lives here in finally so
+        // it survives stream-level errors (cost-leak protection). familyCode
+        // is non-null past the early return at the top of the handler;
+        // TS can't narrow across the IIFE closure.
+        if (flagOn && budgetRow && budgetMonth && tierKey) {
+          try {
+            await logCall(
+              supabaseAdmin,
+              familyCode!,
+              budgetMonth,
+              'haiku',
+              {
+                input_tokens:                inputTokens,
+                output_tokens:               outputTokens,
+                cache_read_input_tokens:     cacheReadTokens,
+                cache_creation_input_tokens: cacheCreateTokens,
+              },
+            )
+          } catch (err) {
+            console.error('[AI-CHAT-BUDGET-LOG-FAIL]', { user_id: user.id, family_code: familyCode, err })
+          }
+        }
       }
     })()
 
