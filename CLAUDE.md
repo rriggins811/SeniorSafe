@@ -1,5 +1,51 @@
 # SeniorSafe — Claude Code Project Brief
-Last updated: March 11, 2026
+Last updated: May 12, 2026
+
+---
+
+## May 12, 2026 — Maggie Consolidation Phase A (cost protection, LIVE for all users)
+
+### Session Summary
+Shipped per-family AI budget tracking + hard caps to production. Flag-gated rollout (Ryan-only → all users) verified end-to-end including cap-exceeded behavior, Sonnet caching (86.5% hit rate), and dollar math (matches Anthropic invoices to the penny). Brand consolidation was scope-cut mid-build; what shipped is cost-protection only.
+
+### Production state at end of session
+- **Edge functions:** `maggie-chat` v19, `ai-chat` v41. Both ACTIVE.
+- **Supabase env:** `MAGGIE_CONSOLIDATION_ENABLED=true`, `MAGGIE_CONSOLIDATION_TEST_USERS=<ryan>` (latter now redundant; global flag overrides).
+- **Branch:** `maggie-consolidation` at `ae0e60a`, pushed to origin. Not yet merged to main — prod runs on inline edge-function deploys. Merging is git hygiene, not behavior.
+
+### Commits on `maggie-consolidation` (7 total)
+1. `bd610d0` migration: ai_user_budgets table + Maggie Daily prompt row + monthly seed cron
+2. `0cabd3a` migration: tier-fix for `upsert_ai_budget_row` (no claw-back on downgrade)
+3. `e3e246f` _shared/budgets.ts helper (per-endpoint sub-cap logic)
+4. `2624af3` maggie-chat budget gate (flag-gated, sonnet path)
+5. `7a7c7e9` ai-chat budget gate + `[AI-CHAT-CALL]` deprecation log (haiku path)
+6. `e70f738` chore: restore v32 BASE_SYSTEM_PROMPT to on-disk source (regression catch)
+7. `ae0e60a` chore(db): Phase A security hardening (REVOKE + CHECK constraints + RPC validation)
+
+### Migrations applied to prod
+- `20260512_maggie_consolidation.sql` — table + RPCs + cron + Daily prompt INSERT
+- `20260512_maggie_consolidation_tier_fix.sql` — tier-preservation on mid-month downgrade
+- `20260512_phase_a_security_hardening.sql` — REVOKE EXECUTE from anon/authenticated on all 5 budget RPCs + non-negative CHECK constraints + RPC input validation
+
+### Budget caps (per-family, per-month)
+- Trial: $4 combined pool across both endpoints
+- Paid: $4 on `/ai-chat` (Maggie locked by tier gate)
+- Premium+: $8 on `/maggie-chat` + $4 on `/ai-chat` = $12 combined
+
+### Key lessons (don't repeat these in future Code sessions)
+
+**1. ai-chat `BASE_SYSTEM_PROMPT` must stay ≥ 1024 tokens.** Below that threshold, Anthropic's `cache_control: { type: 'ephemeral' }` silently no-ops — every call becomes cold, costs spike, and SS AI answers drop in quality (missing knowledge base). The current ~5K-token prompt is sized for caching. Trimming it for "cleanup" was a regression I introduced during inline deploys; restored from v32 deployed snapshot. Inline comment in `ai-chat/index.ts` documents this.
+
+**2. v32 deployed `BASE_SYSTEM_PROMPT` ≠ git source as of session start.** Someone had edited the prompt via Supabase dashboard at some point pre-Phase-A without committing. Drift discovered mid-session, on-disk source restored. **Policy: all prompt changes go through git, never the dashboard.** Pre-Phase-A audit of similar drift on other functions is a post-cram item.
+
+**3. Inline edge function deploys are a foot-gun.** Multiple times this session, hand-typing JSON-escaped TypeScript blobs into the deploy payload introduced bugs (`p_month: model` typo in ai-chat v40, prompt trimming regression, cosmetic ternary). Post-cram: build a deploy script that reads from on-disk source files. Until then, always read source via `get_edge_function` before redeploying to avoid drift.
+
+**4. New RPCs default to PUBLIC EXECUTE.** Postgres + Supabase combination grants `anon` + `authenticated` direct PostgREST EXECUTE access to any new function unless explicitly REVOKED. Critical for SECURITY DEFINER functions — without REVOKE, any logged-in user can call them with arbitrary args and bypass RLS. The `20260512_phase_a_security_hardening.sql` migration shows the pattern. **Every new Supabase function must include `REVOKE EXECUTE ... FROM authenticated, anon, public` in the same migration.**
+
+**5. Supabase Auth "Confirm email" toggle breaks the blueprint-site `/activate` UX.** With confirm-email ON, `supabase.auth.signUp()` returns `data.session = null`. The `/activate` server action's redirect to `/dashboard` lands without a session and bounces. Data state is fine (`applyFreeTierSetup` still fires), but UX is confusing — user thought they activated. Currently OFF. Re-enable only after adding `supabase.auth.admin.updateUserById(userId, { email_confirm: true })` server-side after HMAC token verification (~30 min change).
+
+### Post-cram TODO (captured in Cowork memory `project_maggie_consolidation_post_cram_list.md`)
+Not duplicated here — see that memory file. Highlights: rebuild log_maggie_call as atomic check-and-increment when concurrent-request overshoot becomes material; audit pre-Phase-A RPC permissions for the same `REVOKE PUBLIC` issue; raise maggie-chat `max_tokens` to 4096 (truncation fix); merge `maggie-consolidation` to `main` as housekeeping.
 
 ---
 
