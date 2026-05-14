@@ -580,10 +580,7 @@ export default function MaggiePage() {
           </button>
         </form>
 
-        <p className="text-center text-[11px] mt-2 max-w-2xl mx-auto text-[#6B645A]">
-          {usedToday} of {dailyLimit} today
-        </p>
-        <p className="text-center text-[11px] italic text-[#6B645A] mt-0.5 max-w-2xl mx-auto">
+        <p className="text-center text-[11px] italic text-[#6B645A] mt-2 max-w-2xl mx-auto">
           Powered by Anthropic AI. Maggie is not licensed. For legal, financial, or medical decisions, consult a pro in your state.
         </p>
       </div>
