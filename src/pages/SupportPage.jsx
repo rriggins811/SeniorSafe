@@ -39,7 +39,7 @@ const sections = [
       },
       {
         q: 'How does the AI Assistant work?',
-        a: 'The AI Assistant is your personal guide for navigating senior transitions. Ask questions about senior housing, caregiving, legal planning, medication management, or any family coordination topic. Premium subscribers get 20 messages per month. The assistant knows your family\'s specific situation and provides personalized guidance.'
+        a: 'The AI Assistant is your personal guide for navigating senior transitions. Ask questions about senior housing, caregiving, legal planning, medication management, or any family coordination topic. Premium subscribers get full SeniorSafe AI access. Premium+ subscribers get full Maggie + SeniorSafe AI access. The assistant knows your family\'s specific situation and provides personalized guidance.'
       },
       {
         q: 'What is the Emergency Info Card?',
