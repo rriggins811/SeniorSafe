@@ -100,7 +100,7 @@ const FREE_FEATURES = [
   { icon: Heart,  text: 'Daily "I\'m Okay" check-in' },
   { icon: Bell,   text: '"I Need Help" emergency SMS alerts' },
   { icon: Users,  text: '1 invited family member (unlimited on Premium)' },
-  { icon: Bot,    text: '10 AI messages per month' },
+  { icon: Bot,    text: '10 SeniorSafe AI questions (lifetime)' },
   { icon: Shield, text: 'Emergency Info card' },
 ]
 

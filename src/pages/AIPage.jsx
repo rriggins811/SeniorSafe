@@ -339,7 +339,7 @@ export default function AIPage() {
     // Limit check (optimistic — server enforces authoritatively)
     if (usageCount >= usageLimit) {
       const msg = tier === 'free'
-        ? `You've used all ${FREE_LIMIT} of your free AI messages. Upgrade to Premium for ${PAID_LIMIT} messages per month!`
+        ? `You've used all ${FREE_LIMIT} of your free AI questions. Upgrade to Premium for unlimited access.`
         : buildLimitMsg()
       setMessages(prev => [...prev, { role: 'user', content: userText }, { role: 'assistant', content: msg }])
       return
@@ -495,7 +495,7 @@ export default function AIPage() {
     const now = new Date()
     const next = new Date(now.getFullYear(), now.getMonth() + 1, 1)
     const d = next.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-    return `Your family has used all ${PAID_LIMIT} messages this month. Your messages refresh on ${d}. Need more? An unlimited plan is coming soon!`
+    return `Your family hit the SeniorSafe AI ceiling for this month. Resets ${d}. To stay below the ceiling automatically and add Maggie, consider Premium+.`
   }
 
   // ─── Derived state ─────────────────────────────────────────────────
