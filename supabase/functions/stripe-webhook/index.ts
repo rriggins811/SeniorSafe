@@ -137,6 +137,94 @@ async function kitAddTag(
 }
 
 // ---------------------------------------------------------------------------
+// GHL contact + tag via the ghl-proxy Edge Function (Block C Phase 4, May 15)
+// ---------------------------------------------------------------------------
+// Per memory/sop_ghl_operations.md (locked May 14), all GHL writes go through
+// the ghl-proxy Edge Function — keeps GHL_PIT_TOKEN in Supabase Edge Function
+// secrets, off any Vercel env or repo. This is the same proxy the rss-site
+// /freeguide route (Phase 1) and blueprint-site Stripe webhook (Phase 3) call.
+//
+// Same-project Edge Function call so the network hop is internal even though
+// we go through the public URL. The whitelist on writes is enforced by the
+// proxy: /contacts/upsert + contact-scoped /tags pass through.
+//
+// Tag taxonomy (locked, do NOT normalize the strings):
+//   seniorsafe-paid    — preserved format, paired with workflow trigger
+//                        "SeniorSafe-Remove on subscribe" (workflow ID
+//                        1373ff1a-...) which cleans the trial-active tag
+//                        and exits the Trial Nurture sequence.
+//   product-seniorsafe-premium / -plus — SOP marks these as "(future) — once
+//                        paid customers grow." Holding off until Ryan signals
+//                        — would introduce orphaned tags with no workflow
+//                        consumer today.
+const GHL_PROXY_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1/ghl-proxy`
+
+async function ghlProxyUpsertAndTag(
+  subscriber: {
+    email: string
+    firstName?: string | null
+    lastName?: string | null
+    phone?: string | null
+  },
+  tag: string,
+  source: string,
+  label: string,
+): Promise<void> {
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+  if (!anonKey) {
+    console.warn(`[ghl-proxy ${label}] skipped, SUPABASE_ANON_KEY not set`)
+    return
+  }
+  try {
+    const body: Record<string, unknown> = {
+      email: subscriber.email,
+      tags: [tag],
+      source,
+    }
+    if (subscriber.firstName) body.firstName = subscriber.firstName
+    if (subscriber.lastName) body.lastName = subscriber.lastName
+    if (subscriber.phone) body.phone = subscriber.phone
+
+    const res = await fetch(GHL_PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${anonKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'post',
+        path: '/contacts/upsert',
+        body,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    })
+
+    type ProxyEnvelope = { status: number; body: unknown } | { error: string }
+    const payload = (await res.json().catch(() => ({}))) as ProxyEnvelope
+
+    if (!res.ok || 'error' in payload) {
+      const err = 'error' in payload ? payload.error : `proxy http ${res.status}`
+      console.warn(`[ghl-proxy ${label}] ${err}`)
+      return
+    }
+    const ghlOk = payload.status >= 200 && payload.status < 300
+    if (!ghlOk) {
+      console.warn(`[ghl-proxy ${label}] ghl http ${payload.status}`)
+      return
+    }
+    const contactId =
+      (payload.body as { contact?: { id?: string } } | null)?.contact?.id
+    console.log(
+      `[ghl-proxy ${label}] OK contactId=${contactId ?? '?'} tag=${tag}`,
+    )
+  } catch (err) {
+    console.warn(
+      `[ghl-proxy ${label}] failed: ${err instanceof Error ? err.message : 'unknown'}`,
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Meta Conversions API (CAPI) — SeniorSafe Purchase fire
 // ---------------------------------------------------------------------------
 // Standard 'Purchase' event fired server-to-server on checkout.session.completed.
@@ -457,6 +545,26 @@ serve(async (req: Request) => {
         await kitAddTag(
           { email: fields.email, firstName: fields.firstName },
           kitTagId,
+          `seniorsafe-${tier}`,
+        )
+      }
+
+      // GHL contact + tag via ghl-proxy (Block C Phase 4). Fires alongside
+      // Kit during the verification window. Both 'paid' and 'premium_plus'
+      // get the same `seniorsafe-paid` tag — the locked workflow trigger
+      // ("SeniorSafe-Remove on subscribe", workflow ID 1373ff1a-...) listens
+      // for that exact tag string and handles cleanup of trial-active +
+      // exit from Trial Nurture. Once Phase 5 verifies the proxy path
+      // matches Kit's behavior, drop the kitAddTag call above.
+      if (fields.email && (tier === 'paid' || tier === 'premium_plus')) {
+        await ghlProxyUpsertAndTag(
+          {
+            email: fields.email,
+            firstName: fields.firstName,
+            lastName: fields.lastName,
+          },
+          'seniorsafe-paid',
+          `seniorsafe_${tier}_purchase`,
           `seniorsafe-${tier}`,
         )
       }
