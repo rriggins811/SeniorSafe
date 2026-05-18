@@ -55,86 +55,19 @@ function resolveTier(metadataTier: string | undefined, fallbackPriceId?: string)
 // which exhibited a broken-webhook-resource pattern: every execution
 // produced a 40-second ModuleTimeoutError at gateway:CustomWebHook with
 // transfer=0 bytes despite the gateway returning 200 to the caller.
-// Recreating the hooks (v1 → v2) did not fix it. Bypass Make entirely —
-// post directly to Kit's v4 API.
+// Recreating the hooks (v1 → v2) did not fix it.
 //
-// Tag IDs are provisioned in Ryan's Kit account:
-//   seniorsafe-premium       → 19444470 (paid tier)
-//   seniorsafe-premium-plus  → 19444472 (premium_plus tier)
-//   seniorsafe-churned       → 19444482 (any tier on cancel)
+// Phase 6 (May 18, 2026): Kit retired entirely. All subscriber lifecycle
+// tagging now flows through the GHL ghl-proxy Edge Function below. The
+// seniorsafe-premium / seniorsafe-premium-plus tagging on checkout is
+// already covered by the seniorsafe-paid GHL tag (the locked workflow
+// trigger). The seniorsafe-churned signal previously held only in Kit
+// (tag 19444482) is now mirrored as a GHL `seniorsafe-churned` tag in
+// customer.subscription.deleted below.
 //
-// Auth: Kit v4 expects X-Kit-Api-Key (NOT Authorization: Bearer — that
-// header is reserved for OAuth flows). Set via Supabase secret KIT_API_KEY.
-const KIT_TAG_SENIORSAFE_PREMIUM = 19444470
-const KIT_TAG_SENIORSAFE_PREMIUM_PLUS = 19444472
-const KIT_TAG_SENIORSAFE_CHURNED = 19444482
-const KIT_API_BASE = 'https://api.kit.com/v4'
-
-// Best-effort 2-step Kit tag application:
-//   1. POST /v4/subscribers with {email_address, first_name} → returns
-//      subscriber.id (idempotent — finds existing by email if present)
-//   2. POST /v4/tags/:tag_id/subscribers/:subscriber_id → applies tag
-// Logs on failure but never throws — webhook fan-out must not block the
-// user's payment confirmation. Kit tag application is idempotent so this
-// is safe to retry/double-fire.
-async function kitAddTag(
-  subscriber: { email: string; firstName?: string | null },
-  tagId: number,
-  label: string,
-): Promise<void> {
-  const key = Deno.env.get('KIT_API_KEY')
-  if (!key || /PLACEHOLDER/i.test(key)) {
-    console.warn(`[kit ${label}] skipped, KIT_API_KEY not set`)
-    return
-  }
-  try {
-    const createRes = await fetch(`${KIT_API_BASE}/subscribers`, {
-      method: 'POST',
-      headers: {
-        'X-Kit-Api-Key': key,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email_address: subscriber.email,
-        first_name: subscriber.firstName ?? undefined,
-      }),
-      signal: AbortSignal.timeout(5000),
-    })
-    if (!createRes.ok) {
-      const text = await createRes.text().catch(() => '')
-      console.warn(
-        `[kit ${label}] create ${createRes.status} ${createRes.statusText} ${text.slice(0, 200)}`,
-      )
-      return
-    }
-    const createBody = (await createRes.json()) as {
-      subscriber?: { id?: number }
-    }
-    const subscriberId = createBody.subscriber?.id
-    if (!subscriberId) {
-      console.warn(`[kit ${label}] create returned no subscriber id`)
-      return
-    }
-    const tagRes = await fetch(
-      `${KIT_API_BASE}/tags/${tagId}/subscribers/${subscriberId}`,
-      {
-        method: 'POST',
-        headers: { 'X-Kit-Api-Key': key },
-        signal: AbortSignal.timeout(5000),
-      },
-    )
-    if (!tagRes.ok) {
-      const text = await tagRes.text().catch(() => '')
-      console.warn(
-        `[kit ${label}] tag ${tagRes.status} ${tagRes.statusText} ${text.slice(0, 200)}`,
-      )
-    }
-  } catch (err) {
-    console.warn(
-      `[kit ${label}] failed: ${err instanceof Error ? err.message : 'unknown'}`,
-    )
-  }
-}
+// KIT_API_KEY env var has been removed from Supabase Edge Function
+// secrets. Make scenarios 4994110 / 4994124 / 4994125 remain in
+// deactivated state for forensic record-keeping.
 
 // ---------------------------------------------------------------------------
 // GHL contact + tag via the ghl-proxy Edge Function (Block C Phase 4, May 15)
@@ -338,10 +271,10 @@ async function fireMetaPurchase(params: {
   }
 }
 
-// Pull email + names for Kit tag application. Email lives on auth.users;
-// first/last live on user_profile. Returns null fields rather than throwing
-// if any lookup misses — kitAddTag handles a missing first_name fine
-// (Kit dedupes subscribers by email).
+// Pull email + names for subscriber lifecycle tagging (GHL). Email lives
+// on auth.users; first/last live on user_profile. Returns null fields
+// rather than throwing if any lookup misses — ghlProxyUpsertAndTag
+// tolerates a missing first_name (GHL dedupes contacts by email).
 async function lookupSubscriberFields(userId: string): Promise<{
   email: string | null
   firstName: string | null
@@ -533,29 +466,16 @@ serve(async (req: Request) => {
         console.log(`✅ Updated ${members.length} family member(s) to ${tier}`)
       }
 
-      // Apply Kit lifecycle tag directly. Routes by tier:
-      //   'paid'         → seniorsafe-premium       (19444470)
-      //   'premium_plus' → seniorsafe-premium-plus  (19444472)
-      // Best-effort, never blocks. (Bypass of broken Make Scenario 2.)
       const fields = await lookupSubscriberFields(userId)
-      if (fields.email && (tier === 'paid' || tier === 'premium_plus')) {
-        const kitTagId = tier === 'premium_plus'
-          ? KIT_TAG_SENIORSAFE_PREMIUM_PLUS
-          : KIT_TAG_SENIORSAFE_PREMIUM
-        await kitAddTag(
-          { email: fields.email, firstName: fields.firstName },
-          kitTagId,
-          `seniorsafe-${tier}`,
-        )
-      }
 
-      // GHL contact + tag via ghl-proxy (Block C Phase 4). Fires alongside
-      // Kit during the verification window. Both 'paid' and 'premium_plus'
-      // get the same `seniorsafe-paid` tag — the locked workflow trigger
-      // ("SeniorSafe-Remove on subscribe", workflow ID 1373ff1a-...) listens
-      // for that exact tag string and handles cleanup of trial-active +
-      // exit from Trial Nurture. Once Phase 5 verifies the proxy path
-      // matches Kit's behavior, drop the kitAddTag call above.
+      // GHL contact + tag via ghl-proxy (Block C Phase 4, sole tagging path
+      // post-Phase 6). Both 'paid' and 'premium_plus' get the same
+      // `seniorsafe-paid` tag — the locked workflow trigger ("SeniorSafe-
+      // Remove on subscribe", workflow ID 1373ff1a-...) listens for that
+      // exact tag string and handles cleanup of trial-active + exit from
+      // Trial Nurture. (Kit `seniorsafe-premium` / `seniorsafe-premium-plus`
+      // calls retired May 18 — GHL `seniorsafe-paid` is the system of
+      // record for paid-tier lifecycle now.)
       if (fields.email && (tier === 'paid' || tier === 'premium_plus')) {
         await ghlProxyUpsertAndTag(
           {
@@ -659,9 +579,9 @@ serve(async (req: Request) => {
       if (!userId) break
 
       // Capture prior tier + subscriber fields BEFORE the updateUserTier
-      // flip to free, so the Kit churn webhook gets the tier the customer
-      // is churning FROM (so Kit automations can branch e.g. "won-back
-      // premium" vs "won-back premium_plus" if you ever want that).
+      // flip to free, so the churn signal carries the tier the customer
+      // is churning FROM (kept around for future per-tier winback workflows
+      // in GHL — currently logged for analytics only).
       const fields = await lookupSubscriberFields(userId)
       const { data: priorProfile } = await supabaseAdmin
         .from('user_profile')
@@ -685,16 +605,25 @@ serve(async (req: Request) => {
         console.log(`⬇️ Downgraded ${members.length} family member(s) to free`)
       }
 
-      // Apply seniorsafe-churned Kit tag directly. (Bypass of broken Make
-      // Scenario 3.) Kit automation can branch winback messaging on the
-      // tag application event; prior_tier is captured above for analytics
-      // but isn't passed to Kit (Kit doesn't have a custom-field equivalent
-      // for tag-application metadata in the v4 API).
+      // Apply seniorsafe-churned tag via ghl-proxy. (Phase 6 — replaces
+      // the May-7 Kit `seniorsafe-churned` tag, ID 19444482.) Tag string
+      // mirrors the blueprint-site notifyChurn handler, which also fires
+      // for this same Stripe customer.subscription.deleted event because
+      // the Stripe account is shared between Blueprint and SeniorSafe.
+      // Double-tag is safe — GHL contact-tag application is idempotent.
+      // prior_tier is captured above for analytics; not passed to GHL
+      // because the locked tag taxonomy doesn't yet have per-tier churn
+      // tags (single seniorsafe-churned signal is enough today).
       if (fields.email) {
-        await kitAddTag(
-          { email: fields.email, firstName: fields.firstName },
-          KIT_TAG_SENIORSAFE_CHURNED,
+        await ghlProxyUpsertAndTag(
+          {
+            email: fields.email,
+            firstName: fields.firstName,
+            lastName: fields.lastName,
+          },
           'seniorsafe-churned',
+          'seniorsafe_churn',
+          'churn',
         )
       }
       // Suppress unused-var warning while we keep priorTier for log/analytics:
