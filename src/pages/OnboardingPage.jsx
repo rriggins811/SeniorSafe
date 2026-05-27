@@ -356,8 +356,23 @@ export default function OnboardingPage() {
                 </div>
 
                 <p className="text-gray-400 text-sm mt-2">
-                  Go ahead — hand them the phone and let them tap it!
+                  Go ahead, hand them the phone and let them tap it!
                 </p>
+
+                {/* Escape hatch added 2026-05-27: production data showed
+                    100% of users abandon at this step. Most likely cause is
+                    they're NOT physically with the senior at signup time
+                    (ad-driven traffic clicks at their own kitchen table),
+                    so demo-the-check-in is a wall they cannot cross. Skip
+                    advances them to the family-code step without recording
+                    a check-in. first_checkin_date stays null (honest). */}
+                <button
+                  type="button"
+                  onClick={() => setStep(4)}
+                  className="mt-4 text-sm text-gray-500 underline underline-offset-2 hover:text-[#1B365D]"
+                >
+                  Skip the demo, I&apos;ll do this with them later
+                </button>
               </>
             ) : (
               <>

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Shield, ChevronLeft, Heart, Users, User, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { generateFamilyCode } from '../lib/familyCode'
-import { isNative } from '../lib/platform'
+import { isNative, isIOS, isAndroid } from '../lib/platform'
 import { Browser } from '@capacitor/browser'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
 
@@ -11,6 +11,15 @@ const NATIVE_REDIRECT = 'com.rigginsstrategicsolutions.seniorsafe://auth/callbac
 
 function getOAuthRedirect() {
   return isNative() ? NATIVE_REDIRECT : window.location.origin + '/dashboard'
+}
+
+// Resolve the device_platform string written into user_profile on signup.
+// Returns 'ios' / 'android' / 'web'. Set 2026-05-27 to fix 100% NULL
+// device_platform data quality issue.
+function detectDevicePlatform() {
+  if (isIOS()) return 'ios'
+  if (isAndroid()) return 'android'
+  return 'web'
 }
 
 export default function SignUpPage() {
@@ -201,6 +210,7 @@ export default function SignUpPage() {
         senior_name: form.firstName.trim(),
         senior_age: parseInt(form.age) || null,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        device_platform: detectDevicePlatform(),
         onboarding_complete: false,
         subscription_tier: 'trial',
         trial_status: 'active',
@@ -257,6 +267,7 @@ export default function SignUpPage() {
         invited_by: adminProfile.user_id,
         family_code: null,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        device_platform: detectDevicePlatform(),
         onboarding_complete: false,
         subscription_tier: 'trial',
         trial_status: 'active',
