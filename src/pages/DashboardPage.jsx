@@ -324,10 +324,19 @@ export default function DashboardPage() {
       if (isPremium(subscriptionTier)) setShowNoteInput(true)
     }
 
-    // Update check-in tracking for review prompt
+    // Update check-in tracking for review prompt. Errors here are
+    // non-blocking for the user but worth surfacing in console so
+    // a regression (e.g., RLS WITH CHECK on user_profile failing)
+    // doesn't stay invisible like the original 2026-05-28 incident.
     const updates = { checkin_count: (profile?.checkin_count || 0) + 1 }
     if (!profile?.first_checkin_date) updates.first_checkin_date = new Date().toISOString()
-    supabase.from('user_profile').update(updates).eq('user_id', user.id).then(() => {})
+    supabase
+      .from('user_profile')
+      .update(updates)
+      .eq('user_id', user.id)
+      .then(({ error: updateError }) => {
+        if (updateError) console.error('Check-in tracking update failed:', updateError)
+      })
 
     // Only send notifications for premium tier
     if (isPremium(subscriptionTier)) {

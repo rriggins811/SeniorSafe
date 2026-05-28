@@ -105,7 +105,15 @@ export default function OnboardingPage() {
 
       const { firstName, lastName } = deriveNameFromMetadata(user.user_metadata || {})
       const code = await generateFamilyCode()
-      const familyName = lastName ? `The ${lastName} Family` : `${firstName}'s Family`
+      // Fall through to a generic label if BOTH names are blank (rare:
+      // Apple Sign-In hides the name on the second sign-in attempt).
+      // Never leave family_name NULL — the family-scoped RLS policies
+      // need a non-NULL value so other family members can join.
+      const familyName = lastName
+        ? `The ${lastName} Family`
+        : firstName
+        ? `${firstName}'s Family`
+        : 'Your Family'
 
       await supabase.from('user_profile').upsert({
         user_id: user.id,
@@ -143,12 +151,23 @@ export default function OnboardingPage() {
   async function handleDemoCheckIn() {
     if (!user || checkedIn || checkInLoading) return
     setCheckInLoading(true)
-    await supabase.from('checkins').insert({
+    // Surface insert errors instead of swallowing them. The demo
+    // check-in originally ignored its result, which masked an RLS
+    // bug for months (user_profile.family_name NULL → invisible row
+    // → INSERT...RETURNING rejected). Catch and log so the next
+    // regression is visible immediately.
+    const { error } = await supabase.from('checkins').insert({
       user_id: user.id,
       family_name: meta.family_name || '',
       checked_in_at: new Date().toISOString(),
     })
     setCheckInLoading(false)
+    if (error) {
+      console.error('Demo check-in failed:', error)
+      // Still set checkedIn=true so the user can proceed through
+      // onboarding even if telemetry-style insert failed. The real
+      // dashboard check-in runs through the normal RLS path.
+    }
     setCheckedIn(true)
   }
 
