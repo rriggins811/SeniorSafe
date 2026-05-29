@@ -103,9 +103,11 @@ async function ghlProxyUpsertAndTag(
   source: string,
   label: string,
 ): Promise<void> {
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
-  if (!anonKey) {
-    console.warn(`[ghl-proxy ${label}] skipped, SUPABASE_ANON_KEY not set`)
+  // Authenticate to ghl-proxy with the service-role key (2026-05-29 audit:
+  // the proxy now rejects the public anon key to stop being an open relay).
+  const svcKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!svcKey) {
+    console.warn(`[ghl-proxy ${label}] skipped, SUPABASE_SERVICE_ROLE_KEY not set`)
     return
   }
   try {
@@ -121,7 +123,7 @@ async function ghlProxyUpsertAndTag(
     const res = await fetch(GHL_PROXY_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${anonKey}`,
+        'Authorization': `Bearer ${svcKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
