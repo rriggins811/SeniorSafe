@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { isNative } from './lib/platform'
+import { captureAttribution } from './lib/attribution'
+
+// Capture ad attribution (fbclid + UTMs) on first load, before React renders.
+captureAttribution()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

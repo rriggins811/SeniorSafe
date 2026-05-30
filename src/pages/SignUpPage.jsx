@@ -6,6 +6,7 @@ import { generateFamilyCode } from '../lib/familyCode'
 import { isNative, isIOS, isAndroid } from '../lib/platform'
 import { Browser } from '@capacitor/browser'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
+import { getAttribution } from '../lib/attribution'
 
 const NATIVE_REDIRECT = 'com.rigginsstrategicsolutions.seniorsafe://auth/callback'
 
@@ -209,6 +210,7 @@ export default function SignUpPage() {
         family_code: familyCode,
         senior_name: form.firstName.trim(),
         senior_age: parseInt(form.age) || null,
+        signup_source: getAttribution(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         device_platform: detectDevicePlatform(),
         onboarding_complete: false,
@@ -266,6 +268,7 @@ export default function SignUpPage() {
         role: 'member',
         invited_by: adminProfile.user_id,
         family_code: null,
+        signup_source: getAttribution(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         device_platform: detectDevicePlatform(),
         onboarding_complete: false,
