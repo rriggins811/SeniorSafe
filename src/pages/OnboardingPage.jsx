@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, ChevronLeft, Clock, Users, Copy, Share2, Sparkles, Shield, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { getAttribution } from '../lib/attribution'
 import { getAppUrl, copyToClipboard } from '../lib/platform'
 import { generateFamilyCode } from '../lib/familyCode'
 
@@ -123,6 +124,7 @@ export default function OnboardingPage() {
         role: 'admin',
         family_code: code,
         senior_name: firstName,
+        signup_source: getAttribution(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         onboarding_complete: false,
         subscription_tier: 'trial',
