@@ -231,7 +231,7 @@ export default function SupportPage() {
 
             {/* Booking */}
             <button
-              onClick={() => openExternalLink('https://cal.com/ryan-riggins/discoverycall')}
+              onClick={() => openExternalLink('https://calendar.google.com/calendar/appointments/schedules/AcZssZ0y_kQQfkvnf6jQEBvA5X2Onolndq6VleuID3n9hDujDd4CjpOsaJzKqs_eXujvfVVayudxp2h5')}
               className="w-full flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left"
             >
               <Calendar size={18} className="text-[#1B365D] shrink-0" />

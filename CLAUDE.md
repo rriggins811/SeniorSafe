@@ -738,7 +738,7 @@ Git config for this repo:
 * Book Resources (email capture): rigginsstrategicsolutions.com/bookresources
 * Blueprint purchase: blueprint.rigginsstrategicsolutions.com/pricing
 * Starter Guide: rigginsstrategicsolutions.com/starterguide
-* Booking: https://cal.com/ryan-riggins/discoverycall
+* Booking (20-min discovery, Google Calendar; cal.com retired Jun 2026): https://calendar.google.com/calendar/appointments/schedules/AcZssZ0y_kQQfkvnf6jQEBvA5X2Onolndq6VleuID3n9hDujDd4CjpOsaJzKqs_eXujvfVVayudxp2h5
 * App (production): app.seniorsafeapp.com
 * App (beta): senior-safe-hazel.vercel.app
 * GHL landing pages: go.rigginsstrategicsolutions.com
