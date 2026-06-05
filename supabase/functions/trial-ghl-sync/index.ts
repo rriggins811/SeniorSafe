@@ -21,8 +21,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 //    nurture mid-trial (they were concierge-emailed personally).
 //  - LIFECYCLE: a synced row whose trial_status became `expired` -> add
 //    `seniorsafe trial - expired`, remove `seniorsafe trial - active`.
-//    `converted` -> remove `seniorsafe trial - active` (the paid tag is handled
-//    by the existing remove-on-subscribe workflow; we do not double-build it).
+//    `converted` -> apply the paid-tier tag (`seniorsafe-premium` for 'paid',
+//    `seniorsafe-premium-plus` for 'premium_plus') so the nurture's exit
+//    condition fires, then remove `seniorsafe trial - active`. Catches Stripe
+//    AND Apple/Google IAP conversions (both flip subscription_tier).
 //  - Idempotent: each user is upserted exactly once (gated on ghl_contact_id);
 //    lifecycle tags only transition when trial_status actually changes
 //    (gated on ghl_trial_stage), so workflows are never re-triggered.
@@ -38,6 +40,14 @@ const TAG_ACTIVE = "seniorsafe trial - active"
 const TAG_EXPIRED = "seniorsafe trial - expired"
 const TAG_SIGNUP = "seniorsafe-app-signup"
 const TAG_BACKFILL = "trial-backfill-jun4"
+// Paid-tier tags applied on conversion. The trial nurture's exit condition is
+// keyed on these, so a converted customer must get one to stop the emails.
+// Maps from user_profile.subscription_tier: 'paid' (Premium $14.99) and
+// 'premium_plus' (Premium+ $39.99). Catches BOTH Stripe and Apple/Google IAP
+// conversions, since both flip subscription_tier (stripe-webhook only tags
+// seniorsafe-paid and never fires for IAP).
+const TAG_PREMIUM = "seniorsafe-premium"
+const TAG_PREMIUM_PLUS = "seniorsafe-premium-plus"
 
 // Trials created on/after this instant get the active (nurture-triggering) tag;
 // earlier still-active trials are backfilled as contacts only. Overridable via
@@ -145,7 +155,7 @@ serve(async (req: Request) => {
   // ---- LIFECYCLE ---------------------------------------------------------
   const { data: changed, error: e2 } = await supabase
     .from("user_profile")
-    .select("user_id, ghl_contact_id, ghl_trial_stage, trial_status")
+    .select("user_id, ghl_contact_id, ghl_trial_stage, trial_status, subscription_tier")
     .not("ghl_contact_id", "is", null)
     .in("trial_status", ["expired", "converted"])
     .in("ghl_trial_stage", ["active", "backfill"])
@@ -164,7 +174,19 @@ serve(async (req: Request) => {
         }
         summary.expired++
       } else if (u.trial_status === "converted") {
+        // Tier tag drives the nurture's exit condition. Premium ('paid') ->
+        // seniorsafe-premium; Premium+ -> seniorsafe-premium-plus. Apply it,
+        // then remove the active trigger tag.
+        const tierTag =
+          u.subscription_tier === "premium_plus"
+            ? TAG_PREMIUM_PLUS
+            : u.subscription_tier === "paid"
+            ? TAG_PREMIUM
+            : null
         if (!dry) {
+          if (tierTag) {
+            await ghl("POST", `/contacts/${u.ghl_contact_id}/tags`, token, { tags: [tierTag] })
+          }
           await ghl("DELETE", `/contacts/${u.ghl_contact_id}/tags`, token, { tags: [TAG_ACTIVE] })
           await supabase
             .from("user_profile")
