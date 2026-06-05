@@ -123,6 +123,11 @@ serve(async (req: Request) => {
       if (!email) { summary.errors.push({ user: u.user_id, err: "no email in auth.users" }); continue }
       if (dry) { isBackfill ? summary.backfilled++ : summary.newSynced++; continue }
 
+      // ADDITIVE TAGGING: GHL's /contacts/upsert REPLACES the contact's whole
+      // tag set when `tags` is sent, wiping tags other funnels applied. So
+      // upsert WITHOUT tags, then add them via the contact-scoped tag endpoint
+      // (which appends). This function bypasses ghl-proxy, so it must do the
+      // additive pattern itself.
       const up = await ghl("POST", "/contacts/upsert", token, {
         locationId: loc,
         email,
@@ -130,7 +135,6 @@ serve(async (req: Request) => {
         lastName: u.last_name || undefined,
         phone: u.phone || undefined,
         source: "SeniorSafe app trial",
-        tags,
       })
       if (up.status < 200 || up.status >= 300) {
         console.error("trial-ghl-sync upsert fail", email, up.status, JSON.stringify(up.body))
@@ -142,6 +146,7 @@ serve(async (req: Request) => {
         summary.errors.push({ user: u.user_id, email, op: "upsert", err: "no contact id", body: up.body })
         continue
       }
+      await ghl("POST", `/contacts/${contactId}/tags`, token, { tags })
       await supabase
         .from("user_profile")
         .update({ ghl_contact_id: contactId, ghl_synced_at: new Date().toISOString(), ghl_trial_stage: stage })
