@@ -8,7 +8,8 @@ import Stripe from "https://esm.sh/stripe@14.14.0?target=deno"
 const ALLOWED_ORIGINS = [
   'https://app.seniorsafeapp.com',
   'https://senior-safe-hazel.vercel.app',
-  'http://localhost:5173',
+  'capacitor://localhost',
+  'http://localhost',
 ]
 
 function getCorsHeaders(req: Request) {

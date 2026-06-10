@@ -1,37 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-// ---------------------------------------------------------------------------
-// trial-ghl-sync  (scheduled every 15 min via pg_cron)
-// ---------------------------------------------------------------------------
-// Wires SeniorSafe app trial signups (Supabase user_profile) -> GHL contact +
-// the workflow-trigger tag, which was previously unplugged (no app-signup ->
-// GHL pipe existed, so no trial entered the nurture after May 11).
+// trial-ghl-sync (scheduled every 15 min via pg_cron). Wires SeniorSafe app
+// trial signups (Supabase user_profile) -> GHL contact + the workflow-trigger
+// tag. Invoked by cron with the Vault service_role_key as Bearer
+// (verify_jwt=true). Reuses GHL_PIT_TOKEN + GHL_LOCATION_ID directly (bypasses
+// ghl-proxy), so it does its own ADDITIVE tagging (upsert WITHOUT tags, then
+// POST /contacts/{id}/tags) -- GHL upsert-with-tags REPLACES the tag set.
 //
-// Invoked by cron with the Vault service_role_key as Bearer (verify_jwt=true),
-// same pattern as trial-downgrade-daily. Reuses GHL_PIT_TOKEN + GHL_LOCATION_ID
-// directly (does NOT route through the hardened ghl-proxy).
-//
-// Behavior:
-//  - INITIAL: tier=trial, trial_status=active, role=admin, is_test IS NOT TRUE,
-//    not yet synced. Upsert the GHL contact. Signups on/after CUTOFF get
-//    `seniorsafe trial - active` + `seniorsafe-app-signup` (enter the nurture).
-//    Signups before CUTOFF (the pre-existing actives) get `seniorsafe-app-signup`
-//    + `trial-backfill-jun4` only — NO active tag, so they do not drop into the
-//    nurture mid-trial (they were concierge-emailed personally).
-//  - LIFECYCLE: a synced row whose trial_status became `expired` -> add
-//    `seniorsafe trial - expired`, remove `seniorsafe trial - active`.
-//    `converted` -> apply the paid-tier tag (`seniorsafe-premium` for 'paid',
-//    `seniorsafe-premium-plus` for 'premium_plus') so the nurture's exit
-//    condition fires, then remove `seniorsafe trial - active`. Catches Stripe
-//    AND Apple/Google IAP conversions (both flip subscription_tier).
-//  - Idempotent: each user is upserted exactly once (gated on ghl_contact_id);
-//    lifecycle tags only transition when trial_status actually changes
-//    (gated on ghl_trial_stage), so workflows are never re-triggered.
-//
-// Body options (optional): { "dry": true } counts what it WOULD do without
-// touching GHL or the DB. Useful for verification.
-// ---------------------------------------------------------------------------
+// LIFECYCLE: expired -> add `seniorsafe trial - expired`, remove active.
+// converted -> apply the paid-tier tag (`seniorsafe-premium` for 'paid',
+// `seniorsafe-premium-plus` for 'premium_plus') so the nurture exit condition
+// fires, then remove the active tag. Catches Stripe AND Apple/Google IAP
+// conversions. Idempotent via ghl_contact_id + ghl_trial_stage. Body
+// { "dry": true } = count-only.
 
 const BASE = "https://services.leadconnectorhq.com"
 const VER = "2021-07-28"
@@ -40,18 +22,9 @@ const TAG_ACTIVE = "seniorsafe trial - active"
 const TAG_EXPIRED = "seniorsafe trial - expired"
 const TAG_SIGNUP = "seniorsafe-app-signup"
 const TAG_BACKFILL = "trial-backfill-jun4"
-// Paid-tier tags applied on conversion. The trial nurture's exit condition is
-// keyed on these, so a converted customer must get one to stop the emails.
-// Maps from user_profile.subscription_tier: 'paid' (Premium $14.99) and
-// 'premium_plus' (Premium+ $39.99). Catches BOTH Stripe and Apple/Google IAP
-// conversions, since both flip subscription_tier (stripe-webhook only tags
-// seniorsafe-paid and never fires for IAP).
 const TAG_PREMIUM = "seniorsafe-premium"
 const TAG_PREMIUM_PLUS = "seniorsafe-premium-plus"
 
-// Trials created on/after this instant get the active (nurture-triggering) tag;
-// earlier still-active trials are backfilled as contacts only. Overridable via
-// env so future re-runs / replays stay deterministic.
 const CUTOFF = Deno.env.get("TRIAL_SYNC_ACTIVE_CUTOFF") || "2026-06-04T00:00:00Z"
 
 function j(o: unknown, s = 200) {
@@ -103,7 +76,6 @@ serve(async (req: Request) => {
     return data?.user?.email ?? null
   }
 
-  // ---- INITIAL SYNC ------------------------------------------------------
   const { data: newTrials, error: e1 } = await supabase
     .from("user_profile")
     .select("user_id, first_name, last_name, phone, created_at")
@@ -123,11 +95,9 @@ serve(async (req: Request) => {
       if (!email) { summary.errors.push({ user: u.user_id, err: "no email in auth.users" }); continue }
       if (dry) { isBackfill ? summary.backfilled++ : summary.newSynced++; continue }
 
-      // ADDITIVE TAGGING: GHL's /contacts/upsert REPLACES the contact's whole
-      // tag set when `tags` is sent, wiping tags other funnels applied. So
-      // upsert WITHOUT tags, then add them via the contact-scoped tag endpoint
-      // (which appends). This function bypasses ghl-proxy, so it must do the
-      // additive pattern itself.
+      // ADDITIVE TAGGING: upsert WITHOUT tags, then add via the tag endpoint
+      // (GHL upsert-with-tags replaces the whole tag set and would wipe tags
+      // applied by other funnels).
       const up = await ghl("POST", "/contacts/upsert", token, {
         locationId: loc,
         email,
@@ -157,7 +127,6 @@ serve(async (req: Request) => {
     }
   }
 
-  // ---- LIFECYCLE ---------------------------------------------------------
   const { data: changed, error: e2 } = await supabase
     .from("user_profile")
     .select("user_id, ghl_contact_id, ghl_trial_stage, trial_status, subscription_tier")
@@ -179,9 +148,6 @@ serve(async (req: Request) => {
         }
         summary.expired++
       } else if (u.trial_status === "converted") {
-        // Tier tag drives the nurture's exit condition. Premium ('paid') ->
-        // seniorsafe-premium; Premium+ -> seniorsafe-premium-plus. Apply it,
-        // then remove the active trigger tag.
         const tierTag =
           u.subscription_tier === "premium_plus"
             ? TAG_PREMIUM_PLUS
@@ -206,7 +172,6 @@ serve(async (req: Request) => {
   }
 
   console.log("trial-ghl-sync", JSON.stringify(summary))
-  // 207 if everything attempted failed (monitoring/alert signal); else 200.
   const acted = summary.newSynced + summary.backfilled + summary.expired + summary.converted
   return j({ ok: true, ...summary }, summary.errors.length > 0 && acted === 0 ? 207 : 200)
 })

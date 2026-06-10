@@ -59,7 +59,7 @@ What to capture (and update if already known):
 - Family structure (primary caregiver, siblings, who's doing what, known conflict).
 - Blueprint progress (which tools mentioned/started/completed, which modules covered).
 - Key decisions made ("family decided memory care by Q3," "selling as-is," "using MAPT strategy").
-- Professional team (attorney, agent, care manager, names and roles only, no PII like phone/email).
+- Professional team (attorney, agent, care manager — names and roles only, no PII like phone/email).
 - Upcoming milestones (attorney appointment, tour date, move date, closing date).
 - Emotional context ("Dad is resistant," "sibling tension around the will," "Mom recently widowed").
 - Detected Persona (Stoic, Denier, Overwhelmed, Grieving/Keeper of Memories, Controller).
@@ -97,9 +97,11 @@ serve(async (req) => {
       return jsonResponse({ error: 'conversation_id and source (maggie|senior_safe) required' }, 400, corsHeaders)
     }
 
+    // Resolve which tables to read from.
     const convTable = source === 'maggie' ? 'maggie_conversations' : 'ai_conversations'
     const msgTable = source === 'maggie' ? 'maggie_messages' : 'ai_messages'
 
+    // Fetch the conversation, verify ownership, check summarized_at idempotency.
     const { data: conv, error: convErr } = await supabaseAdmin
       .from(convTable)
       .select('id, user_id, family_code, title, summarized_at')
@@ -111,6 +113,7 @@ serve(async (req) => {
       return jsonResponse({ status: 'already_summarized', summarized_at: conv.summarized_at }, 200, corsHeaders)
     }
 
+    // Resolve family_code (members inherit from admin).
     let familyCode: string | null = conv.family_code
     if (!familyCode) {
       const { data: profile } = await supabaseAdmin
@@ -130,6 +133,7 @@ serve(async (req) => {
     }
     if (!familyCode) return jsonResponse({ error: 'No family_code' }, 400, corsHeaders)
 
+    // Pull messages.
     const { data: msgs, error: msgErr } = await supabaseAdmin
       .from(msgTable)
       .select('role, content, created_at')
@@ -137,10 +141,12 @@ serve(async (req) => {
       .order('created_at', { ascending: true })
     if (msgErr) return jsonResponse({ error: `messages fetch failed: ${msgErr.message}` }, 500, corsHeaders)
     if (!msgs || msgs.length === 0) {
+      // Empty conversation — just stamp it summarized so the rolling window can sweep it.
       await supabaseAdmin.from(convTable).update({ summarized_at: new Date().toISOString() }).eq('id', conversation_id)
       return jsonResponse({ status: 'empty_conversation' }, 200, corsHeaders)
     }
 
+    // Existing summary (if any).
     const { data: ctxRow } = await supabaseAdmin
       .from('family_context')
       .select('summary')
@@ -148,15 +154,18 @@ serve(async (req) => {
       .maybeSingle()
     const existingSummary = ctxRow?.summary || ''
 
+    // Build the compaction prompt for Sonnet.
     const transcript = msgs.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n')
     const userPrompt =
-      `## Current running summary\n\n${existingSummary || '(none yet, this is the first conversation being summarized for this family)'}\n\n` +
+      `## Current running summary\n\n${existingSummary || '(none yet — this is the first conversation being summarized for this family)'}\n\n` +
       `## Conversation that just finished (source: ${source})\n\n${transcript}\n\n` +
       `## Your task\n\nProduce the UPDATED running summary. Merge new information into the existing structure. Drop stale/superseded items. Keep under 2,800 tokens. Markdown only, no preamble.`
 
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
     if (!ANTHROPIC_API_KEY) return jsonResponse({ error: 'ANTHROPIC_API_KEY not configured' }, 500, corsHeaders)
 
+    // Use Sonnet for higher-quality compaction. The cost is bounded because
+    // this runs once per conversation, not per message.
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -185,6 +194,7 @@ serve(async (req) => {
       return jsonResponse({ error: 'Empty summary returned by model' }, 502, corsHeaders)
     }
 
+    // Hard cap as a safety net (model should already respect 2,800).
     const capped = approxTokenCount(newSummary) > FAMILY_CONTEXT_TOKEN_CAP
       ? newSummary.slice(0, FAMILY_CONTEXT_TOKEN_CAP * 4)
       : newSummary
@@ -192,6 +202,7 @@ serve(async (req) => {
     const tokenCount = approxTokenCount(capped)
     const now = new Date().toISOString()
 
+    // Upsert family_context
     await supabaseAdmin
       .from('family_context')
       .upsert({
@@ -202,6 +213,7 @@ serve(async (req) => {
         updated_at: now,
       })
 
+    // Stamp the conversation as summarized so we don't redo it.
     await supabaseAdmin
       .from(convTable)
       .update({ summarized_at: now })

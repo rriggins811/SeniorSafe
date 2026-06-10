@@ -55,7 +55,7 @@ async function sendFailureAlertEmail(
 
   // If Resend is not configured, log prominently so Supabase log dashboard catches it
   if (!RESEND_API_KEY) {
-    console.error(`🚨 SMS_FAILURE_ALERT — No RESEND_API_KEY configured. Details:\n${body}`)
+    console.error(`SMS_FAILURE_ALERT — No RESEND_API_KEY configured. Details:\n${body}`)
     return false
   }
 
@@ -74,17 +74,17 @@ async function sendFailureAlertEmail(
       }),
     })
     if (res.ok) {
-      console.log(`📧 Failure alert email sent for ${phone}`)
+      console.log(`Failure alert email sent for ${phone}`)
       return true
     }
     const errText = await res.text()
-    console.error(`📧 Resend email failed (${res.status}):`, errText)
+    console.error(`Resend email failed (${res.status}):`, errText)
     // Still log the full alert so Supabase dashboard has it
-    console.error(`🚨 SMS_FAILURE_ALERT:\n${body}`)
+    console.error(`SMS_FAILURE_ALERT:\n${body}`)
     return false
   } catch (emailErr) {
-    console.error('📧 Resend email error:', emailErr)
-    console.error(`🚨 SMS_FAILURE_ALERT:\n${body}`)
+    console.error('Resend email error:', emailErr)
+    console.error(`SMS_FAILURE_ALERT:\n${body}`)
     return false
   }
 }
@@ -216,7 +216,7 @@ serve(async (_req) => {
               },
             )
             if (pushRes.ok) {
-              console.log(`📱 Push sent to ${member.first_name} for missed check-in`)
+              console.log(`Push sent to ${member.first_name} for missed check-in`)
             }
           } catch (pushErr) {
             console.error(`Push error for ${member.first_name}:`, pushErr)
@@ -249,10 +249,10 @@ serve(async (_req) => {
 
           if (response.ok) {
             totalSent++
-            console.log(`✅ Missed check-in SMS sent to ${member.first_name} (${toPhone}) for admin ${admin.user_id}`)
+            console.log(`Missed check-in SMS sent to ${member.first_name} (${toPhone}) for admin ${admin.user_id}`)
           } else {
             const errText = await response.text()
-            console.error(`❌ Twilio error for ${toPhone}:`, errText)
+            console.error(`Twilio error for ${toPhone}:`, errText)
             // CRITICAL SAFETY FALLBACK — alert support that a check-in SMS failed
             await sendFailureAlertEmail(familyLabel, toPhone, seniorName, `Twilio HTTP ${response.status}: ${errText}`)
           }
@@ -270,7 +270,7 @@ serve(async (_req) => {
         date: todayLocal,
       })
 
-      console.log(`📋 Logged alert for admin ${admin.user_id} on ${todayLocal}`)
+      console.log(`Logged alert for admin ${admin.user_id} on ${todayLocal}`)
 
     } catch (err) {
       console.error(`Error processing admin ${admin.user_id}:`, err)

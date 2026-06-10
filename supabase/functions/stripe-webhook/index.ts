@@ -17,23 +17,11 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-// ---------------------------------------------------------------------------
-// Tier resolution: Stripe-side tier name → user_profile.subscription_tier value
-// ---------------------------------------------------------------------------
-// 'premium' (the create-checkout body name) maps to 'paid' in user_profile.
-// 'premium_plus' maps to 'premium_plus' as-is.
 type Tier = 'free' | 'paid' | 'premium_plus'
 
-// Reverse lookup: live Stripe price ID → user_profile.subscription_tier value.
-// Used as a fallback for events where metadata.tier is missing (legacy
-// subscriptions created before the metadata stamp shipped, or Stripe Customer
-// Portal tier switches that don't carry our metadata). Keep in sync with the
-// PRICE_MAP in create-checkout/index.ts.
 const PRICE_TO_TIER: Record<string, Tier> = {
-  // Premium tier ($14.99/mo, $143.88/yr)
   'price_1T99bMFoeumweL6DaOZyam4h': 'paid',
   'price_1T99e4FoeumweL6DuVorGKRY': 'paid',
-  // Premium+ tier ($39.99/mo, $383.90/yr)
   'price_1TUSe3FoeumweL6DtmuRCVpD': 'premium_plus',
   'price_1TUSeoFoeumweL6DluScBwCU': 'premium_plus',
 }
@@ -41,55 +29,17 @@ const PRICE_TO_TIER: Record<string, Tier> = {
 function resolveTier(metadataTier: string | undefined, fallbackPriceId?: string): Tier {
   if (metadataTier === 'premium_plus') return 'premium_plus'
   if (metadataTier === 'premium') return 'paid'
-  // Fallback: look up by price ID for events that lack metadata.tier
   if (fallbackPriceId && PRICE_TO_TIER[fallbackPriceId]) return PRICE_TO_TIER[fallbackPriceId]
-  // Conservative default — never accidentally grant Maggie. Caller chose
-  // 'paid' as the safest baseline if metadata + price both missing.
   return 'paid'
 }
 
 // ---------------------------------------------------------------------------
-// Direct Kit (formerly ConvertKit) v4 tag application
+// GHL contact + tag via the ghl-proxy Edge Function
 // ---------------------------------------------------------------------------
-// Replaces the previous Make.com fan-out (scenarios 4994124 / 4994125)
-// which exhibited a broken-webhook-resource pattern: every execution
-// produced a 40-second ModuleTimeoutError at gateway:CustomWebHook with
-// transfer=0 bytes despite the gateway returning 200 to the caller.
-// Recreating the hooks (v1 → v2) did not fix it.
-//
-// Phase 6 (May 18, 2026): Kit retired entirely. All subscriber lifecycle
-// tagging now flows through the GHL ghl-proxy Edge Function below. The
-// seniorsafe-premium / seniorsafe-premium-plus tagging on checkout is
-// already covered by the seniorsafe-paid GHL tag (the locked workflow
-// trigger). The seniorsafe-churned signal previously held only in Kit
-// (tag 19444482) is now mirrored as a GHL `seniorsafe-churned` tag in
-// customer.subscription.deleted below.
-//
-// KIT_API_KEY env var has been removed from Supabase Edge Function
-// secrets. Make scenarios 4994110 / 4994124 / 4994125 remain in
-// deactivated state for forensic record-keeping.
-
-// ---------------------------------------------------------------------------
-// GHL contact + tag via the ghl-proxy Edge Function (Block C Phase 4, May 15)
-// ---------------------------------------------------------------------------
-// Per memory/sop_ghl_operations.md (locked May 14), all GHL writes go through
-// the ghl-proxy Edge Function — keeps GHL_PIT_TOKEN in Supabase Edge Function
-// secrets, off any Vercel env or repo. This is the same proxy the rss-site
-// /freeguide route (Phase 1) and blueprint-site Stripe webhook (Phase 3) call.
-//
-// Same-project Edge Function call so the network hop is internal even though
-// we go through the public URL. The whitelist on writes is enforced by the
-// proxy: /contacts/upsert + contact-scoped /tags pass through.
-//
-// Tag taxonomy (locked, do NOT normalize the strings):
-//   seniorsafe-paid    — preserved format, paired with workflow trigger
-//                        "SeniorSafe-Remove on subscribe" (workflow ID
-//                        1373ff1a-...) which cleans the trial-active tag
-//                        and exits the Trial Nurture sequence.
-//   product-seniorsafe-premium / -plus — SOP marks these as "(future) — once
-//                        paid customers grow." Holding off until Ryan signals
-//                        — would introduce orphaned tags with no workflow
-//                        consumer today.
+// All GHL writes go through ghl-proxy, which holds GHL_PIT_TOKEN. As of the
+// 2026-05-29 security audit the proxy authenticates callers by the service-
+// role key (it was previously an open relay accepting the anon key), so this
+// same-project call now sends SUPABASE_SERVICE_ROLE_KEY.
 const GHL_PROXY_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1/ghl-proxy`
 
 async function ghlProxyUpsertAndTag(
@@ -162,19 +112,6 @@ async function ghlProxyUpsertAndTag(
 // ---------------------------------------------------------------------------
 // Meta Conversions API (CAPI) — SeniorSafe Purchase fire
 // ---------------------------------------------------------------------------
-// Standard 'Purchase' event fired server-to-server on checkout.session.completed.
-// Single shared pixel (id 1237498758330884) across rss-site, blueprint-site,
-// and seniorsafeapp.com so Andromeda gets unified signal.
-//
-// Tier → content_name mapping (per Ryan Q5 confirmation):
-//   'paid'         → 'seniorsafe_premium'      ($14.99/mo or $143.88/yr)
-//   'premium_plus' → 'seniorsafe_premium_plus' ($39.99/mo or $383.90/yr)
-//
-// NEVER use 'OrderFormPurchase' — that legacy Squarespace event name is
-// blocked Meta-side.
-//
-// Env: META_PIXEL_ID, META_CAPI_ACCESS_TOKEN, META_GRAPH_API_VERSION
-// (all in Supabase Edge Function secrets, NOT Vercel).
 const META_PIXEL_ID = Deno.env.get('META_PIXEL_ID') ?? '1237498758330884'
 const META_GRAPH_API_VERSION = Deno.env.get('META_GRAPH_API_VERSION') ?? 'v20.0'
 
@@ -215,7 +152,6 @@ async function fireMetaPurchase(params: {
       : 0
   const currency = (params.currency ?? 'usd').toUpperCase()
 
-  // Hash all PII before send. Meta rejects raw email/name in user_data.
   const userData: Record<string, string> = {}
   if (params.email) userData.em = await sha256Hex(params.email)
   if (params.firstName) userData.fn = await sha256Hex(params.firstName)
@@ -273,10 +209,6 @@ async function fireMetaPurchase(params: {
   }
 }
 
-// Pull email + names for subscriber lifecycle tagging (GHL). Email lives
-// on auth.users; first/last live on user_profile. Returns null fields
-// rather than throwing if any lookup misses — ghlProxyUpsertAndTag
-// tolerates a missing first_name (GHL dedupes contacts by email).
 async function lookupSubscriberFields(userId: string): Promise<{
   email: string | null
   firstName: string | null
@@ -322,26 +254,20 @@ async function updateUserTier(
     .select('user_id, subscription_tier')
 
   if (error) {
-    console.error(`❌ Failed to update user ${userId} to ${tier}:`, error.message)
+    console.error(`Failed to update user ${userId} to ${tier}:`, error.message)
   } else if (!data || data.length === 0) {
-    console.error(`❌ Update returned no rows — user_id "${userId}" may not exist in user_profile`)
+    console.error(`Update returned no rows for user_id ${userId}`)
   } else {
-    console.log(`✅ User ${userId} → subscription_tier = '${data[0]?.subscription_tier}'`)
+    console.log(`User ${userId} -> subscription_tier = '${data[0]?.subscription_tier}'`)
   }
   return error
 }
 
-// ---------------------------------------------------------------------------
-// Helper: normalize phone number
-// ---------------------------------------------------------------------------
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, '')
   return digits.startsWith('1') ? `+${digits}` : `+1${digits}`
 }
 
-// ---------------------------------------------------------------------------
-// Helper: send SMS via Twilio
-// ---------------------------------------------------------------------------
 async function sendTwilioSMS(to: string, message: string) {
   const ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID')
   const AUTH_TOKEN  = Deno.env.get('TWILIO_AUTH_TOKEN')
@@ -369,10 +295,6 @@ async function sendTwilioSMS(to: string, message: string) {
   return response.ok
 }
 
-// ---------------------------------------------------------------------------
-// Helper: look up Supabase user_id from a Stripe customer ID
-// (for events that don't carry client_reference_id)
-// ---------------------------------------------------------------------------
 async function getUserIdByStripeCustomer(customerId: string): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from('user_profile')
@@ -395,7 +317,6 @@ serve(async (req: Request) => {
     return new Response('Method not allowed', { status: 405 })
   }
 
-  // ---- Verify Stripe signature ----
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
 
@@ -412,18 +333,13 @@ serve(async (req: Request) => {
     return new Response(`Webhook Error: ${err.message}`, { status: 400 })
   }
 
-  console.log(`📨 Stripe event: ${event.type} (${event.id})`)
+  console.log(`Stripe event: ${event.type} (${event.id})`)
 
-  // ---- Handle events ----
   switch (event.type) {
 
-    // ========================================
-    // CHECKOUT COMPLETED — user just paid
-    // ========================================
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
 
-      // client_reference_id = Supabase user_id (set in create-checkout)
       const userId = session.client_reference_id
       const customerId = session.customer as string
       const subscriptionId = session.subscription as string
@@ -433,7 +349,6 @@ serve(async (req: Request) => {
         break
       }
 
-      // Fetch subscription details for billing info + price ID fallback
       let periodEnd: string | undefined
       let interval: string | undefined
       let firstPriceId: string | undefined
@@ -448,14 +363,10 @@ serve(async (req: Request) => {
         }
       }
 
-      // Resolve tier from session metadata (stamped by create-checkout) with
-      // price-ID fallback for legacy sessions or future portal-driven tier
-      // switches.
       const tier = resolveTier(session.metadata?.tier, firstPriceId)
 
       await updateUserTier(userId, tier, customerId, subscriptionId, periodEnd, interval)
 
-      // Also update any family members (invited_by this admin) to the same tier
       const { data: members } = await supabaseAdmin
         .from('user_profile')
         .select('user_id')
@@ -465,19 +376,11 @@ serve(async (req: Request) => {
         for (const m of members) {
           await updateUserTier(m.user_id, tier)
         }
-        console.log(`✅ Updated ${members.length} family member(s) to ${tier}`)
+        console.log(`Updated ${members.length} family member(s) to ${tier}`)
       }
 
       const fields = await lookupSubscriberFields(userId)
 
-      // GHL contact + tag via ghl-proxy (Block C Phase 4, sole tagging path
-      // post-Phase 6). Both 'paid' and 'premium_plus' get the same
-      // `seniorsafe-paid` tag — the locked workflow trigger ("SeniorSafe-
-      // Remove on subscribe", workflow ID 1373ff1a-...) listens for that
-      // exact tag string and handles cleanup of trial-active + exit from
-      // Trial Nurture. (Kit `seniorsafe-premium` / `seniorsafe-premium-plus`
-      // calls retired May 18 — GHL `seniorsafe-paid` is the system of
-      // record for paid-tier lifecycle now.)
       if (fields.email && (tier === 'paid' || tier === 'premium_plus')) {
         await ghlProxyUpsertAndTag(
           {
@@ -491,9 +394,6 @@ serve(async (req: Request) => {
         )
       }
 
-      // Meta Purchase CAPI fire. Best-effort, never blocks. Standard
-      // 'Purchase' event with content_name routing 'paid' →
-      // 'seniorsafe_premium', 'premium_plus' → 'seniorsafe_premium_plus'.
       if (tier === 'paid' || tier === 'premium_plus') {
         await fireMetaPurchase({
           tier,
@@ -512,9 +412,6 @@ serve(async (req: Request) => {
       break
     }
 
-    // ========================================
-    // SUBSCRIPTION UPDATED — plan change, renewal, payment method change
-    // ========================================
     case 'customer.subscription.updated': {
       const subscription = event.data.object as Stripe.Subscription
       const customerId = subscription.customer as string
@@ -523,18 +420,13 @@ serve(async (req: Request) => {
       const userId = await getUserIdByStripeCustomer(customerId)
       if (!userId) break
 
-      // Active or trialing = paid/premium_plus; anything else = free
       if (status === 'active' || status === 'trialing') {
         const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
         const interval = subscription.items?.data?.[0]?.price?.recurring?.interval || undefined
         const firstPriceId = subscription.items?.data?.[0]?.price?.id || undefined
-        // Resolve tier from subscription metadata (stamped by create-checkout
-        // via subscription_data.metadata) with price-ID fallback.
         const tier = resolveTier(subscription.metadata?.tier, firstPriceId)
         await updateUserTier(userId, tier, customerId, subscription.id, periodEnd, interval)
 
-        // Cascade tier changes to family members (e.g. admin uses Stripe
-        // Customer Portal to upgrade Premium → Premium+, family follows).
         const { data: members } = await supabaseAdmin
           .from('user_profile')
           .select('user_id')
@@ -543,17 +435,13 @@ serve(async (req: Request) => {
           for (const m of members) {
             await updateUserTier(m.user_id, tier)
           }
-          console.log(`🔁 Cascaded tier ${tier} to ${members.length} family member(s)`)
+          console.log(`Cascaded tier ${tier} to ${members.length} family member(s)`)
         }
       } else if (status === 'past_due' || status === 'unpaid') {
-        // Give a grace period — don't downgrade immediately on past_due
-        // Stripe will retry payment. Only downgrade on explicit cancel/expire.
-        console.log(`⚠️ Subscription ${subscription.id} is ${status} — keeping paid for now`)
+        console.log(`Subscription ${subscription.id} is ${status} — keeping paid for now`)
       } else {
-        // canceled, incomplete_expired, etc.
         await updateUserTier(userId, 'free', customerId, subscription.id)
 
-        // Downgrade family members too
         const { data: members } = await supabaseAdmin
           .from('user_profile')
           .select('user_id')
@@ -563,16 +451,13 @@ serve(async (req: Request) => {
           for (const m of members) {
             await updateUserTier(m.user_id, 'free')
           }
-          console.log(`⬇️ Downgraded ${members.length} family member(s) to free`)
+          console.log(`Downgraded ${members.length} family member(s) to free`)
         }
       }
 
       break
     }
 
-    // ========================================
-    // SUBSCRIPTION DELETED — cancelled and period ended
-    // ========================================
     case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription
       const customerId = subscription.customer as string
@@ -580,10 +465,6 @@ serve(async (req: Request) => {
       const userId = await getUserIdByStripeCustomer(customerId)
       if (!userId) break
 
-      // Capture prior tier + subscriber fields BEFORE the updateUserTier
-      // flip to free, so the churn signal carries the tier the customer
-      // is churning FROM (kept around for future per-tier winback workflows
-      // in GHL — currently logged for analytics only).
       const fields = await lookupSubscriberFields(userId)
       const { data: priorProfile } = await supabaseAdmin
         .from('user_profile')
@@ -594,7 +475,6 @@ serve(async (req: Request) => {
 
       await updateUserTier(userId, 'free', customerId, subscription.id)
 
-      // Downgrade family members too
       const { data: members } = await supabaseAdmin
         .from('user_profile')
         .select('user_id')
@@ -604,18 +484,9 @@ serve(async (req: Request) => {
         for (const m of members) {
           await updateUserTier(m.user_id, 'free')
         }
-        console.log(`⬇️ Downgraded ${members.length} family member(s) to free`)
+        console.log(`Downgraded ${members.length} family member(s) to free`)
       }
 
-      // Apply seniorsafe-churned tag via ghl-proxy. (Phase 6 — replaces
-      // the May-7 Kit `seniorsafe-churned` tag, ID 19444482.) Tag string
-      // mirrors the blueprint-site notifyChurn handler, which also fires
-      // for this same Stripe customer.subscription.deleted event because
-      // the Stripe account is shared between Blueprint and SeniorSafe.
-      // Double-tag is safe — GHL contact-tag application is idempotent.
-      // prior_tier is captured above for analytics; not passed to GHL
-      // because the locked tag taxonomy doesn't yet have per-tier churn
-      // tags (single seniorsafe-churned signal is enough today).
       if (fields.email) {
         await ghlProxyUpsertAndTag(
           {
@@ -628,28 +499,22 @@ serve(async (req: Request) => {
           'churn',
         )
       }
-      // Suppress unused-var warning while we keep priorTier for log/analytics:
       void priorTier
 
       break
     }
 
-    // ========================================
-    // INVOICE PAYMENT FAILED — payment retry failed
-    // ========================================
     case 'invoice.payment_failed': {
       const invoice = event.data.object as Stripe.Invoice
       const customerId = invoice.customer as string
 
-      console.log(`⚠️ Payment failed for customer ${customerId} — attempt: ${invoice.attempt_count}`)
+      console.log(`Payment failed for customer ${customerId} — attempt: ${invoice.attempt_count}`)
 
       const userId = await getUserIdByStripeCustomer(customerId)
       if (!userId) break
 
-      // Flip admin to free tier
       await updateUserTier(userId, 'free', customerId)
 
-      // Downgrade family members too
       const { data: members } = await supabaseAdmin
         .from('user_profile')
         .select('user_id')
@@ -659,10 +524,9 @@ serve(async (req: Request) => {
         for (const m of members) {
           await updateUserTier(m.user_id, 'free')
         }
-        console.log(`⬇️ Downgraded ${members.length} family member(s) to free`)
+        console.log(`Downgraded ${members.length} family member(s) to free`)
       }
 
-      // Send SMS notification to admin about payment failure
       const { data: adminProfile } = await supabaseAdmin
         .from('user_profile')
         .select('phone, senior_name, first_name')
@@ -677,7 +541,7 @@ serve(async (req: Request) => {
           `Your SeniorSafe payment could not be processed. ${name}'s Premium features are paused. Update payment at app.seniorsafeapp.com/upgrade — SeniorSafe. Reply STOP to opt out`
         )
         if (sent) {
-          console.log(`📱 Payment failure SMS sent to ${toPhone}`)
+          console.log(`Payment failure SMS sent to ${toPhone}`)
         }
       }
 
@@ -688,7 +552,6 @@ serve(async (req: Request) => {
       console.log(`Unhandled event type: ${event.type}`)
   }
 
-  // Always return 200 so Stripe doesn't retry
   return new Response(JSON.stringify({ received: true }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
