@@ -1,11 +1,4 @@
 // Maggie chat edge function (Premium+ tier, Claude Sonnet 4.6).
-// Phase 1.0c: prompts loaded from maggie_prompts table with a 60-second
-// in-memory cache TTL so prompt updates propagate within a minute without
-// requiring a function redeploy. Books deferred to Phase 1.0b. All book
-// frameworks (5 Personas, Riggins Rules, Transition Tax, Authority Shift,
-// predator scenarios, Complete Loops, Great Medicare Myth) are baked into
-// the system prompt and KB so behavior is preserved.
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import {
@@ -23,9 +16,6 @@ import {
   type TierKey,
 } from '../_shared/budgets.ts'
 
-// ---------------------------------------------------------------------------
-// CORS
-// ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = [
   'https://app.seniorsafeapp.com',
   'https://senior-safe-hazel.vercel.app',
@@ -45,42 +35,25 @@ function getCorsHeaders(req: Request) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Service-role admin client (bypasses RLS for telemetry writes + cross-user reads)
-// ---------------------------------------------------------------------------
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   { auth: { persistSession: false, autoRefreshToken: false } },
 )
 
-// ---------------------------------------------------------------------------
-// Limits
-// ---------------------------------------------------------------------------
-const DAILY_LIMIT = 100        // soft per-user cap (not advertised; abuse stop)
+const DAILY_LIMIT = 100
 const FAMILY_CONTEXT_TOKEN_CAP = 3000
-const PROMPT_CACHE_TTL_MS = 60_000  // 60s; prompt edits propagate within a minute
+const PROMPT_CACHE_TTL_MS = 60_000
 
-// Off-topic detection heuristic: Maggie's prompt instructs her to redirect
-// off-topic users back to SeniorSafe AI (for elder-facing tasks) or general
-// AI tools (for non-elder-facing tasks). We detect either redirect in her
-// response so admin can see how often it fires per user.
 const OFF_TOPIC_MARKERS = [
   'served by SeniorSafe AI',
   "I'm Maggie, the Premium+ specialist",
   'SeniorSafe AI is the right starting point',
   'Premium+ specialist for senior transitions',
-  // Phase 1.0d: off-topic now redirects to SeniorSafe AI in this same app
-  // (reversed from 1.0c which sent users to Google/ChatGPT — keep customers in-ecosystem)
   'SeniorSafe AI tab in this same app',
   'Slide over to that tab',
 ]
 
-// ---------------------------------------------------------------------------
-// Prompt asset loader (cached per warm container with 60s TTL).
-// First call queries maggie_prompts; subsequent calls within 60s use the cache.
-// Edits to the maggie_prompts table propagate within a minute.
-// ---------------------------------------------------------------------------
 let cachedSystemPrompt: string | null = null
 let cachedKnowledgeBase: string | null = null
 let cachedAt = 0
@@ -117,10 +90,6 @@ async function loadPrompts(): Promise<{ systemPrompt: string; knowledgeBase: str
   return { systemPrompt: sp, knowledgeBase: kb }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function jsonResponse(body: unknown, status: number, headers: HeadersInit) {
   return new Response(JSON.stringify(body), {
     status,
@@ -129,9 +98,6 @@ function jsonResponse(body: unknown, status: number, headers: HeadersInit) {
 }
 
 function approxTokenCount(text: string): number {
-  // Rough heuristic: ~4 chars per token for English text. Good enough for
-  // family context cap enforcement. We don't need to be exact; we just
-  // need to refuse to grow indefinitely.
   return Math.ceil(text.length / 4)
 }
 
@@ -163,9 +129,6 @@ function buildPerUserContext(
   if (familySummary && familySummary.trim().length > 0) {
     parts.push('')
     parts.push('### Family context memory (running summary, capped at ~3000 tokens)')
-    parts.push('No specific medical details, medication names, or mental-health')
-    parts.push('specifics live here by design (HIPAA-honest). If asked, see Section 13.')
-    parts.push('')
     parts.push(familySummary)
   }
 
@@ -181,9 +144,6 @@ function detectOffTopicRedirect(reply: string): boolean {
   return OFF_TOPIC_MARKERS.some(m => reply.includes(m))
 }
 
-// ---------------------------------------------------------------------------
-// Handler
-// ---------------------------------------------------------------------------
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
 
@@ -191,17 +151,12 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // Phase 1.0d warm-ping: no-auth no-op handler so MaggiePage can warm the
-  // container on mount before the user types. Cold containers were returning
-  // raw "Anthropic error 403" on the first real message; warming + retry
-  // (below) makes the first request feel instant and never user-hostile.
   const url = new URL(req.url)
   if (req.method === 'GET' || url.searchParams.get('warmup') === '1') {
     return new Response('ok', { status: 200, headers: corsHeaders })
   }
 
   try {
-    // --- Auth ---
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       return jsonResponse({ error: 'Missing authorization' }, 401, corsHeaders)
@@ -218,7 +173,6 @@ serve(async (req) => {
       return jsonResponse({ error: 'Unauthorized' }, 401, corsHeaders)
     }
 
-    // --- Load profile ---
     const { data: profile } = await supabase
       .from('user_profile')
       .select('*')
@@ -229,9 +183,6 @@ serve(async (req) => {
       return jsonResponse({ error: 'Profile not found' }, 404, corsHeaders)
     }
 
-    // --- Determine family code + entitlement ---
-    // Members inherit their admin's tier (the family's RevenueCat subscription
-    // is on the admin's account).
     let familyCode: string | null = profile.family_code
     let effectiveTier: string = profile.subscription_tier || 'free'
 
@@ -247,10 +198,6 @@ serve(async (req) => {
       }
     }
 
-    // Maggie is Premium+ — and trial users (the 14-day Blueprint-signup
-    // trial) get the full Premium+ experience for the trial window. Free /
-    // Premium users get bounced with a friendly "you're on the wrong AI for
-    // this tier" message.
     if (effectiveTier !== 'premium_plus' && effectiveTier !== 'trial') {
       return jsonResponse({
         error: 'tier_required',
@@ -263,13 +210,6 @@ serve(async (req) => {
       return jsonResponse({ error: 'No family code found' }, 400, corsHeaders)
     }
 
-    // -----------------------------------------------------------------------
-    // Phase A budget gate (flag-gated; OFF for all users by default).
-    // For whitelisted users only, hard-block when monthly sonnet spend
-    // hits the per-tier cap ($8 premium_plus, $4 trial combined-pool).
-    // Old behavior is bit-for-bit unchanged when isConsolidationEnabledFor
-    // returns false — none of the helper functions fire.
-    // -----------------------------------------------------------------------
     const flagOn = isConsolidationEnabledFor(user.id)
     let budgetRow:   BudgetRow | null = null
     let budgetMonth: string    | null = null
@@ -277,8 +217,6 @@ serve(async (req) => {
 
     if (flagOn) {
       tierKey = normalizeTier(effectiveTier)
-      // Tier gate above already restricted to premium_plus/trial, so this
-      // should never null. Defensive only.
       if (!tierKey) {
         return jsonResponse({ error: 'internal_tier_normalize_failed' }, 500, corsHeaders)
       }
@@ -287,10 +225,6 @@ serve(async (req) => {
       try {
         budgetRow = await loadOrCreateBudget(supabaseAdmin, familyCode, tierKey, budgetMonth)
       } catch (err) {
-        // Best-effort: a transient DB error should NOT regress an active
-        // user's Maggie session. Log loudly with greppable prefix and fall
-        // through to old behavior for this single request. Next request
-        // retries. Future Sentry/Datadog hooks can match on the prefix.
         console.error('[MAGGIE-BUDGET-LOAD-FAIL]', { user_id: user.id, family_code: familyCode, err })
       }
 
@@ -301,14 +235,12 @@ serve(async (req) => {
           message: `You've used 100% of your monthly Maggie budget. Resets ${resetDateLabel()}.`,
           reset_date:    resetDateLabel(),
           current_tier:  tierKey,
-          // Premium+ is already at top tier; trial can subscribe.
           upgrade_url:   tierKey === 'trial' ? '/upgrade' : null,
           _usage_metadata: meta,
         }, 429, corsHeaders)
       }
     }
 
-    // --- Daily rate limit (per user, soft cap, not advertised) ---
     const today = new Date().toISOString().slice(0, 10)
     const { data: usageRow } = await supabaseAdmin
       .from('maggie_usage')
@@ -327,14 +259,12 @@ serve(async (req) => {
       }, 429, corsHeaders)
     }
 
-    // --- Parse body ---
     const body = await req.json().catch(() => ({}))
     const { messages, recentTopics = [] } = body
     if (!Array.isArray(messages) || messages.length === 0) {
       return jsonResponse({ error: 'messages array is required' }, 400, corsHeaders)
     }
 
-    // --- Load family context summary (Maggie's persistent memory) ---
     const { data: ctxRow } = await supabaseAdmin
       .from('family_context')
       .select('summary, token_count')
@@ -342,19 +272,15 @@ serve(async (req) => {
       .maybeSingle()
 
     let familySummary = ctxRow?.summary || ''
-    // Hard cap: if the stored summary somehow exceeds the cap, truncate.
-    // Auto-resummarization is Phase 1.5; for now we just guard the upper bound.
     if (approxTokenCount(familySummary) > FAMILY_CONTEXT_TOKEN_CAP) {
       familySummary = familySummary.slice(-FAMILY_CONTEXT_TOKEN_CAP * 4)
     }
 
-    // --- Anthropic call ---
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
     if (!ANTHROPIC_API_KEY) {
       return jsonResponse({ error: 'ANTHROPIC_API_KEY not configured' }, 500, corsHeaders)
     }
 
-    // Load Maggie's prompt assets from maggie_prompts table (cached after first request).
     let systemPrompt: string
     let knowledgeBase: string
     try {
@@ -367,10 +293,6 @@ serve(async (req) => {
 
     const perUserContext = buildPerUserContext(profile, familySummary, recentTopics)
 
-    // System payload uses 2 cache breakpoints in Phase 1.0a (system prompt
-    // + knowledge base). Phase 1.0b will add the two book bodies as
-    // additional cached blocks once the asset-loading mechanism is in place.
-    // Per-user context (last block) is NOT cached.
     const systemPayload = [
       { type: 'text', text: systemPrompt,    cache_control: { type: 'ephemeral' } },
       { type: 'text', text: knowledgeBase,   cache_control: { type: 'ephemeral' } },
@@ -395,9 +317,6 @@ serve(async (req) => {
 
     let anthropicRes = await fetch('https://api.anthropic.com/v1/messages', anthropicInit)
 
-    // Phase 1.0d cold-start handling: on Anthropic 4xx, retry once after 1s.
-    // Cold containers occasionally return transient auth/rate errors on the
-    // first request; the retry almost always succeeds.
     if (!anthropicRes.ok && anthropicRes.status >= 400 && anthropicRes.status < 500) {
       const firstErr = await anthropicRes.text().catch(() => '')
       console.warn(`Anthropic ${anthropicRes.status} on first try, retrying after 1s. Body: ${firstErr.slice(0, 500)}`)
@@ -413,7 +332,6 @@ serve(async (req) => {
       }, 502, corsHeaders)
     }
 
-    // --- Stream SSE back to client and accumulate the response for telemetry ---
     const { readable, writable } = new TransformStream()
     const writer = writable.getWriter()
     const enc = new TextEncoder()
@@ -474,10 +392,6 @@ serve(async (req) => {
           }
         }
 
-        // Phase A: emit fresh _usage_metadata BEFORE [DONE] using a synthetic
-        // post-call row computed locally. The DB log happens in the finally
-        // block so it survives stream-level errors (no cost-leak path).
-        // Maggie-chat is sonnet-only — additions to haiku columns are always 0.
         if (flagOn && budgetRow && tierKey) {
           try {
             const synthRow: BudgetRow = {
@@ -487,14 +401,11 @@ serve(async (req) => {
               sonnet_cache_read_tokens:     Number(budgetRow.sonnet_cache_read_tokens)     + cacheReadTokens,
               sonnet_cache_creation_tokens: Number(budgetRow.sonnet_cache_creation_tokens) + cacheCreateTokens,
             }
-            // For trial: combined-pool view reads total_dollars_spent.
             if (tierKey === 'trial') {
               synthRow.total_dollars_spent = ssAIDollarsSpent(synthRow) + maggieDollarsSpent(synthRow)
             }
             await write('usage_metadata', buildUsageMetadata('maggie', tierKey, synthRow))
           } catch (err) {
-            // Metadata emit failure shouldn't break the stream — the user
-            // already has their reply. DB log still fires in finally.
             console.error('[MAGGIE-METADATA-EMIT-FAIL]', err)
           }
         }
@@ -505,8 +416,6 @@ serve(async (req) => {
       } finally {
         await writer.close()
 
-        // Existing per-day telemetry — untouched. Runs whether or not the
-        // consolidation flag is on for this user.
         try {
           const offTopic = detectOffTopicRedirect(fullReply) ? 1 : 0
           await supabaseAdmin.rpc('increment_maggie_usage', {
@@ -521,11 +430,6 @@ serve(async (req) => {
           console.error('telemetry log failed', e)
         }
 
-        // Phase A: persist the monthly budget log. Lives here in finally so
-        // it survives stream-level errors (cost-leak protection). Separate
-        // try block from the per-day telemetry — one path failing must not
-        // skip the other. familyCode is non-null past the early return at
-        // the top of the handler; TS can't narrow across the IIFE closure.
         if (flagOn && budgetRow && budgetMonth && tierKey) {
           try {
             await logCall(

@@ -81,7 +81,7 @@ serve(async (_req) => {
             subscription_tier: 'paid',
           })
           .eq('user_id', user.user_id)
-        console.log(`✅ User ${user.user_id} converted (active subscription)`)
+        console.log(`User ${user.user_id} converted (active subscription)`)
         converted++
       } else {
         // No subscription — downgrade to free
@@ -109,10 +109,10 @@ serve(async (_req) => {
               })
               .eq('user_id', m.user_id)
           }
-          console.log(`⬇️ Downgraded ${members.length} family member(s)`)
+          console.log(`Downgraded ${members.length} family member(s)`)
         }
 
-        console.log(`⬇️ User ${user.user_id} trial expired → free`)
+        console.log(`User ${user.user_id} trial expired → free`)
         downgraded++
       }
     }

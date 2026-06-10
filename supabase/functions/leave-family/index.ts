@@ -1,13 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
 // CORS
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------
 const ALLOWED_ORIGINS = [
   'https://app.seniorsafeapp.com',
   'https://senior-safe-hazel.vercel.app',
-  'http://localhost:5173',
+  'capacitor://localhost',
+  'http://localhost',
 ]
 
 function getCorsHeaders(req: Request) {
@@ -20,9 +21,9 @@ function getCorsHeaders(req: Request) {
   }
 }
 
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------
 // Family member leaves the family group — unlinks from admin, notifies in-app
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------
 serve(async (req: Request) => {
   const cors = getCorsHeaders(req)
 

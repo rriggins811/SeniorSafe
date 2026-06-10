@@ -224,6 +224,39 @@ serve(async (req: Request) => {
       console.error('Storage cleanup error (continuing):', storageErr)
     }
 
+    // ---- 5/6. Remove the account — but PRESERVE a paid Blueprint purchase ----
+    // blueprint-site (the $47/$297 course) and SeniorSafe share this one
+    // user_profile row + auth user. A paid course lives in course_access.tier
+    // (core|premium). Hard-deleting the row + auth user also destroys that paid
+    // course access — this caused a real customer incident (a SeniorSafe opt-out
+    // silently wiped a Blueprint purchase). So when the user has paid Blueprint
+    // access, keep the auth user + the row + course_access and only reset the
+    // SeniorSafe-operational state. Otherwise delete fully as before.
+    const courseTier = (profile.course_access as { tier?: string } | null)?.tier
+    const hasPaidBlueprint = courseTier === 'core' || courseTier === 'premium'
+
+    if (hasPaidBlueprint) {
+      await supabase
+        .from('user_profile')
+        .update({
+          subscription_tier: 'free',
+          trial_status: 'expired',
+          ghl_trial_stage: 'expired',
+          device_token: null,
+          device_platform: null,
+          family_code: null,
+          invited_by: null,
+          senior_name: null,
+          onboarding_complete: false,
+        })
+        .eq('user_id', user.id)
+      console.log(`✅ SeniorSafe data removed; PRESERVED paid Blueprint access for ${user.id} (course=${courseTier})`)
+      return new Response(
+        JSON.stringify({ success: true, preservedBlueprintAccess: true }),
+        { status: 200, headers: cors }
+      )
+    }
+
     // ---- 5. Delete user_profile ----
     await supabase.from('user_profile').delete().eq('user_id', user.id)
 

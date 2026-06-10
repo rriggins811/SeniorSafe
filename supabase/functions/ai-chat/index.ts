@@ -15,13 +15,14 @@ import {
   type TierKey,
 } from '../_shared/budgets.ts'
 
-// ---------------------------------------------------------------------------
-// CORS
-// ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = [
   'https://app.seniorsafeapp.com',
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
+  'http://localhost',
+  'https://localhost',
+  'capacitor://localhost',
+  'ionic://localhost',
 ]
 
 function getCorsHeaders(req: Request) {
@@ -33,20 +34,14 @@ function getCorsHeaders(req: Request) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Module-scope admin client (service role — bypasses RLS)
-// ---------------------------------------------------------------------------
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   { auth: { persistSession: false, autoRefreshToken: false } },
 )
 
-// ---------------------------------------------------------------------------
-// Limits
-// ---------------------------------------------------------------------------
-const FREE_LIMIT = 10   // lifetime
-const PAID_LIMIT = 500  // per month
+const FREE_LIMIT = 10
+const PAID_LIMIT = 500
 
 function getMonthYear(): string {
   const now = new Date()
@@ -63,16 +58,6 @@ function getLimitMessage(limit: number, tier: string): string {
   return `Your family has used all ${limit} messages this month. Your messages refresh on ${resetDate}. Need more? An unlimited plan is coming soon!`
 }
 
-// ---------------------------------------------------------------------------
-// Base system prompt — CACHEABLE (same for every user, every call).
-// Sized above the 1024-token Anthropic ephemeral-cache threshold so the
-// 'cache_control' below actually takes effect; trimming this below ~1024
-// tokens silently disables caching AND degrades answer quality.
-//
-// SOURCE OF TRUTH: this file. Any change must come through git, not the
-// Supabase dashboard, or production will drift from source. (May 2026
-// regression caught and restored from v32 deployed snapshot.)
-// ---------------------------------------------------------------------------
 const BASE_SYSTEM_PROMPT = `You are SeniorSafe's family coordination assistant. You help families organize care, understand processes, and stay coordinated during senior transitions.
 
 CRITICAL SAFETY RULES — NEVER VIOLATE THESE:
@@ -304,9 +289,6 @@ IMPORTANT BEHAVIOR RULES:
 
 Keep responses concise — 2-4 short paragraphs max unless asked for detail.`
 
-// ---------------------------------------------------------------------------
-// Per-user context (fresh each call — NOT cached)
-// ---------------------------------------------------------------------------
 function buildPerUserContext(
   profile: any,
   recentTopics: string[],
@@ -339,9 +321,6 @@ function buildPerUserContext(
   return parts.join('\n')
 }
 
-// ---------------------------------------------------------------------------
-// Handler
-// ---------------------------------------------------------------------------
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
 
@@ -352,12 +331,9 @@ serve(async (req) => {
   const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' }
 
   try {
-    // ---- Auth ----
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
-        status: 401, headers: jsonHeaders,
-      })
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), { status: 401, headers: jsonHeaders })
     }
 
     const supabase = createClient(
@@ -368,25 +344,14 @@ serve(async (req) => {
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: jsonHeaders,
-      })
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: jsonHeaders })
     }
 
-    // ---- Load profile ----
-    const { data: profile } = await supabase
-      .from('user_profile')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
+    const { data: profile } = await supabase.from('user_profile').select('*').eq('user_id', user.id).single()
     if (!profile) {
-      return new Response(JSON.stringify({ error: 'Profile not found' }), {
-        status: 404, headers: jsonHeaders,
-      })
+      return new Response(JSON.stringify({ error: 'Profile not found' }), { status: 404, headers: jsonHeaders })
     }
 
-    // ---- Determine family code and tier ----
     let familyCode = profile.family_code
     let adminTier = profile.subscription_tier || 'free'
 
@@ -403,14 +368,9 @@ serve(async (req) => {
     }
 
     if (!familyCode) {
-      return new Response(JSON.stringify({ error: 'No family code found' }), {
-        status: 400, headers: jsonHeaders,
-      })
+      return new Response(JSON.stringify({ error: 'No family code found' }), { status: 400, headers: jsonHeaders })
     }
 
-    // Deprecation telemetry: track every /ai-chat call so we can monitor
-    // when consolidation eventually lands and traffic shifts to /maggie-chat.
-    // No behavior change — log line only.
     console.log('[AI-CHAT-CALL]', {
       user_id:    user.id,
       tier:       adminTier,
@@ -418,13 +378,6 @@ serve(async (req) => {
       ts:         new Date().toISOString(),
     })
 
-    // -----------------------------------------------------------------------
-    // Phase A budget gate (flag-gated; OFF for all users by default).
-    // For whitelisted users only, hard-block when monthly haiku spend
-    // hits the per-tier cap ($4 paid / premium_plus, $4 trial combined-pool).
-    // Free tier skips this entirely — it stays on the existing message-count
-    // limit (FREE_LIMIT = 10 lifetime).
-    // -----------------------------------------------------------------------
     const flagOn = isConsolidationEnabledFor(user.id)
     let budgetRow:   BudgetRow | null = null
     let budgetMonth: string    | null = null
@@ -432,8 +385,6 @@ serve(async (req) => {
 
     if (flagOn) {
       tierKey = normalizeTier(adminTier)
-      // Free tier returns null from normalizeTier — falls through to the
-      // existing message-count enforcement path. No budget row written.
       if (tierKey) {
         budgetMonth = currentMonth()
         try {
@@ -449,7 +400,6 @@ serve(async (req) => {
             message: `You've used 100% of your monthly SeniorSafe AI budget. Resets ${resetDateLabel()}.`,
             reset_date:    resetDateLabel(),
             current_tier:  tierKey,
-            // Premium+ is already at top tier; paid/trial can subscribe up.
             upgrade_url:   tierKey === 'premium_plus' ? null : '/upgrade',
             _usage_metadata: meta,
           }), { status: 429, headers: jsonHeaders })
@@ -457,22 +407,14 @@ serve(async (req) => {
       }
     }
 
-    // ---- Usage check (ai_usage table) ----
     const monthYear = getMonthYear()
     let usageCount = 0
 
     if (adminTier === 'free') {
-      // Free tier: LIFETIME total across all months
-      const { data: total } = await supabaseAdmin.rpc('get_family_total_usage', {
-        p_family_code: familyCode,
-      })
+      const { data: total } = await supabaseAdmin.rpc('get_family_total_usage', { p_family_code: familyCode })
       usageCount = total || 0
     } else {
-      // Paid tier: current month only
-      const { data: monthCount } = await supabaseAdmin.rpc('get_family_usage', {
-        p_family_code: familyCode,
-        p_month_year: monthYear,
-      })
+      const { data: monthCount } = await supabaseAdmin.rpc('get_family_usage', { p_family_code: familyCode, p_month_year: monthYear })
       usageCount = monthCount || 0
     }
 
@@ -488,36 +430,21 @@ serve(async (req) => {
       }), { status: 429, headers: jsonHeaders })
     }
 
-    // ---- Increment usage ----
-    const { data: newCount } = await supabaseAdmin.rpc('increment_family_usage', {
-      p_family_code: familyCode,
-      p_month_year: monthYear,
-    })
+    const { data: newCount } = await supabaseAdmin.rpc('increment_family_usage', { p_family_code: familyCode, p_month_year: monthYear })
 
-    // ---- Parse body ----
     const { messages, recentTopics = [] } = await req.json()
     if (!Array.isArray(messages) || messages.length === 0) {
-      return new Response(JSON.stringify({ error: 'messages array is required' }), {
-        status: 400, headers: jsonHeaders,
-      })
+      return new Response(JSON.stringify({ error: 'messages array is required' }), { status: 400, headers: jsonHeaders })
     }
 
-    // ---- Load medications for context ----
-    const { data: medsData } = await supabase
-      .from('medications')
-      .select('med_name')
-      .limit(10)
+    const { data: medsData } = await supabase.from('medications').select('med_name').limit(10)
     const medNames = (medsData || []).map((m: any) => m.med_name).filter(Boolean)
 
-    // ---- Build system prompt with prompt caching ----
     const perUserContext = buildPerUserContext(profile, recentTopics, medNames)
 
-    // ---- Call Anthropic (streaming) ----
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
     if (!ANTHROPIC_API_KEY) {
-      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), {
-        status: 500, headers: jsonHeaders,
-      })
+      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured' }), { status: 500, headers: jsonHeaders })
     }
 
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -532,15 +459,8 @@ serve(async (req) => {
         max_tokens: 2048,
         stream: true,
         system: [
-          {
-            type: 'text',
-            text: BASE_SYSTEM_PROMPT,
-            cache_control: { type: 'ephemeral' },
-          },
-          {
-            type: 'text',
-            text: perUserContext,
-          },
+          { type: 'text', text: BASE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: perUserContext },
         ],
         messages,
       }),
@@ -553,7 +473,6 @@ serve(async (req) => {
       }), { status: 502, headers: jsonHeaders })
     }
 
-    // ---- Stream SSE back to client ----
     const { readable, writable } = new TransformStream()
     const writer = writable.getWriter()
     const enc = new TextEncoder()
@@ -561,10 +480,6 @@ serve(async (req) => {
     const write = (event: string, data: unknown) =>
       writer.write(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
 
-    // Phase A token capture. Populated by message_start and message_delta
-    // events inside the stream loop. Visible to the finally block so the
-    // budget log can fire even on stream-level errors. Runs whether or not
-    // the consolidation flag is on; values are simply unused when flag off.
     let inputTokens       = 0
     let outputTokens      = 0
     let cacheReadTokens   = 0
@@ -572,12 +487,7 @@ serve(async (req) => {
 
     ;(async () => {
       try {
-        // Meta event — client updates usage counter
-        await write('meta', {
-          count: newCount || (usageCount + 1),
-          limit: effectiveLimit,
-          tier: adminTier,
-        })
+        await write('meta', { count: newCount || (usageCount + 1), limit: effectiveLimit, tier: adminTier })
 
         const reader = anthropicRes.body!.getReader()
         const dec = new TextDecoder()
@@ -598,7 +508,6 @@ serve(async (req) => {
             try {
               const evt = JSON.parse(json)
 
-              // Token capture for Phase A budget logging.
               if (evt.type === 'message_start' && evt.message?.usage) {
                 const u = evt.message.usage
                 inputTokens       = u.input_tokens || 0
@@ -616,10 +525,6 @@ serve(async (req) => {
           }
         }
 
-        // Phase A: emit fresh _usage_metadata BEFORE [DONE] using a synthetic
-        // post-call row computed locally. DB log happens in finally so it
-        // survives stream-level errors. Ai-chat is haiku-only — sonnet
-        // columns get no additions.
         if (flagOn && budgetRow && tierKey) {
           try {
             const synthRow: BudgetRow = {
@@ -629,7 +534,6 @@ serve(async (req) => {
               haiku_cache_read_tokens:     Number(budgetRow.haiku_cache_read_tokens)     + cacheReadTokens,
               haiku_cache_creation_tokens: Number(budgetRow.haiku_cache_creation_tokens) + cacheCreateTokens,
             }
-            // For trial: combined-pool view reads total_dollars_spent.
             if (tierKey === 'trial') {
               synthRow.total_dollars_spent = ssAIDollarsSpent(synthRow) + maggieDollarsSpent(synthRow)
             }
@@ -645,24 +549,14 @@ serve(async (req) => {
       } finally {
         await writer.close()
 
-        // Phase A: persist the monthly budget log. Lives here in finally so
-        // it survives stream-level errors (cost-leak protection). familyCode
-        // is non-null past the early return at the top of the handler;
-        // TS can't narrow across the IIFE closure.
         if (flagOn && budgetRow && budgetMonth && tierKey) {
           try {
-            await logCall(
-              supabaseAdmin,
-              familyCode!,
-              budgetMonth,
-              'haiku',
-              {
-                input_tokens:                inputTokens,
-                output_tokens:               outputTokens,
-                cache_read_input_tokens:     cacheReadTokens,
-                cache_creation_input_tokens: cacheCreateTokens,
-              },
-            )
+            await logCall(supabaseAdmin, familyCode!, budgetMonth, 'haiku', {
+              input_tokens:                inputTokens,
+              output_tokens:               outputTokens,
+              cache_read_input_tokens:     cacheReadTokens,
+              cache_creation_input_tokens: cacheCreateTokens,
+            })
           } catch (err) {
             console.error('[AI-CHAT-BUDGET-LOG-FAIL]', { user_id: user.id, family_code: familyCode, err })
           }
@@ -671,11 +565,7 @@ serve(async (req) => {
     })()
 
     return new Response(readable, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-      },
+      headers: { ...corsHeaders, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
     })
   } catch (error) {
     return new Response(JSON.stringify({ error: (error as Error).message }), {
