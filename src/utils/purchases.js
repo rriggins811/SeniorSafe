@@ -1,5 +1,6 @@
 import { Purchases } from '@revenuecat/purchases-capacitor'
 import { Capacitor } from '@capacitor/core'
+import { supabase } from '../lib/supabase'
 
 const APPLE_API_KEY = 'appl_TzwbAuYsqyTfHLRocmJpjzNSPnL'
 const ANDROID_API_KEY = 'goog_FpPwzuruOoVoRGRxFWbkKMudxgq'
@@ -25,12 +26,48 @@ export function isNativePlatform() {
   return platform === 'ios' || platform === 'android'
 }
 
+// Tracks whether we've identified a RevenueCat user, so we only call logOut()
+// when we actually logged in (logOut on an anonymous user throws).
+let rcIdentified = false
+
+// Sync the RevenueCat identity to the Supabase user. This makes the RevenueCat
+// app_user_id equal the Supabase user id, so the mark-iap-paid edge function can
+// verify that a purchase belongs to the signed-in account (security audit #4).
+// Without it, RevenueCat uses an anonymous id and the purchase can't be tied to a
+// user server-side (which is why REVENUECAT_SECRET_KEY can't be enabled until this
+// ships in a rebuild).
+async function syncRevenueCatUser(session) {
+  try {
+    if (session?.user) {
+      await Purchases.logIn({ appUserID: session.user.id })
+      rcIdentified = true
+    } else if (rcIdentified) {
+      await Purchases.logOut()
+      rcIdentified = false
+    }
+  } catch (err) {
+    console.warn('RevenueCat user sync skipped:', err)
+  }
+}
+
+let rcAuthListenerSet = false
+
 export async function initializePurchases() {
   const platform = Capacitor.getPlatform()
   if (platform === 'web') return
 
   const apiKey = platform === 'ios' ? APPLE_API_KEY : ANDROID_API_KEY
   await Purchases.configure({ apiKey })
+
+  // Identify the current user now (if already signed in at launch)...
+  const { data: { session } } = await supabase.auth.getSession()
+  await syncRevenueCatUser(session)
+
+  // ...and keep RevenueCat in sync on future sign-in / sign-out.
+  if (!rcAuthListenerSet) {
+    rcAuthListenerSet = true
+    supabase.auth.onAuthStateChange((_event, session) => { syncRevenueCatUser(session) })
+  }
 }
 
 export async function purchaseMonthly() {
