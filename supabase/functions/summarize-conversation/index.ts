@@ -113,15 +113,20 @@ serve(async (req) => {
       return jsonResponse({ status: 'already_summarized', summarized_at: conv.summarized_at }, 200, corsHeaders)
     }
 
-    // Resolve family_code (members inherit from admin).
-    let familyCode: string | null = conv.family_code
-    if (!familyCode) {
+    // SECURITY (audit #5): resolve family_code from the AUTHENTICATED USER's own
+    // profile, NEVER from conv.family_code. The client stamps family_code at
+    // conversation-insert time (AIPage), so trusting conv.family_code let any user
+    // create a conversation tagged with ANOTHER family's code and poison that
+    // family's permanent AI memory via this summarizer. Always derive from the
+    // caller (members inherit their admin's code); the stamped value is ignored.
+    let familyCode: string | null = null
+    {
       const { data: profile } = await supabaseAdmin
         .from('user_profile')
         .select('family_code, role, invited_by')
         .eq('user_id', user.id)
         .single()
-      familyCode = profile?.family_code
+      familyCode = profile?.family_code || null
       if (!familyCode && profile?.role === 'member' && profile?.invited_by) {
         const { data: admin } = await supabaseAdmin
           .from('user_profile')

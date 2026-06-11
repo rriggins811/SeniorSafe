@@ -212,6 +212,30 @@ serve(async (req) => {
   }
 
   try {
+    // AUTH (security audit #8): this endpoint had NO auth — anyone who knew the URL
+    // could push (and SMS-fallback) to any user by id. Require a caller token:
+    // service-role (internal callers: family-message-notify, missed-checkin-alerts)
+    // may target anyone; a regular logged-in user may target ONLY their own family.
+    const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const isInternal = token === Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    let callerRoot: string | null = null
+    if (!isInternal) {
+      const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
+      if (authErr || !user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const { data: cp } = await supabaseAdmin
+        .from('user_profile').select('invited_by').eq('user_id', user.id).single()
+      callerRoot = cp?.invited_by || user.id
+    }
+
     const { user_ids, title, body, data, notification_type, sms_fallback_message } = await req.json()
 
     if (!user_ids || !Array.isArray(user_ids) || !title || !body) {
@@ -226,9 +250,15 @@ serve(async (req) => {
     for (const userId of user_ids) {
       const { data: profile } = await supabaseAdmin
         .from('user_profile')
-        .select('device_token, device_platform, phone, family_name')
+        .select('device_token, device_platform, phone, family_name, invited_by')
         .eq('user_id', userId)
         .single()
+
+      // A regular caller may only notify members of their OWN family (#8).
+      if (!isInternal && (profile?.invited_by || userId) !== callerRoot) {
+        results.push({ user_id: userId, push: false, sms: false })
+        continue
+      }
 
       let pushSent = false
       let smsSent = false

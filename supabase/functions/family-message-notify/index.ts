@@ -57,9 +57,9 @@ serve(async (req) => {
   try {
     const { record } = await req.json()
 
-    if (!record?.user_id || !record?.family_name) {
-      console.log('Missing user_id or family_name in payload, skipping.')
-      return new Response(JSON.stringify({ skipped: true, reason: 'missing fields' }), {
+    if (!record?.id) {
+      console.log('Missing message id in payload, skipping.')
+      return new Response(JSON.stringify({ skipped: true, reason: 'missing id' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -71,15 +71,38 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
+    // SECURITY (audit #10): this endpoint has NO caller auth (it's a Postgres pg_net
+    // trigger sink). Do NOT trust the POSTed record's user_id / family_name /
+    // message_text — a forged POST could otherwise inject attacker text into another
+    // family's SMS/push blast. Re-read the message from the DB by id; the real row is
+    // the source of truth for the poster (hence the family) and the content. A forged
+    // or unknown id finds no row and is skipped.
+    const { data: msg } = await supabaseAdmin
+      .from('family_messages')
+      .select('id, user_id, family_name, author_name, message_text, created_at')
+      .eq('id', record.id)
+      .single()
+    if (!msg?.user_id || !msg?.family_name) {
+      console.log('Message not found (or forged id), skipping.')
+      return new Response(JSON.stringify({ skipped: true, reason: 'message not found' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    const posterId: string = msg.user_id
+    const familyName: string = msg.family_name
+    const authorName: string | null = msg.author_name
+    const messageText: string = msg.message_text || ''
+
     // 1) Check if the poster is an admin (senior) — only admins trigger SMS
     const { data: posterProfile } = await supabaseAdmin
       .from('user_profile')
       .select('role, first_name, family_code')
-      .eq('user_id', record.user_id)
+      .eq('user_id', posterId)
       .single()
 
     if (!posterProfile || posterProfile.role !== 'admin') {
-      console.log(`Poster ${record.user_id} is not admin (role=${posterProfile?.role}), skipping SMS.`)
+      console.log(`Poster ${posterId} is not admin (role=${posterProfile?.role}), skipping SMS.`)
       return new Response(JSON.stringify({ skipped: true, reason: 'not admin' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -93,14 +116,14 @@ serve(async (req) => {
     const { count: todayCount } = await supabaseAdmin
       .from('family_messages')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', record.user_id)
-      .eq('family_name', record.family_name)
+      .eq('user_id', posterId)
+      .eq('family_name', familyName)
       .gte('created_at', todayStart.toISOString())
 
     // The current message is already in the table (trigger fires AFTER INSERT),
     // so todayCount includes this message. Cap at 4.
     if ((todayCount || 0) > 4) {
-      console.log(`Daily SMS cap reached (${todayCount} messages today) for family ${record.family_name}. Message saved, no SMS.`)
+      console.log(`Daily SMS cap reached (${todayCount} messages today) for family ${familyName}. Message saved, no SMS.`)
       return new Response(JSON.stringify({ skipped: true, reason: 'daily cap reached' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -111,7 +134,7 @@ serve(async (req) => {
     const { data: familyMembers } = await supabaseAdmin
       .from('user_profile')
       .select('user_id, phone, first_name, sms_notifications')
-      .eq('invited_by', record.user_id)
+      .eq('invited_by', posterId)
 
     if (!familyMembers?.length) {
       console.log('No family members to notify.')
@@ -122,8 +145,8 @@ serve(async (req) => {
     }
 
     // Send push notifications to all members
-    const senderName = posterProfile.first_name || record.author_name || 'Your loved one'
-    const pushPreview = (record.message_text || '').trim().slice(0, 50)
+    const senderName = posterProfile.first_name || authorName || 'Your loved one'
+    const pushPreview = (messageText || '').trim().slice(0, 50)
     const pushBody = pushPreview || 'Shared something new'
     try {
       await fetch(
@@ -160,7 +183,7 @@ serve(async (req) => {
     }
 
     // 4) Build SMS message
-    const msgText = (record.message_text || '').trim()
+    const msgText = (messageText || '').trim()
 
     let smsBody: string
     if (msgText.length > 0 && msgText.length <= 100) {
@@ -178,7 +201,7 @@ serve(async (req) => {
     )
 
     const successCount = results.filter(Boolean).length
-    console.log(`SMS sent: ${successCount}/${eligibleMembers.length} for family ${record.family_name}`)
+    console.log(`SMS sent: ${successCount}/${eligibleMembers.length} for family ${familyName}`)
 
     return new Response(JSON.stringify({
       success: true,
