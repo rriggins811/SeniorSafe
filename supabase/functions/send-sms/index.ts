@@ -118,6 +118,29 @@ serve(async (req) => {
     const FROM_NUMBER = Deno.env.get('TWILIO_PHONE_NUMBER')!
     const toPhone = normalizePhone(to)
 
+    // AUTHZ (security audit #9): the recipient must be a phone within the caller's
+    // OWN family (their own number, the senior's, or a family member's). Previously
+    // any logged-in user could text ANY number — a free SMS cannon on the Twilio
+    // account. The caller is authenticated above; restrict the destination here.
+    {
+      const { data: self } = await supabaseAdmin
+        .from('user_profile').select('invited_by').eq('user_id', user.id).single()
+      const root = self?.invited_by || user.id
+      const { data: fam } = await supabaseAdmin
+        .from('user_profile').select('phone')
+        .or(`user_id.eq.${root},invited_by.eq.${root}`)
+      const allowed = new Set(
+        (fam || [])
+          .map((r: { phone: string | null }) => (r.phone ? normalizePhone(r.phone) : ''))
+          .filter(Boolean),
+      )
+      if (!allowed.has(toPhone)) {
+        return new Response(JSON.stringify({ error: 'Recipient is not a member of your family' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
     // Create notification log entry
     const logType = notification_type || 'system'
     const { data: logEntry } = await supabaseAdmin
