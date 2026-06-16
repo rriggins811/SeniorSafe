@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 // Meta Ads driver. Reuses META_CAPI_ACCESS_TOKEN (SYSTEM_USER token w/ ads_management).
 // Direct to Graph Marketing API. Auth-gated via x-proxy-secret == SOCIAL_PROXY_SECRET.
 // Actions: account_info | insights | list_campaigns | list_adsets | list_ads | ad_urls | ad_review | set_status | set_budget | create_ad
+//   build chain (all PAUSED by default): create_campaign | create_adset | upload_image | create_image_creative | create_ad
 
 const V = 'v20.0'
 const DEFAULT_ACCT = '777855301466126'
@@ -92,6 +93,75 @@ serve(async (req: Request) => {
       }
       if (p.tracking_specs) f.tracking_specs = JSON.stringify(p.tracking_specs)
       return j(await gpost(`/act_${acct}/ads`, token, f))
+    }
+    if (action === 'create_campaign') {
+      // Always PAUSED. special_ad_categories defaults to [] (not housing/credit/employment/etc).
+      if (!p.name || !p.objective) return j({ ok: false, error: 'need name + objective' }, 400)
+      const f: Record<string, string> = {
+        name: String(p.name),
+        objective: String(p.objective),
+        status: p.status === 'ACTIVE' ? 'ACTIVE' : 'PAUSED',
+        special_ad_categories: JSON.stringify(p.special_ad_categories ?? []),
+      }
+      if (p.buying_type) f.buying_type = String(p.buying_type)
+      const r = await gpost(`/act_${acct}/campaigns`, token, f)
+      return j({ ...r, campaign_id: r.body?.id })
+    }
+    if (action === 'create_adset') {
+      // Conversion ad set. Always PAUSED. billing_event defaults to IMPRESSIONS.
+      // promoted_object carries { pixel_id, custom_event_type } for conversion optimization.
+      if (!p.name || !p.campaign_id || !p.daily_budget || !p.optimization_goal || !p.targeting)
+        return j({ ok: false, error: 'need name + campaign_id + daily_budget + optimization_goal + targeting' }, 400)
+      const f: Record<string, string> = {
+        name: String(p.name),
+        campaign_id: String(p.campaign_id),
+        daily_budget: String(p.daily_budget), // minor units (cents)
+        billing_event: String(p.billing_event || 'IMPRESSIONS'),
+        optimization_goal: String(p.optimization_goal),
+        targeting: JSON.stringify(p.targeting),
+        status: p.status === 'ACTIVE' ? 'ACTIVE' : 'PAUSED',
+      }
+      if (p.promoted_object) f.promoted_object = JSON.stringify(p.promoted_object)
+      if (p.bid_amount) f.bid_amount = String(p.bid_amount)
+      if (p.bid_strategy) f.bid_strategy = String(p.bid_strategy)
+      if (p.start_time) f.start_time = String(p.start_time)
+      if (p.end_time) f.end_time = String(p.end_time)
+      const r = await gpost(`/act_${acct}/adsets`, token, f)
+      return j({ ...r, adset_id: r.body?.id })
+    }
+    if (action === 'upload_image') {
+      // Upload an ad image by base64 bytes; surfaces the image_hash for the creative.
+      if (!p.bytes) return j({ ok: false, error: 'need bytes (base64 image)' }, 400)
+      const r = await gpost(`/act_${acct}/adimages`, token, { bytes: String(p.bytes) })
+      // /adimages returns { images: { <name>: { hash, url } } } — pull the first hash.
+      let image_hash: string | undefined
+      try {
+        const imgs = r.body?.images
+        if (imgs && typeof imgs === 'object') image_hash = (Object.values(imgs)[0] as any)?.hash
+      } catch { /* leave undefined */ }
+      return j({ ...r, image_hash })
+    }
+    if (action === 'create_image_creative') {
+      // Single-image link creative. Returns creative_id for create_ad to attach.
+      // call_to_action: pass a type string (e.g. "LEARN_MORE") or a full { type, value } object.
+      if (!p.page_id || !p.image_hash || !p.link)
+        return j({ ok: false, error: 'need page_id + image_hash + link' }, 400)
+      const link_data: Record<string, any> = { image_hash: String(p.image_hash), link: String(p.link) }
+      if (p.message) link_data.message = String(p.message)
+      if (p.name) link_data.name = String(p.name)               // headline
+      if (p.description) link_data.description = String(p.description)
+      if (p.call_to_action) {
+        link_data.call_to_action = typeof p.call_to_action === 'string'
+          ? { type: p.call_to_action, value: { link: String(p.link) } }
+          : p.call_to_action
+      }
+      const f: Record<string, string> = {
+        object_story_spec: JSON.stringify({ page_id: String(p.page_id), link_data }),
+      }
+      f.name = String(p.creative_name || p.name || 'Map creative')
+      if (p.degrees_of_freedom_spec) f.degrees_of_freedom_spec = JSON.stringify(p.degrees_of_freedom_spec)
+      const r = await gpost(`/act_${acct}/adcreatives`, token, f)
+      return j({ ...r, creative_id: r.body?.id })
     }
     return j({ error: `unknown action: ${action}` }, 400)
   } catch (e) { return j({ error: e instanceof Error ? e.message : 'unknown' }, 500) }
