@@ -26,7 +26,10 @@ async function gpost(path: string, token: string, fields: Record<string, string>
 
 serve(async (req: Request) => {
   if (req.method !== 'POST') return j({ error: 'POST only' }, 405)
-  const proxySecret = Deno.env.get('SOCIAL_PROXY_SECRET') || ''
+  // Read either case: the project secret is stored lowercase (social_proxy_secret).
+  // Reading only the uppercase name left this gate DORMANT = open relay. Match
+  // ghl-social-schedule, which reads both, so the existing secret activates the gate.
+  const proxySecret = Deno.env.get('SOCIAL_PROXY_SECRET') || Deno.env.get('social_proxy_secret') || ''
   if (proxySecret) {
     const provided = req.headers.get('x-proxy-secret') || ''
     if (!provided || !safeEqual(provided, proxySecret)) return j({ error: 'Unauthorized' }, 401)
