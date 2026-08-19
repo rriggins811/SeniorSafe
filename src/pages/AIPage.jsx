@@ -22,8 +22,8 @@ const PLACEHOLDERS = [
 
 const STARTER_PROMPTS = [
   "What's a good recipe for tonight?",
+  "What's the weather like today?",
   'Help me write a birthday card',
-  'What documents do we need for a move?',
 ]
 
 // Emergency keywords — client-side detection before sending to AI
@@ -557,7 +557,7 @@ export default function AIPage() {
             </div>
           </div>
         </div>
-        <BottomNav />
+        {profile?.role === 'member' && <BottomNav />}
       </div>
     )
   }
@@ -695,7 +695,7 @@ export default function AIPage() {
                     {firstName ? `Hi ${firstName}, how can I help today?` : 'Hi! How can I help today?'}
                   </p>
                   <p className="text-[#6B645A] italic leading-relaxed max-w-sm" style={{ fontSize: '17px' }}>
-                    I&apos;m here for anything on your mind. Ask about recipes, help with an email, questions about your family&apos;s transition, or whatever else.
+                    I'm here for everyday questions — recipes, the weather, a birthday card, simple how-tos. For legal or family decisions, ask your family.
                   </p>
                   <div className="flex flex-col gap-3 w-full max-w-sm mt-2">
                     {STARTER_PROMPTS.map(q => (
@@ -852,7 +852,7 @@ export default function AIPage() {
         </div>
       </div>
 
-      <BottomNav inline />
+      {profile?.role === 'member' && <BottomNav inline />}
     </div>
   )
 }
