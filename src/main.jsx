@@ -15,7 +15,9 @@ createRoot(document.getElementById('root')).render(
 )
 
 // Register service worker (web only — not needed in Capacitor)
-if (!isNative() && 'serviceWorker' in navigator) {
+// Production web only. In dev the worker caches /src modules cache-first and
+// serves stale code after edits.
+if (!isNative() && import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {
       // SW registration failed — app works fine without it

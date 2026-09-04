@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { Shield, CheckCircle, Phone, Settings, LogOut, Pill, MoreHorizontal, ChevronRight, MessageCircle } from 'lucide-react'
+import {
+  Shield, CheckCircle, Phone, Settings, LogOut, Pill, Menu, ChevronRight, MessageCircle,
+  Users, Calendar, Heart, FolderLock, Lock, X,
+} from 'lucide-react'
 import HelpModal from './HelpModal'
 
 function formatTelHref(phone) {
@@ -38,8 +41,21 @@ export default function ParentHome({
   onSettings,
   onSignOut,
   onAsk,
+  onNavigate,
+  unreadMsgCount = 0,
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
+  const go = (path) => { setMoreOpen(false); onNavigate && onNavigate(path) }
+
+  // Everything that is not the button lives behind Menu, in large type.
+  // Order: what a senior is most likely to want first.
+  const menu = [
+    { label: 'Family messages and photos', sub: unreadMsgCount > 0 ? `${unreadMsgCount} new` : null, Icon: Users, path: '/family', premium: false },
+    { label: 'My medications', Icon: Pill, path: '/medications', premium: false },
+    { label: 'My appointments', Icon: Calendar, path: '/appointments', premium: false },
+    { label: 'My emergency card', Icon: Heart, path: '/emergency', premium: false },
+    { label: 'Documents', Icon: FolderLock, path: '/vault', premium: true },
+  ]
   const isSent = checkInStatus === 'sent'
   const checked = isSent || alreadyCheckedIn
 
@@ -63,10 +79,16 @@ export default function ParentHome({
           </div>
           <button
             onClick={() => setMoreOpen(true)}
-            className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0"
-            aria-label="More"
+            className="h-12 px-4 rounded-xl bg-white/15 flex items-center gap-2 flex-shrink-0 relative"
+            aria-label="Open the menu"
           >
-            <MoreHorizontal size={20} color="rgba(255,255,255,0.85)" />
+            <Menu size={22} color="white" />
+            <span className="text-white font-semibold" style={{ fontSize: '17px' }}>Menu</span>
+            {unreadMsgCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-[#B5483F] text-white text-xs font-bold flex items-center justify-center" aria-label={`${unreadMsgCount} new family messages`}>
+                {unreadMsgCount > 9 ? '9+' : unreadMsgCount}
+              </span>
+            )}
           </button>
         </div>
       </header>
@@ -220,26 +242,68 @@ export default function ParentHome({
       {moreOpen && (
         <>
           <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setMoreOpen(false)} />
-          <div className="fixed left-0 right-0 bottom-0 z-50 bg-white rounded-t-3xl px-5 pt-4 pb-8 max-w-lg mx-auto">
-            <div className="w-10 h-1 rounded-full bg-[#E7E2D8] mx-auto mb-4" />
-            <button
-              onClick={() => { setMoreOpen(false); onSettings() }}
-              className="w-full flex items-center gap-3 py-4 text-[#1B365D] font-semibold text-lg"
-            >
-              <Settings size={20} /> Settings
-            </button>
-            <button
-              onClick={() => { setMoreOpen(false); onSignOut() }}
-              className="w-full flex items-center gap-3 py-4 text-[#6B645A] font-semibold text-lg"
-            >
-              <LogOut size={20} /> Sign out
-            </button>
-            <a
-              href="tel:911"
-              className="w-full flex items-center gap-3 py-4 text-[#B5483F] font-bold text-lg"
-            >
-              <Phone size={20} /> Call 911
-            </a>
+          <div
+            className="fixed left-0 right-0 bottom-0 z-50 bg-white rounded-t-3xl px-5 pt-4 max-w-lg mx-auto overflow-y-auto"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)', maxHeight: '88vh' }}
+            role="dialog"
+            aria-label="Menu"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[#1B365D] font-bold" style={{ fontSize: '22px', fontFamily: 'var(--font-display)' }}>Menu</p>
+              <button onClick={() => setMoreOpen(false)} aria-label="Close menu" className="w-11 h-11 rounded-xl bg-[#F3EFE7] flex items-center justify-center">
+                <X size={22} color="#1B365D" />
+              </button>
+            </div>
+
+            <div className="flex flex-col divide-y divide-[#E7E2D8]">
+              {menu.map(item => {
+                const locked = item.premium && !isPremiumUser
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => go(locked ? '/upgrade' : item.path)}
+                    className="w-full flex items-center gap-4 py-4 text-left"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
+                      <item.Icon size={24} color="#1B365D" strokeWidth={1.7} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[#1B365D] font-semibold" style={{ fontSize: '19px' }}>{item.label}</p>
+                      {item.sub && <p className="text-[#B5483F] font-semibold" style={{ fontSize: '15px' }}>{item.sub}</p>}
+                      {locked && <p className="text-[#6B645A]" style={{ fontSize: '15px' }}>Premium feature</p>}
+                    </div>
+                    {locked ? <Lock size={18} color="#D4A843" /> : <ChevronRight size={20} color="#C4BDB3" />}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="mt-2 pt-2 border-t-2 border-[#E7E2D8] flex flex-col divide-y divide-[#E7E2D8]">
+              <button
+                onClick={() => { setMoreOpen(false); onSettings() }}
+                className="w-full flex items-center gap-4 py-4 text-[#1B365D] font-semibold text-left"
+                style={{ fontSize: '19px' }}
+              >
+                <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0"><Settings size={24} color="#1B365D" strokeWidth={1.7} /></div>
+                Settings
+              </button>
+              <a
+                href="tel:911"
+                className="w-full flex items-center gap-4 py-4 text-[#B5483F] font-bold text-left"
+                style={{ fontSize: '19px' }}
+              >
+                <div className="w-12 h-12 rounded-xl bg-[#B5483F]/10 flex items-center justify-center flex-shrink-0"><Phone size={24} color="#B5483F" strokeWidth={2} /></div>
+                Call 911
+              </a>
+              <button
+                onClick={() => { if (window.confirm('Sign out of SeniorSafe on this phone? You will need your email and password to sign back in.')) { setMoreOpen(false); onSignOut() } }}
+                className="w-full flex items-center gap-4 py-4 text-[#6B645A] font-semibold text-left"
+                style={{ fontSize: '17px' }}
+              >
+                <div className="w-12 h-12 rounded-xl bg-[#F3EFE7] flex items-center justify-center flex-shrink-0"><LogOut size={22} color="#6B645A" strokeWidth={1.7} /></div>
+                Sign out
+              </button>
+            </div>
           </div>
         </>
       )}

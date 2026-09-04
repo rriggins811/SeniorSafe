@@ -451,6 +451,8 @@ export default function DashboardPage() {
         onSettings={() => navigate('/profile')}
         onSignOut={handleSignOut}
         onAsk={() => navigate('/ai')}
+        onNavigate={(path) => navigate(path)}
+        unreadMsgCount={unreadMsgCount}
       />
     )
   }
