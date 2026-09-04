@@ -1,5 +1,5 @@
 # SeniorSafe — Claude Code Project Brief
-Last updated: September 4, 2026
+Last updated: September 4, 2026 (evening)
 
 ---
 
@@ -31,15 +31,24 @@ section, then verify against production.
 - **Migrations applied:** `20260904_family_senior_flag.sql` (Ryan ran it by pasting;
   MCP DDL is blocked in Claude Code's auto mode).
 
-### Committed but NOT deployed (as of this note)
-- `send-invite` and `invite-reminders` edge functions + `20260904_invite_delivery.sql`.
-  The web UI calls `send-invite` and falls back to the phone's Messages app when it
-  is missing. Push the web build only after those are deployed.
-- `@capacitor/text-zoom` wired in `App.jsx` (needs `npx cap sync` + native build).
-- `ai-chat` in git has a strict everyday-only prompt (from 2026-08-19). Live `ai-chat`
-  (v53) still runs the old prompt that names a $47/$297 Blueprint. **Ryan has to
-  decide: two AIs (August/Grok direction) or one merged Maggie (Sept 2 brief).**
-  Do not deploy either until he says.
+### One assistant, two plans (2026-09-04 afternoon)
+- **Maggie is the only assistant**, for the senior and the family, on Haiku 4.5.
+  Endpoint `ai-chat` (v55+). `maggie-chat` is a 410 stub; delete it and the
+  `maggie_*` tables after 2026-10-04 (their rows were copied into
+  `ai_conversations` / `ai_messages` by `20260904_one_assistant.sql`).
+- **`ai-chat/index.ts` is GENERATED.** Edit `supabase/prompts/maggie-system-prompt-v2.md`
+  (the prompt), `supabase/prompts/maggie-knowledge-base.md` (Blueprint reference,
+  attached two sections per call by keyword), `src/content/setupFaq.js` (app help,
+  shared with the Help Center) or `index.template.ts`, then run
+  `node scripts/build-ai-chat.mjs`, commit, and paste the generated file. Cached
+  prefix is ~5.3K tokens; the script prints it. Caching verified 2026-09-04
+  (cache_read == cache_creation == 5295 in `ai_user_budgets`).
+- **Plans:** Free (10 Maggie messages ever per family, no texts) and Paid
+  ($14.99/mo, $143.88/yr). `premium_plus` is a legacy value treated as paid;
+  nobody holds it. Store products for Premium+ still exist but nothing sells them.
+- `send-invite` (v1), `invite-reminders` (v1, cron 15:00 UTC) and their
+  migrations are live. `notification_log` accepts `invite` / `invite_reminder`.
+- `@capacitor/text-zoom` is wired; needs the native 1.1.2 build to reach phones.
 
 ### Traps (all of these cost real time)
 - Prompt and function changes go through git. Deploy from the on-disk file. Ryan
