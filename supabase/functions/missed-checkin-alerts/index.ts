@@ -1,85 +1,50 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+// Missed check-in alerts. Runs as cron every 30 minutes.
+//
+// 2026-09-04 rewrite for the setup rebuild. The person who checks in is the
+// row with is_senior = true, which may be the family owner (set up for
+// themselves) or a member the owner invited. The family is keyed by
+// COALESCE(invited_by, user_id) = the owner's user_id. The owner holds the
+// subscription and the check-in time; the senior's row holds the timezone.
+// Everyone in the family except the senior is alerted.
 
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, '')
   return digits.startsWith('1') ? `+${digits}` : `+1${digits}`
 }
 
-/** Current date string (YYYY-MM-DD) in a given IANA timezone. */
 function getLocalDate(tz: string): string {
-  return new Date().toLocaleDateString('en-CA', { timeZone: tz }) // en-CA → YYYY-MM-DD
+  return new Date().toLocaleDateString('en-CA', { timeZone: tz }) // YYYY-MM-DD
 }
 
-/** Current hour + minute in a given IANA timezone. */
 function getLocalTime(tz: string): { hour: number; min: number } {
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz,
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit' })
   const parts = fmt.format(new Date()).split(':')
-  return { hour: parseInt(parts[0], 10), min: parseInt(parts[1], 10) }
+  return { hour: parseInt(parts[0], 10) % 24, min: parseInt(parts[1], 10) }
 }
 
-// ---------------------------------------------------------------------------
-// Fallback: send alert email when SMS fails (via Resend API)
-// Set RESEND_API_KEY in Supabase secrets:
-//   supabase secrets set RESEND_API_KEY=re_xxxxxxxxx
-// ---------------------------------------------------------------------------
-async function sendFailureAlertEmail(
-  familyName: string,
-  phone: string,
-  seniorName: string,
-  errorDetail: string,
-): Promise<boolean> {
+async function sendFailureAlertEmail(familyName: string, phone: string, seniorName: string, errorDetail: string): Promise<boolean> {
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-
   const body = [
-    `MISSED CHECK-IN SMS FAILED`,
-    ``,
-    `Senior: ${seniorName}`,
-    `Family: ${familyName || 'Unknown'}`,
-    `Failed phone: ${phone}`,
-    `Error: ${errorDetail}`,
-    `Time: ${new Date().toISOString()}`,
-    ``,
-    `The family member above did NOT receive a missed check-in alert.`,
-    `Please follow up manually.`,
+    `MISSED CHECK-IN SMS FAILED`, ``,
+    `Senior: ${seniorName}`, `Family: ${familyName || 'Unknown'}`, `Failed phone: ${phone}`,
+    `Error: ${errorDetail}`, `Time: ${new Date().toISOString()}`, ``,
+    `The family member above did NOT receive a missed check-in alert.`, `Please follow up manually.`,
   ].join('\n')
-
-  // If Resend is not configured, log prominently so Supabase log dashboard catches it
   if (!RESEND_API_KEY) {
     console.error(`SMS_FAILURE_ALERT — No RESEND_API_KEY configured. Details:\n${body}`)
     return false
   }
-
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'SeniorSafe Alerts <alerts@seniorsafeapp.com>',
-        to: ['support@seniorsafeapp.com'],
-        subject: 'ALERT: Missed check-in SMS failed',
-        text: body,
-      }),
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'SeniorSafe Alerts <alerts@seniorsafeapp.com>', to: ['support@seniorsafeapp.com'], subject: 'ALERT: Missed check-in SMS failed', text: body }),
     })
-    if (res.ok) {
-      console.log(`Failure alert email sent for ${phone}`)
-      return true
-    }
-    const errText = await res.text()
-    console.error(`Resend email failed (${res.status}):`, errText)
-    // Still log the full alert so Supabase dashboard has it
+    if (res.ok) return true
+    console.error(`Resend email failed (${res.status}):`, await res.text())
     console.error(`SMS_FAILURE_ALERT:\n${body}`)
     return false
   } catch (emailErr) {
@@ -89,200 +54,155 @@ async function sendFailureAlertEmail(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Main handler — runs as cron every 30 minutes
-// ---------------------------------------------------------------------------
+type ProfileRow = {
+  user_id: string
+  first_name: string | null
+  senior_name: string | null
+  phone: string | null
+  device_token: string | null
+  device_platform: string | null
+  timezone: string | null
+  checkin_alert_time: string | null
+  subscription_tier: string | null
+  role: string | null
+  invited_by: string | null
+  is_senior: boolean
+  family_name: string | null
+}
+
 serve(async (_req) => {
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  )
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
   const ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID')!
   const AUTH_TOKEN  = Deno.env.get('TWILIO_AUTH_TOKEN')!
   const FROM_NUMBER = Deno.env.get('TWILIO_PHONE_NUMBER')!
   const credentials = btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`)
 
-  // 1. Get all PAID admins (only paid tier gets missed check-in alerts)
-  const { data: admins, error: adminErr } = await supabase
+  // 1. Every senior.
+  const { data: seniors, error: sErr } = await supabase
     .from('user_profile')
-    .select('user_id, senior_name, first_name, timezone, checkin_alert_time')
-    .eq('role', 'admin')
-    .in('subscription_tier', ['paid', 'trial'])
+    .select('user_id, first_name, senior_name, phone, device_token, device_platform, timezone, checkin_alert_time, subscription_tier, role, invited_by, is_senior, family_name')
+    .eq('is_senior', true)
 
-  if (adminErr) {
-    console.error('Error fetching admins:', adminErr.message)
-    return new Response(JSON.stringify({ error: adminErr.message }), { status: 500 })
+  if (sErr) {
+    console.error('Error fetching seniors:', sErr.message)
+    return new Response(JSON.stringify({ error: sErr.message }), { status: 500 })
   }
-
-  if (!admins?.length) {
-    return new Response(JSON.stringify({ sent: 0, message: 'No paid admins found' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    })
+  if (!seniors?.length) {
+    return new Response(JSON.stringify({ sent: 0, message: 'No seniors found' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
   let totalSent = 0
   let skipped = 0
+  let checked = 0
 
-  for (const admin of admins) {
+  for (const senior of seniors as ProfileRow[]) {
     try {
-      const tz = admin.timezone || 'America/New_York'
-      const alertTime = admin.checkin_alert_time || '12:00'
-      const [alertH, alertM] = alertTime.split(':').map(Number)
+      const ownerId = senior.invited_by || senior.user_id
 
-      // Check if current local time is past the alert time
-      const local = getLocalTime(tz)
-      const localMins = local.hour * 60 + local.min
-      const alertMins = alertH * 60 + alertM
-      if (localMins < alertMins) {
-        skipped++
-        continue // Not time yet for this admin
+      // 2. The owner holds the plan and the check-in time.
+      let owner: ProfileRow = senior
+      if (ownerId !== senior.user_id) {
+        const { data: o } = await supabase
+          .from('user_profile')
+          .select('user_id, first_name, senior_name, phone, device_token, device_platform, timezone, checkin_alert_time, subscription_tier, role, invited_by, is_senior, family_name')
+          .eq('user_id', ownerId)
+          .single()
+        if (!o) { skipped++; continue }
+        owner = o as ProfileRow
       }
+
+      // Only paid and trial families get the alert.
+      if (!['paid', 'trial', 'premium_plus'].includes(owner.subscription_tier || '')) { skipped++; continue }
+      checked++
+
+      const tz = senior.timezone || owner.timezone || 'America/New_York'
+      const alertTime = owner.checkin_alert_time || '12:00'
+      const [alertH, alertM] = alertTime.split(':').map(Number)
+      const local = getLocalTime(tz)
+      if (local.hour * 60 + local.min < alertH * 60 + alertM) { skipped++; continue }
 
       const todayLocal = getLocalDate(tz)
 
-      // Check dedup — already alerted today?
+      // Dedup: one alert per senior per local day. admin_id keeps its old
+      // name but now holds the senior's user_id.
       const { data: alreadySent } = await supabase
-        .from('checkin_alert_logs')
-        .select('id')
-        .eq('admin_id', admin.user_id)
-        .eq('date', todayLocal)
-        .limit(1)
+        .from('checkin_alert_logs').select('id').eq('admin_id', senior.user_id).eq('date', todayLocal).limit(1)
+      if (alreadySent?.length) { skipped++; continue }
 
-      if (alreadySent?.length) {
-        skipped++
-        continue // Already sent today
-      }
-
-      // Check if senior has checked in today (using their local date)
-      // Build start-of-day in the admin's timezone
-      const dayStart = new Date(`${todayLocal}T00:00:00`)
+      // Has the senior checked in today (their local day)?
+      const dayStartUtc = new Date(new Date().toLocaleString('en-US', { timeZone: tz }))
+      dayStartUtc.setHours(0, 0, 0, 0)
+      const offsetMs = new Date().getTime() - new Date(new Date().toLocaleString('en-US', { timeZone: tz })).getTime()
+      const dayStartIso = new Date(dayStartUtc.getTime() + offsetMs).toISOString()
       const { data: checkins } = await supabase
-        .from('checkins')
-        .select('id')
-        .eq('user_id', admin.user_id)
-        .gte('checked_in_at', dayStart.toISOString())
-        .limit(1)
+        .from('checkins').select('id').eq('user_id', senior.user_id).gte('checked_in_at', dayStartIso).limit(1)
+      if (checkins?.length) { skipped++; continue }
 
-      if (checkins?.length) {
-        skipped++
-        continue // Already checked in today
-      }
-
-      // Get family members (with or without phone — push doesn't need phone)
-      const { data: members } = await supabase
+      // 3. Everyone in the family except the senior.
+      const { data: familyRows } = await supabase
         .from('user_profile')
-        .select('user_id, phone, first_name, device_token, device_platform')
-        .eq('invited_by', admin.user_id)
+        .select('user_id, first_name, phone, device_token, device_platform')
+        .or(`user_id.eq.${ownerId},invited_by.eq.${ownerId}`)
+      const recipients = (familyRows || []).filter(r => r.user_id !== senior.user_id)
+      if (recipients.length === 0) { skipped++; continue }
 
-      if (!members?.length) {
-        skipped++
-        continue // No family members with phones
-      }
-
-      const seniorName = admin.senior_name || admin.first_name || 'Your loved one'
+      const seniorName = senior.first_name || owner.senior_name || 'Your loved one'
+      const familyLabel = owner.family_name || senior.family_name || seniorName
       const message = `${seniorName} hasn't checked in today. — SeniorSafe. Reply STOP to opt out`
 
-      // Send SMS to each family member
-      // Fetch admin's family_name for failure alerts
-      const { data: adminProfile } = await supabase
-        .from('user_profile')
-        .select('family_name')
-        .eq('user_id', admin.user_id)
-        .single()
-      const familyLabel = adminProfile?.family_name || seniorName
-
-      // Send push notifications to members with device tokens
-      for (const member of members) {
-        if (member.device_token) {
-          try {
-            // Call send-push-notification function internally
-            const pushRes = await fetch(
-              `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notification`,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  user_ids: [member.user_id],
-                  title: 'Missed Check-In',
-                  body: `${seniorName} hasn't checked in yet today.`,
-                  notification_type: 'missed_check_in',
-                  data: { route: '/dashboard' },
-                }),
-              },
-            )
-            if (pushRes.ok) {
-              console.log(`Push sent to ${member.first_name} for missed check-in`)
-            }
-          } catch (pushErr) {
-            console.error(`Push error for ${member.first_name}:`, pushErr)
-          }
+      for (const member of recipients) {
+        if (!member.device_token) continue
+        try {
+          const pushRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notification`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_ids: [member.user_id],
+              title: 'Missed Check-In',
+              body: `${seniorName} hasn't checked in yet today.`,
+              notification_type: 'missed_check_in',
+              data: { route: '/dashboard' },
+            }),
+          })
+          if (pushRes.ok) console.log(`Push sent to ${member.first_name} for missed check-in`)
+        } catch (pushErr) {
+          console.error(`Push error for ${member.first_name}:`, pushErr)
         }
       }
 
-      // Send SMS to members with phone numbers
-      for (const member of members) {
+      for (const member of recipients) {
         if (!member.phone) continue
+        const toPhone = normalizePhone(member.phone)
         try {
-          const toPhone = normalizePhone(member.phone)
-          const body = new URLSearchParams({
-            To: toPhone,
-            From: FROM_NUMBER,
-            Body: message,
+          const body = new URLSearchParams({ To: toPhone, From: FROM_NUMBER, Body: message })
+          const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`, {
+            method: 'POST',
+            headers: { 'Authorization': `Basic ${credentials}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString(),
           })
-
-          const response = await fetch(
-            `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Basic ${credentials}`,
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-              body: body.toString(),
-            }
-          )
-
           if (response.ok) {
             totalSent++
-            console.log(`Missed check-in SMS sent to ${member.first_name} (${toPhone}) for admin ${admin.user_id}`)
+            console.log(`Missed check-in SMS sent to ${member.first_name} (${toPhone}) for senior ${senior.user_id}`)
           } else {
             const errText = await response.text()
             console.error(`Twilio error for ${toPhone}:`, errText)
-            // CRITICAL SAFETY FALLBACK — alert support that a check-in SMS failed
             await sendFailureAlertEmail(familyLabel, toPhone, seniorName, `Twilio HTTP ${response.status}: ${errText}`)
           }
         } catch (smsErr) {
           console.error(`SMS error for member ${member.first_name}:`, smsErr)
-          const toPhone = member.phone ? normalizePhone(member.phone) : 'unknown'
-          // CRITICAL SAFETY FALLBACK — alert support that a check-in SMS failed
           await sendFailureAlertEmail(familyLabel, toPhone, seniorName, `Exception: ${smsErr}`)
         }
       }
 
-      // Insert dedup log
-      await supabase.from('checkin_alert_logs').insert({
-        admin_id: admin.user_id,
-        date: todayLocal,
-      })
-
-      console.log(`Logged alert for admin ${admin.user_id} on ${todayLocal}`)
-
+      await supabase.from('checkin_alert_logs').insert({ admin_id: senior.user_id, date: todayLocal })
+      console.log(`Logged alert for senior ${senior.user_id} on ${todayLocal}`)
     } catch (err) {
-      console.error(`Error processing admin ${admin.user_id}:`, err)
-      // Continue to next admin
+      console.error(`Error processing senior ${senior.user_id}:`, err)
     }
   }
 
-  const result = { sent: totalSent, skipped, adminsChecked: admins.length }
+  const result = { sent: totalSent, skipped, seniorsChecked: checked, seniorsTotal: seniors.length }
   console.log('Missed check-in alerts result:', JSON.stringify(result))
-
-  return new Response(JSON.stringify(result), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  })
+  return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } })
 })

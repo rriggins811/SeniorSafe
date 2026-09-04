@@ -51,16 +51,23 @@ function ProtectedRoute({ children, skipOnboardingCheck }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Check if user has completed onboarding (for OAuth users who skip SignUpPage)
+  // Where does this person belong? No profile row means an OAuth sign-in
+  // that has not been through onboarding. An unfinished owner goes back to
+  // their path; members never need onboarding.
+  const [onboardingPath, setOnboardingPath] = useState('family')
   useEffect(() => {
     if (!session || skipOnboardingCheck || onboardingChecked) return
     supabase
       .from('user_profile')
-      .select('onboarding_complete')
+      .select('onboarding_complete, is_senior, role')
       .eq('user_id', session.user.id)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
-        if (!data || !data.onboarding_complete) {
+        if (!data) {
+          setOnboardingPath('oauth')
+          setNeedsOnboarding(true)
+        } else if (!data.onboarding_complete) {
+          setOnboardingPath(data.role === 'member' ? 'family' : data.is_senior ? 'self' : 'family')
           setNeedsOnboarding(true)
         }
         setOnboardingChecked(true)
@@ -71,9 +78,6 @@ function ProtectedRoute({ children, skipOnboardingCheck }) {
   if (!session) return <Navigate to="/signin" replace />
   if (!skipOnboardingCheck && !onboardingChecked) return null
   if (needsOnboarding) {
-    const provider = session.user.app_metadata?.provider
-    const isOAuth = provider === 'apple' || provider === 'google'
-    const onboardingPath = isOAuth ? 'oauth' : 'parent-setup'
     return <Navigate to={`/onboarding?path=${onboardingPath}`} replace />
   }
   return children
@@ -108,7 +112,7 @@ export default function App() {
     if (isNative()) {
       const handleDeepLink = async ({ url }) => {
         // Close the system browser after OAuth completes
-        try { await Browser.close() } catch {}
+        try { await Browser.close() } catch { /* already closed */ }
 
         // Handle auth callback: extract tokens from URL fragment
         if (url.includes('auth/callback')) {
@@ -125,17 +129,16 @@ export default function App() {
             if (session?.user) {
               const { data: profile } = await supabase
                 .from('user_profile')
-                .select('onboarding_complete')
+                .select('onboarding_complete, is_senior')
                 .eq('user_id', session.user.id)
-                .single()
+                .maybeSingle()
 
               if (profile?.onboarding_complete) {
                 window.location.replace('/dashboard')
+              } else if (!profile) {
+                window.location.replace('/onboarding?path=oauth')
               } else {
-                // Determine onboarding path from provider
-                const provider = session.user.app_metadata?.provider
-                const isOAuth = provider === 'apple' || provider === 'google'
-                window.location.replace(isOAuth ? '/onboarding?path=oauth' : '/onboarding')
+                window.location.replace(`/onboarding?path=${profile.is_senior ? 'self' : 'family'}`)
               }
             }
           }

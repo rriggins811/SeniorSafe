@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { Shield, ChevronLeft, Heart, Users, User, Loader2 } from 'lucide-react'
+import { Shield, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { generateFamilyCode } from '../lib/familyCode'
-import { isNative, isIOS, isAndroid } from '../lib/platform'
+import { isNative } from '../lib/platform'
 import { Browser } from '@capacitor/browser'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
-import { getAttribution } from '../lib/attribution'
+import { baseProfileRow, PENDING_SIGNUP_KEY } from '../lib/signup'
+import {
+  Shell, Heading, Field, BigButton, TextLink, ErrorText, Disclosure, OAuthButtons, Divider, Select,
+} from '../components/SetupUI'
 
 const NATIVE_REDIRECT = 'com.rigginsstrategicsolutions.seniorsafe://auth/callback'
 
@@ -14,647 +17,369 @@ function getOAuthRedirect() {
   return isNative() ? NATIVE_REDIRECT : window.location.origin + '/dashboard'
 }
 
-// Resolve the device_platform string written into user_profile on signup.
-// Returns 'ios' / 'android' / 'web'. Set 2026-05-27 to fix 100% NULL
-// device_platform data quality issue.
-function detectDevicePlatform() {
-  if (isIOS()) return 'ios'
-  if (isAndroid()) return 'android'
-  return 'web'
-}
+const RELATIONSHIPS = [
+  { value: '', label: 'Choose one' },
+  { value: 'Daughter', label: 'Daughter' },
+  { value: 'Son', label: 'Son' },
+  { value: 'Spouse', label: 'Spouse' },
+  { value: 'Grandchild', label: 'Grandchild' },
+  { value: 'Sibling', label: 'Sibling' },
+  { value: 'Caregiver', label: 'Caregiver' },
+  { value: 'Friend', label: 'Friend or neighbor' },
+  { value: 'Other', label: 'Other' },
+]
 
+// Modes:
+//   family  (default) an adult child setting up for someone they look after
+//   self    a senior setting up for themselves
+//   join    someone with an invite code joining as a family member
+//   senior  the senior opening the link the adult child sent them
 export default function SignUpPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const urlCode = searchParams.get('code')?.toUpperCase() || ''
+  const [params] = useSearchParams()
+  const urlCode = (params.get('code') || '').toUpperCase()
+  const urlWho = params.get('who')
 
-  const [path, setPath] = useState(urlCode ? 'member-join' : null)
-  const [step, setStep] = useState(0)
+  const [mode, setMode] = useState(urlCode ? 'join' : 'family')
+  const [invite, setInvite] = useState(null)      // result of lookup_invite_code
+  const [code, setCode] = useState(urlCode)
+  const [checking, setChecking] = useState(!!urlCode)
   const [loading, setLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState('')
   const [error, setError] = useState('')
-  const [adminProfile, setAdminProfile] = useState(null)
-  const [codeValidating, setCodeValidating] = useState(!!urlCode)
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [appleLoading, setAppleLoading] = useState(false)
 
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    age: '',
-    email: '',
-    password: '',
-    phone: '',
-    inviteCode: urlCode,
-    relationship: '',
+    firstName: '', lastName: '', phone: '', email: '', password: '', relationship: '',
   })
+  const update = (k, v) => { setForm(f => ({ ...f, [k]: v })); setError('') }
 
-  // Auto-validate URL invite code on mount
+  // A link with a code: look it up once and pick the right screen.
   useEffect(() => {
     if (!urlCode) return
     ;(async () => {
-      const { data: rows } = await supabase.rpc('lookup_invite_code', { invite_code: urlCode })
-      const profile = rows?.[0]
-      setCodeValidating(false)
-      if (profile) {
-        setAdminProfile(profile)
-        setStep(1)
+      const { data: rows, error: err } = await supabase.rpc('lookup_invite_code', { invite_code: urlCode })
+      const row = rows?.[0]
+      setChecking(false)
+      if (err || !row) {
+        setMode('join')
+        setInvite(null)
+        setError(err?.message?.includes('Too many') ? err.message : 'That invite link is no longer valid. Ask your family for a new one.')
+        return
+      }
+      setInvite(row)
+      if (urlWho === 'senior' && !row.has_senior) {
+        setMode('senior')
+        setForm(f => ({ ...f, firstName: row.senior_name || '' }))
       } else {
-        setError('This invite code is no longer valid. Ask your family member for a new one.')
+        setMode('join')
       }
     })()
-  }, [urlCode])
+  }, [urlCode, urlWho])
 
-  function update(field, value) {
-    setForm(f => ({ ...f, [field]: value }))
-    setError('')
-  }
-
-  function goBack() {
-    setError('')
-    if (step > 0) {
-      setStep(s => s - 1)
-    } else {
-      setPath(null)
-      setAdminProfile(null)
-      setForm(f => ({ ...f, inviteCode: '' }))
-    }
-  }
-
-  async function handleGoogleSignUp() {
-    setGoogleLoading(true)
-    try {
-      if (isNative()) {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
-        })
-        if (error) throw error
-        if (data?.url) await Browser.open({ url: data.url })
-      } else {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: { redirectTo: getOAuthRedirect() },
-        })
-        if (error) throw error
-      }
-    } catch (err) {
-      setError(err.message)
-      setGoogleLoading(false)
-    }
-  }
-
-  async function handleAppleSignUp() {
-    setAppleLoading(true)
-    setError('')
-    try {
-      if (isNative()) {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'apple',
-          options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
-        })
-        if (error) throw error
-        if (data?.url) await Browser.open({ url: data.url })
-      } else {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'apple',
-          options: { redirectTo: getOAuthRedirect() },
-        })
-        if (error) throw error
-      }
-    } catch (err) {
-      setError(err.message || 'Apple Sign In failed. Please try again.')
-      setAppleLoading(false)
-    }
-  }
-
-  function selectPath(p) {
-    setPath(p)
-    setStep(0)
-    setError('')
-    setForm({
-      firstName: '', lastName: '', age: '', email: '', password: '',
-      phone: '', inviteCode: '', relationship: '',
-    })
-  }
-
-  // ─── Code validation for Path B ───────────────────────────────────
-  async function handleValidateCode() {
+  async function lookupCode() {
     dismissKeyboard()
-    const code = form.inviteCode.trim().toUpperCase()
-    if (code.length < 4) { setError('Please enter a valid family code.'); return }
-
+    const c = code.trim().toUpperCase()
+    if (c.length < 4) { setError('The code is 6 letters and numbers.'); return }
     setLoading(true)
-    const { data: rows, error: err } = await supabase.rpc('lookup_invite_code', { invite_code: code })
+    const { data: rows, error: err } = await supabase.rpc('lookup_invite_code', { invite_code: c })
     setLoading(false)
-
-    const profile = rows?.[0]
-    if (err || !profile) {
-      setError('Code not found. Check with your family member and try again.')
+    const row = rows?.[0]
+    if (err || !row) {
+      setError(err?.message?.includes('Too many') ? err.message : 'We could not find that code. Check it with your family and try again.')
       return
     }
-    setAdminProfile(profile)
-    setStep(1)
+    setCode(c)
+    setInvite(row)
+    setError('')
   }
 
-  // ─── Create admin account (Path A + C) ────────────────────────────
-  async function createAdminAccount() {
-    dismissKeyboard()
-    if (!form.firstName.trim() || !form.email.trim() || !form.password) {
-      setError('Please fill in all fields.')
-      return
+  // ─── OAuth ─────────────────────────────────────────────────────────
+  // The provider redirect loses page state, so remember what the person was
+  // doing. OnboardingPage reads this back and finishes the right profile.
+  async function startOAuth(provider) {
+    setOauthLoading(provider)
+    setError('')
+    try {
+      localStorage.setItem(PENDING_SIGNUP_KEY, JSON.stringify({
+        mode,
+        code: invite ? code : null,
+        savedAt: Date.now(),
+      }))
+      if (isNative()) {
+        const { data, error: err } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
+        })
+        if (err) throw err
+        if (data?.url) await Browser.open({ url: data.url })
+      } else {
+        const { error: err } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: getOAuthRedirect() },
+        })
+        if (err) throw err
+      }
+    } catch (err) {
+      setError(err.message || 'That sign-in did not work. Please try again.')
+      setOauthLoading('')
     }
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters.')
-      return
-    }
+  }
 
+  // ─── Email signups ─────────────────────────────────────────────────
+  function validateBasics({ needPhone }) {
+    if (!form.firstName.trim()) return 'Please enter a first name.'
+    if (needPhone && form.phone.replace(/\D/g, '').length < 10) return 'Please enter a mobile number so the check-in text reaches you.'
+    if (!form.email.trim()) return 'Please enter an email address.'
+    if (form.password.length < 6) return 'Choose a password of at least 6 characters.'
+    return ''
+  }
+
+  function friendlyAuthError(err) {
+    const m = err?.message || ''
+    if (/already registered|already exists/i.test(m)) return 'There is already an account with that email. Sign in instead.'
+    if (/valid email/i.test(m)) return 'That email address does not look right.'
+    return m || 'Something went wrong. Please try again.'
+  }
+
+  // Owner: adult child (family) or the senior themself (self).
+  async function createOwner(isSelf) {
+    dismissKeyboard()
+    const v = validateBasics({ needPhone: !isSelf })
+    if (v) { setError(v); return }
     setLoading(true)
     setError('')
 
     const familyCode = await generateFamilyCode()
-    const familyName = form.lastName.trim()
-      ? `The ${form.lastName.trim()} Family`
-      : `${form.firstName.trim()}'s Family`
+    const first = form.firstName.trim()
+    const last = form.lastName.trim()
+    const familyName = last ? `The ${last} Family` : `${first}'s Family`
+    const phone = form.phone.trim() || null
 
     const { data, error: err } = await supabase.auth.signUp({
       email: form.email.trim(),
       password: form.password,
       options: {
         data: {
-          first_name: form.firstName.trim(),
-          last_name: form.lastName.trim(),
-          family_name: familyName,
-          phone: form.phone.trim() || null,
-          role: 'admin',
-          family_code: familyCode,
-          senior_name: form.firstName.trim(),
-          senior_age: parseInt(form.age) || null,
-          onboarding_path: path,
+          first_name: first, last_name: last, family_name: familyName, phone,
+          role: 'admin', family_code: familyCode, is_senior: isSelf,
+          onboarding_path: isSelf ? 'self' : 'family',
         },
       },
     })
+    if (err) { setError(friendlyAuthError(err)); setLoading(false); return }
+    if (!data?.user) { setError('We could not create the account. Please try again.'); setLoading(false); return }
 
-    if (err) { setError(err.message); setLoading(false); return }
-
-    // Create user_profile immediately so family_code is in the DB
-    // before it's displayed on the onboarding family code screen.
-    // OnboardingPage handleFinish() will update with checkin_alert_time later.
-    if (data?.user) {
-      await supabase.from('user_profile').upsert({
-        user_id: data.user.id,
-        family_name: familyName,
-        first_name: form.firstName.trim(),
-        last_name: form.lastName.trim(),
-        phone: form.phone.trim() || null,
-        role: 'admin',
-        family_code: familyCode,
-        senior_name: form.firstName.trim(),
-        senior_age: parseInt(form.age) || null,
-        signup_source: getAttribution(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        device_platform: detectDevicePlatform(),
-        onboarding_complete: false,
-        subscription_tier: 'trial',
-        trial_status: 'active',
-        trial_start_date: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
-    }
-
+    const { error: pErr } = await supabase.from('user_profile').upsert({
+      ...baseProfileRow(data.user.id),
+      first_name: first, last_name: last, family_name: familyName, phone,
+      role: 'admin', family_code: familyCode,
+      is_senior: isSelf,
+      senior_name: isSelf ? first : null,
+      onboarding_complete: false,
+    }, { onConflict: 'user_id' })
     setLoading(false)
-    navigate(`/onboarding?path=${path}`)
+    if (pErr) { setError('Account created, but saving your details failed: ' + pErr.message); return }
+    navigate(`/onboarding?path=${isSelf ? 'self' : 'family'}`)
   }
 
-  // ─── Create member account (Path B) ───────────────────────────────
-  async function createMemberAccount() {
+  // Member (sibling, caregiver) or the senior joining by link.
+  async function createMember(asSenior) {
     dismissKeyboard()
-    if (!form.firstName.trim() || !form.email.trim() || !form.password) {
-      setError('Please fill in all required fields.')
-      return
-    }
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters.')
-      return
-    }
-
+    if (!invite) return
+    const v = validateBasics({ needPhone: !asSenior })
+    if (v) { setError(v); return }
     setLoading(true)
     setError('')
 
+    const first = form.firstName.trim()
+    const last = form.lastName.trim()
+    const phone = form.phone.trim() || null
+
     const { data, error: err } = await supabase.auth.signUp({
       email: form.email.trim(),
       password: form.password,
       options: {
         data: {
-          first_name: form.firstName.trim(),
-          last_name: form.lastName.trim(),
-          family_name: adminProfile.family_name,
-          phone: form.phone.trim() || null,
-          role: 'member',
-          invited_by: adminProfile.user_id,
+          first_name: first, last_name: last, family_name: invite.family_name, phone,
+          role: 'member', invited_by: invite.user_id, is_senior: asSenior,
           relationship: form.relationship || null,
-          onboarding_path: 'member-join',
+          onboarding_path: asSenior ? 'senior' : 'join',
         },
       },
     })
+    if (err) { setError(friendlyAuthError(err)); setLoading(false); return }
+    if (!data?.user) { setError('We could not create the account. Please try again.'); setLoading(false); return }
 
-    if (err) { setError(err.message); setLoading(false); return }
-
-    if (data?.user) {
-      await supabase.from('user_profile').upsert({
-        user_id: data.user.id,
-        family_name: adminProfile.family_name,
-        first_name: form.firstName.trim(),
-        last_name: form.lastName.trim(),
-        phone: form.phone.trim() || null,
-        role: 'member',
-        invited_by: adminProfile.user_id,
-        family_code: null,
-        signup_source: getAttribution(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        device_platform: detectDevicePlatform(),
-        onboarding_complete: false,
-        subscription_tier: 'trial',
-        trial_status: 'active',
-        trial_start_date: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
-    }
-
+    const { error: pErr } = await supabase.from('user_profile').upsert({
+      ...baseProfileRow(data.user.id),
+      first_name: first, last_name: last, family_name: invite.family_name, phone,
+      role: 'member', invited_by: invite.user_id, family_code: null,
+      is_senior: asSenior,
+      senior_name: asSenior ? first : null,
+      onboarding_complete: true,
+    }, { onConflict: 'user_id' })
     setLoading(false)
-    navigate('/onboarding?path=member-join')
+    if (pErr) {
+      setError(pErr.message?.includes('one_senior_per_family')
+        ? `${invite.senior_name || 'Someone'} has already joined this family as the person who checks in. Ask ${invite.owner_first_name || 'your family'} to send a family-member link instead.`
+        : 'Account created, but joining the family failed: ' + pErr.message)
+      return
+    }
+    navigate('/dashboard', { replace: true })
   }
 
-  // ─── Loading state for URL code validation ────────────────────────
-  if (codeValidating) {
+  // ═════════════════════════════════════════════════════════════════════
+  if (checking) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
         <Loader2 size={32} className="animate-spin text-[#1B365D]" />
-        <p className="text-gray-500">Checking your invite code...</p>
+        <p className="text-gray-500 text-lg">Opening your invite...</p>
       </div>
     )
   }
 
-  // ═════════════════════════════════════════════════════════════════════
-  //  LANDING SCREEN — choose your path
-  // ═════════════════════════════════════════════════════════════════════
-  if (!path) {
+  const seniorName = invite?.senior_name || ''
+  const ownerFirst = invite?.owner_first_name || ''
+
+  // ─── The senior, arriving by link ──────────────────────────────────
+  if (mode === 'senior' && invite) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-sm flex flex-col gap-6">
-          <div className="flex flex-col items-center gap-3">
-            <div className="bg-[#1B365D] rounded-2xl p-4">
-              <Shield size={40} color="#D4A843" strokeWidth={1.5} />
-            </div>
-            <h1 className="text-2xl font-bold text-[#1B365D] text-center">
-              Welcome to SeniorSafe
-            </h1>
-            <p className="text-gray-500 text-center text-lg leading-relaxed">
-              How would you like to get started?
-            </p>
-          </div>
-
-          {/* Path A — Primary (most common) */}
-          <button
-            onClick={() => selectPath('parent-setup')}
-            className="w-full p-6 rounded-2xl bg-[#1B365D] text-left flex items-start gap-4 active:scale-[0.98] transition-transform"
-          >
-            <div className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
-              <Heart size={28} color="#D4A843" strokeWidth={1.5} />
-            </div>
-            <div className="pt-1">
-              <p className="text-white font-bold text-lg leading-snug">
-                Setting up for my parent
-              </p>
-              <p className="text-white/60 text-sm mt-1">
-                I'm on my parent's phone right now
-              </p>
-            </div>
-          </button>
-
-          {/* Path B — Secondary */}
-          <button
-            onClick={() => selectPath('member-join')}
-            className="w-full p-5 rounded-2xl border-2 border-[#1B365D] text-left flex items-start gap-4 active:scale-[0.98] transition-transform"
-          >
-            <div className="w-14 h-14 rounded-xl bg-[#1B365D]/10 flex items-center justify-center flex-shrink-0">
-              <Users size={28} color="#1B365D" strokeWidth={1.5} />
-            </div>
-            <div className="pt-1">
-              <p className="text-[#1B365D] font-bold text-lg leading-snug">
-                Joining a family member
-              </p>
-              <p className="text-gray-500 text-sm mt-1">
-                I have an invite code
-              </p>
-            </div>
-          </button>
-
-          {/* Path C — Tertiary */}
-          <button
-            onClick={() => selectPath('self-setup')}
-            className="w-full py-4 rounded-xl text-center active:bg-gray-50 transition-colors"
-          >
-            <p className="text-[#1B365D] font-semibold text-base flex items-center justify-center gap-2">
-              <User size={18} strokeWidth={1.5} />
-              Setting up for myself
-            </p>
-          </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400">or</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          {/* Google OAuth */}
-          <button
-            onClick={handleGoogleSignUp}
-            disabled={googleLoading}
-            className="w-full py-4 rounded-xl border border-gray-300 bg-white text-gray-700 font-semibold text-base flex items-center justify-center gap-3 hover:bg-gray-50 disabled:opacity-60"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
-              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
-              <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
-              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
-            </svg>
-            {googleLoading ? 'Redirecting...' : 'Sign up with Google'}
-          </button>
-
-          {/* Apple Sign In */}
-          <button
-            onClick={handleAppleSignUp}
-            disabled={appleLoading}
-            className="w-full py-4 rounded-xl bg-black text-white font-semibold text-base flex items-center justify-center gap-3 disabled:opacity-60"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="white" xmlns="http://www.w3.org/2000/svg">
-              <path d="M13.71 9.54c-.02-2.17 1.77-3.22 1.85-3.27-1.01-1.48-2.58-1.68-3.13-1.7-1.33-.14-2.6.79-3.28.79-.68 0-1.72-.77-2.83-.75-1.46.02-2.8.85-3.55 2.15-1.52 2.63-.39 6.52 1.09 8.65.72 1.04 1.58 2.22 2.71 2.17 1.09-.04 1.5-.7 2.81-.7 1.31 0 1.68.7 2.82.68 1.17-.02 1.91-1.06 2.63-2.11.83-1.21 1.17-2.38 1.19-2.44-.03-.01-2.28-.88-2.31-3.47zM11.56 3.28c.6-.73 1.01-1.73.9-2.74-.87.04-1.92.58-2.54 1.3-.56.64-1.05 1.67-.92 2.66.97.07 1.96-.49 2.56-1.22z"/>
-            </svg>
-            {appleLoading ? 'Redirecting...' : 'Sign up with Apple'}
-          </button>
-
-          <div className="flex flex-col gap-2 pt-2">
-            <p className="text-sm text-center text-gray-500">
-              Already have an account?{' '}
-              <Link to="/signin" className="text-[#1B365D] font-semibold underline">Sign in</Link>
-            </p>
-            <p className="text-xs text-gray-400 text-center">
-              <Link to="/terms" className="underline hover:text-gray-600">Terms</Link>
-              {' | '}
-              <Link to="/privacy" className="underline hover:text-gray-600">Privacy</Link>
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ═════════════════════════════════════════════════════════════════════
-  //  PATH A — Setting up for my parent
-  // ═════════════════════════════════════════════════════════════════════
-  if (path === 'parent-setup' && step === 0) {
-    return (
-      <StepShell step={1} total={4} onBack={goBack}>
+      <Shell>
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
-            <Heart size={32} color="#1B365D" strokeWidth={1.5} />
+          <div className="bg-[#1B365D] rounded-2xl p-3">
+            <Shield size={32} color="#D4A843" strokeWidth={1.5} />
           </div>
-          <h1 className="text-[#1B365D] font-bold text-2xl">
-            Who is this account for?
-          </h1>
-          <p className="text-gray-500 text-lg">
-            We'll get their phone set up for daily check-ins.
-          </p>
         </div>
-
-        <div className="flex flex-col gap-4">
-          <Input label="Parent's first name" placeholder="e.g. Margaret" value={form.firstName}
-            onChange={v => update('firstName', v)} autoFocus />
-          <Input label="Their age" placeholder="e.g. 78" type="number" inputMode="numeric"
-            value={form.age} onChange={v => update('age', v)} />
-          <Input label="Last name" placeholder="e.g. Johnson" value={form.lastName}
-            onChange={v => update('lastName', v)} />
-        </div>
-
-        {form.firstName.trim() && (
-          <p className="text-[#1B365D] text-base bg-[#1B365D]/5 rounded-xl p-4 text-center">
-            This will be <strong>{form.firstName.trim()}</strong>'s phone — you'll set up your own account next.
-          </p>
-        )}
-
-        <div className="flex flex-col gap-3">
-          <Input label="Email address" placeholder="email@example.com" type="email"
-            value={form.email} onChange={v => update('email', v)} />
-          <Input label="Create a password" placeholder="At least 6 characters" type="password"
-            value={form.password} onChange={v => update('password', v)} />
-        </div>
-
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-        <BigButton onClick={createAdminAccount} disabled={loading || !form.firstName.trim() || !form.email.trim() || !form.password}>
-          {loading ? 'Creating account...' : 'Create Account & Continue'}
-        </BigButton>
-      </StepShell>
-    )
-  }
-
-  // ═════════════════════════════════════════════════════════════════════
-  //  PATH B — Joining a family member
-  // ═════════════════════════════════════════════════════════════════════
-  if (path === 'member-join' && step === 0) {
-    return (
-      <StepShell step={1} total={3} onBack={goBack}>
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
-            <Users size={32} color="#1B365D" strokeWidth={1.5} />
-          </div>
-          <h1 className="text-[#1B365D] font-bold text-2xl">
-            Enter your family code
-          </h1>
-          <p className="text-gray-500 text-lg">
-            Your family member should have shared this with you.
-          </p>
-        </div>
-
-        <input
-          type="text"
-          value={form.inviteCode}
-          onChange={e => update('inviteCode', e.target.value.toUpperCase())}
-          placeholder="e.g. A3BX7K"
-          maxLength={6}
-          className="w-full px-6 py-5 border-2 border-gray-200 rounded-2xl text-center text-3xl font-bold tracking-[0.3em] text-[#1B365D] focus:outline-none focus:border-[#1B365D] uppercase"
-          autoFocus
+        <Heading
+          large
+          title={seniorName ? `Hi ${seniorName}.` : 'Hello.'}
+          sub={`${ownerFirst || 'Your family'} set up SeniorSafe so you can let them know you're okay each morning with one tap.`}
         />
-
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-        <BigButton onClick={handleValidateCode} disabled={loading || form.inviteCode.trim().length < 4}>
-          {loading ? 'Checking...' : 'Continue'}
+        <p className="text-[#2D2A24]" style={{ fontSize: '18px', lineHeight: 1.5 }}>
+          To finish, choose an email and a password for your account. {ownerFirst || 'Your family'} can help with this part.
+        </p>
+        <div className="flex flex-col gap-5">
+          <Field large label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} />
+          <Field large label="Your email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
+          <Field large label="Choose a password" type="password" autoComplete="new-password" hint="At least 6 characters. Tap the eye to see it." value={form.password} onChange={v => update('password', v)} />
+        </div>
+        <ErrorText>{error}</ErrorText>
+        <BigButton large onClick={() => createMember(true)} disabled={loading}>
+          {loading ? 'One moment...' : 'Continue'}
         </BigButton>
-      </StepShell>
+        <Divider>or</Divider>
+        <OAuthButtons onGoogle={() => startOAuth('google')} onApple={() => startOAuth('apple')} googleLoading={oauthLoading === 'google'} appleLoading={oauthLoading === 'apple'} />
+        <Disclosure />
+      </Shell>
     )
   }
 
-  if (path === 'member-join' && step === 1) {
-    const seniorName = adminProfile?.senior_name || adminProfile?.first_name || 'your family'
-    return (
-      <StepShell step={2} total={3} onBack={goBack}>
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-[#1B365D] font-bold text-2xl">
-            Your info
-          </h1>
-          {adminProfile && (
-            <p className="text-gray-500 text-lg">
-              You're joining <strong>{adminProfile.family_name || `${seniorName}'s family`}</strong>
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <Input label="Your first name" placeholder="e.g. Sarah" value={form.firstName}
-            onChange={v => update('firstName', v)} autoFocus />
-          <Input label="Last name" placeholder="e.g. Johnson" value={form.lastName}
-            onChange={v => update('lastName', v)} />
-          <Input label="Your phone number" placeholder="(336) 555-0100" type="tel"
-            value={form.phone} onChange={v => update('phone', v)}
-            hint="For check-in notifications" />
-
-          <div>
-            <label className="block text-base font-medium text-gray-700 mb-2">
-              Relationship to {seniorName}
-            </label>
-            <select
-              value={form.relationship}
-              onChange={e => update('relationship', e.target.value)}
-              className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl text-lg focus:outline-none focus:border-[#1B365D] bg-white"
-            >
-              <option value="">Select...</option>
-              <option value="Son">Son</option>
-              <option value="Daughter">Daughter</option>
-              <option value="Spouse">Spouse</option>
-              <option value="Grandchild">Grandchild</option>
-              <option value="Caregiver">Caregiver</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          <div className="border-t border-gray-100 pt-4 flex flex-col gap-4">
-            <Input label="Email address" placeholder="email@example.com" type="email"
-              value={form.email} onChange={v => update('email', v)} />
-            <Input label="Create a password" placeholder="At least 6 characters" type="password"
-              value={form.password} onChange={v => update('password', v)} />
-          </div>
-        </div>
-
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-        <BigButton onClick={createMemberAccount} disabled={loading || !form.firstName.trim() || !form.email.trim() || !form.password}>
-          {loading ? 'Creating account...' : 'Join Family'}
-        </BigButton>
-      </StepShell>
-    )
-  }
-
-  // ═════════════════════════════════════════════════════════════════════
-  //  PATH C — Setting up for myself
-  // ═════════════════════════════════════════════════════════════════════
-  if (path === 'self-setup' && step === 0) {
-    return (
-      <StepShell step={1} total={4} onBack={goBack}>
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
-            <User size={32} color="#1B365D" strokeWidth={1.5} />
-          </div>
-          <h1 className="text-[#1B365D] font-bold text-2xl">
-            Let's get you set up
-          </h1>
-          <p className="text-gray-500 text-lg">
-            We'll have you checking in with your family in no time.
+  // ─── Joining with a code ───────────────────────────────────────────
+  if (mode === 'join') {
+    if (!invite) {
+      return (
+        <Shell onBack={() => { setMode('family'); setError('') }}>
+          <Heading title="Enter your invite code" sub="Ask the person who set up SeniorSafe for their 6-character family code." />
+          <input
+            type="text"
+            value={code}
+            onChange={e => { setCode(e.target.value.toUpperCase()); setError('') }}
+            placeholder="A3BX7K"
+            maxLength={6}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            className="w-full px-6 py-5 border-2 border-gray-200 rounded-2xl text-center text-3xl font-bold tracking-[0.3em] text-[#1B365D] focus:outline-none focus:border-[#1B365D] uppercase"
+            autoFocus
+          />
+          <ErrorText>{error}</ErrorText>
+          <BigButton onClick={lookupCode} disabled={loading || code.trim().length < 4}>
+            {loading ? 'Checking...' : 'Continue'}
+          </BigButton>
+          <p className="text-center text-gray-500">
+            Already have an account? <TextLink to="/signin">Sign in</TextLink>
           </p>
-        </div>
-
+        </Shell>
+      )
+    }
+    return (
+      <Shell onBack={() => { if (urlCode) navigate('/signup'); else setInvite(null) }}>
+        <Heading
+          title={seniorName ? `Join ${seniorName}'s family` : `Join ${invite.family_name || 'the family'}`}
+          sub={`You'll get the daily "I'm okay" check-in${seniorName ? ` from ${seniorName}` : ''}, and you can send a nudge if it's late.`}
+        />
         <div className="flex flex-col gap-4">
-          <Input label="Your first name" placeholder="e.g. Margaret" value={form.firstName}
-            onChange={v => update('firstName', v)} autoFocus />
-          <Input label="Last name" placeholder="e.g. Johnson" value={form.lastName}
-            onChange={v => update('lastName', v)} />
-          <Input label="Your age" placeholder="e.g. 78" type="number" inputMode="numeric"
-            value={form.age} onChange={v => update('age', v)} />
+          <Field label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} autoFocus />
+          <Field label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
+          <Field label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="The check-in comes to you as a text." value={form.phone} onChange={v => update('phone', v)} />
+          <Select label={seniorName ? `You are ${seniorName}'s` : 'Your relationship'} value={form.relationship} onChange={v => update('relationship', v)} options={RELATIONSHIPS} />
+          <Field label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
+          <Field label="Password" type="password" autoComplete="new-password" hint="At least 6 characters." value={form.password} onChange={v => update('password', v)} />
         </div>
-
-        <div className="border-t border-gray-100 pt-4 flex flex-col gap-4">
-          <Input label="Email address" placeholder="email@example.com" type="email"
-            value={form.email} onChange={v => update('email', v)} />
-          <Input label="Create a password" placeholder="At least 6 characters" type="password"
-            value={form.password} onChange={v => update('password', v)} />
-        </div>
-
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-        <BigButton onClick={createAdminAccount} disabled={loading || !form.firstName.trim() || !form.email.trim() || !form.password}>
-          {loading ? 'Creating account...' : 'Create Account & Continue'}
+        <ErrorText>{error}</ErrorText>
+        <BigButton onClick={() => createMember(false)} disabled={loading}>
+          {loading ? 'Joining...' : 'Join the family'}
         </BigButton>
-      </StepShell>
+        <Divider>or</Divider>
+        <OAuthButtons onGoogle={() => startOAuth('google')} onApple={() => startOAuth('apple')} googleLoading={oauthLoading === 'google'} appleLoading={oauthLoading === 'apple'} />
+        <Disclosure />
+      </Shell>
     )
   }
 
-  return null
-}
-
-// ═════════════════════════════════════════════════════════════════════════
-//  Shared UI Components
-// ═════════════════════════════════════════════════════════════════════════
-
-function StepShell({ step, total, onBack, children }) {
-  const pct = (step / total) * 100
-  return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Header with progress */}
-      <div className="bg-[#1B365D] flex-shrink-0">
-        <div className="px-6 pt-12 pb-4 max-w-md mx-auto w-full flex items-center justify-between">
-          <button onClick={onBack} className="p-2 -ml-2 rounded-lg text-white/70 active:text-white">
-            <ChevronLeft size={24} />
-          </button>
-          <span className="text-[#D4A843] text-sm font-semibold">
-            Step {step} of {total}
-          </span>
-          <div className="w-8" />
+  // ─── Setting up for yourself ───────────────────────────────────────
+  if (mode === 'self') {
+    return (
+      <Shell onBack={() => { setMode('family'); setError('') }}>
+        <Heading title="Set up SeniorSafe for yourself" sub="You'll pick your check-in time and invite your family on the next screens." />
+        <div className="flex flex-col gap-4">
+          <Field large label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} autoFocus />
+          <Field large label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
+          <Field large label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="Optional. Lets your family send you a text nudge." value={form.phone} onChange={v => update('phone', v)} />
+          <Field large label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
+          <Field large label="Choose a password" type="password" autoComplete="new-password" hint="At least 6 characters. Tap the eye to see it." value={form.password} onChange={v => update('password', v)} />
         </div>
-        <div className="w-full h-1 bg-white/20">
-          <div className="h-full bg-[#D4A843] transition-all duration-500" style={{ width: `${pct}%` }} />
+        <ErrorText>{error}</ErrorText>
+        <BigButton large onClick={() => createOwner(true)} disabled={loading}>
+          {loading ? 'One moment...' : 'Create my account'}
+        </BigButton>
+        <Divider>or</Divider>
+        <OAuthButtons onGoogle={() => startOAuth('google')} onApple={() => startOAuth('apple')} googleLoading={oauthLoading === 'google'} appleLoading={oauthLoading === 'apple'} />
+        <Disclosure />
+      </Shell>
+    )
+  }
+
+  // ─── Default: an adult child setting up for someone ────────────────
+  return (
+    <Shell onBack={() => navigate('/')}>
+      <div className="flex items-center gap-3">
+        <div className="bg-[#1B365D] rounded-2xl p-2.5">
+          <Shield size={26} color="#D4A843" strokeWidth={1.5} />
         </div>
+        <Heading title="Set up SeniorSafe" />
       </div>
-
-      {/* Content */}
-      <div className="flex-1 px-6 pt-8 pb-10 max-w-md mx-auto w-full flex flex-col gap-6 overflow-y-auto keyboard-safe-bottom">
-        {children}
+      <p className="text-[#6B645A]" style={{ fontSize: '17px', lineHeight: 1.45 }}>
+        About two minutes. You'll add the person you look after on the next screen, and they get a link that opens straight to their button.
+      </p>
+      <OAuthButtons onGoogle={() => startOAuth('google')} onApple={() => startOAuth('apple')} googleLoading={oauthLoading === 'google'} appleLoading={oauthLoading === 'apple'} />
+      <Divider>or with email</Divider>
+      <div className="flex flex-col gap-4">
+        <Field label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} />
+        <Field label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
+        <Field label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="The daily check-in comes to you as a text." value={form.phone} onChange={v => update('phone', v)} />
+        <Field label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
+        <Field label="Password" type="password" autoComplete="new-password" hint="At least 6 characters." value={form.password} onChange={v => update('password', v)} />
       </div>
-    </div>
-  )
-}
-
-function Input({ label, hint, onChange, autoFocus, ...props }) {
-  return (
-    <div>
-      <label className="block text-base font-medium text-gray-700 mb-2">{label}</label>
-      <input
-        {...props}
-        autoFocus={autoFocus}
-        onChange={e => onChange(e.target.value)}
-        className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl text-lg focus:outline-none focus:border-[#1B365D]"
-      />
-      {hint && <p className="text-gray-400 text-sm mt-1">{hint}</p>}
-    </div>
-  )
-}
-
-function BigButton({ onClick, disabled, children }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full py-5 rounded-2xl bg-[#1B365D] text-[#D4A843] font-bold text-xl disabled:opacity-40 active:scale-[0.98] transition-transform mt-2"
-    >
-      {children}
-    </button>
+      <ErrorText>{error}</ErrorText>
+      <BigButton onClick={() => createOwner(false)} disabled={loading}>
+        {loading ? 'Creating your account...' : 'Create my account'}
+      </BigButton>
+      <Disclosure />
+      <div className="flex flex-col gap-3 pt-2 text-center text-gray-600" style={{ fontSize: '16px' }}>
+        <p>Have an invite code? <TextLink onClick={() => { setMode('join'); setError('') }}>Join your family</TextLink></p>
+        <p>Setting this up for yourself? <TextLink onClick={() => { setMode('self'); setError('') }}>Start here</TextLink></p>
+        <p>Already have an account? <Link to="/signin" className="text-[#1B365D] font-semibold underline underline-offset-2">Sign in</Link></p>
+      </div>
+    </Shell>
   )
 }

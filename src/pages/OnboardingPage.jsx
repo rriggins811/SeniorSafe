@@ -1,865 +1,357 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, ChevronLeft, Clock, Users, Copy, Share2, Sparkles, Shield, AlertTriangle } from 'lucide-react'
+import { MessageSquare, Copy, Share2, CheckCircle, Smartphone } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { getAttribution } from '../lib/attribution'
-import { getAppUrl, copyToClipboard } from '../lib/platform'
 import { generateFamilyCode } from '../lib/familyCode'
+import { copyToClipboard } from '../lib/platform'
+import { dismissKeyboard } from '../lib/dismissKeyboard'
+import {
+  Shell, Heading, Field, BigButton, TextLink, ErrorText, Select,
+} from '../components/SetupUI'
+import { TIME_OPTIONS, formatTime12 } from '../lib/time'
+import { baseProfileRow, PENDING_SIGNUP_KEY } from '../lib/signup'
+import {
+  seniorInviteLink, seniorInviteText, memberInviteLink, memberInviteText, smsHref,
+} from '../lib/family'
 
-// Time options: 30-min increments from 6 AM to 8 PM
-const TIME_OPTIONS = []
-for (let h = 6; h <= 20; h++) {
-  for (let m = 0; m < 60; m += 30) {
-    if (h === 20 && m > 0) break
-    const hour12 = h > 12 ? h - 12 : h === 0 ? 12 : h
-    const ampm = h >= 12 ? 'PM' : 'AM'
-    const label = `${hour12}:${String(m).padStart(2, '0')} ${ampm}`
-    const value = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-    TIME_OPTIONS.push({ label, value })
-  }
-}
+// Two screens, for two kinds of owner:
+//   family  the adult child: who do you look after, then invite them
+//   self    the senior: pick a check-in time, then invite the family
+// Members and seniors arriving by link never come here; SignUpPage finishes
+// them and sends them to the dashboard.
+//
+// oauth: Google / Apple sign-ins land here with no profile row yet. We read
+// what SignUpPage stashed before the redirect and either finish a join or
+// show the owner screens, inserting the profile on the first submit so the
+// is_senior flag is set once and correctly.
 
-// Derive first/last name from OAuth provider metadata.
-// Apple/Google return name data in a few different shapes; if the user chose
-// to hide their name (Apple "Hide My Email" with no name shared) we fall back
-// to a placeholder rather than prompting — Apple rejects re-prompting.
-function deriveNameFromMetadata(meta) {
-  if (meta.first_name || meta.last_name) {
-    return { firstName: meta.first_name || '', lastName: meta.last_name || '' }
-  }
-  if (meta.full_name) {
-    const parts = meta.full_name.trim().split(/\s+/)
+function deriveName(meta) {
+  if (meta.first_name || meta.last_name) return { firstName: meta.first_name || '', lastName: meta.last_name || '' }
+  const full = (meta.full_name || meta.name || '').trim()
+  if (full) {
+    const parts = full.split(/\s+/)
     return { firstName: parts[0] || '', lastName: parts.slice(1).join(' ') }
   }
-  if (meta.name) {
-    const parts = meta.name.trim().split(/\s+/)
-    return { firstName: parts[0] || '', lastName: parts.slice(1).join(' ') }
-  }
-  return { firstName: 'Family', lastName: 'Member' }
-}
-
-// Step offsets and totals per path (signup steps already completed)
-// +2 for medical disclaimer + emergency interstitial shown before path-specific steps
-const PATH_CONFIG = {
-  'parent-setup': { signupSteps: 1, onboardingSteps: 5, total: 6 },
-  'member-join':  { signupSteps: 2, onboardingSteps: 3, total: 5 },
-  'self-setup':   { signupSteps: 1, onboardingSteps: 5, total: 6 },
-  'oauth':        { signupSteps: 0, onboardingSteps: 5, total: 5 },
+  return { firstName: '', lastName: '' }
 }
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const path = searchParams.get('path') || 'parent-setup'
-  const config = PATH_CONFIG[path] || PATH_CONFIG['parent-setup']
+  const [params] = useSearchParams()
+  const requested = params.get('path') || 'family'
 
   const [user, setUser] = useState(null)
+  const [profile, setProfile] = useState(null)      // existing row, or null for oauth
+  const [path, setPath] = useState(requested === 'oauth' ? 'family' : requested)
+  const [ready, setReady] = useState(false)
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState('')
+  const [handoff, setHandoff] = useState(false)
 
-  // Check-in time (default 9 AM)
-  const [checkinTime, setCheckinTime] = useState('09:00')
-
-  // Check-in demo
-  const [checkedIn, setCheckedIn] = useState(false)
-  const [checkInLoading, setCheckInLoading] = useState(false)
-
-  // Family code
-  const [codeCopied, setCodeCopied] = useState(false)
-
-  // OAuth: family code populated by auto-create useEffect below
-  const [oauthFamilyCode, setOauthFamilyCode] = useState('')
-  const [oauthFirstName, setOauthFirstName] = useState('')
+  // Owner details (oauth users type their own name here; email users already did)
+  const [ownerFirst, setOwnerFirst] = useState('')
+  const [ownerLast, setOwnerLast] = useState('')
+  const [ownerPhone, setOwnerPhone] = useState('')
+  // The person being looked after
+  const [seniorFirst, setSeniorFirst] = useState('')
+  const [seniorPhone, setSeniorPhone] = useState('')
+  const [alertTime, setAlertTime] = useState('09:00')
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { navigate('/signin'); return }
-      setUser(user)
-      supabase
-        .from('user_profile')
-        .select('onboarding_complete')
-        .eq('user_id', user.id)
-        .single()
-        .then(({ data }) => {
-          if (data?.onboarding_complete) navigate('/dashboard', { replace: true })
-        })
-    })
-  }, [navigate])
-
-  // ─── OAuth: auto-create profile from Apple/Google name metadata ───
-  // Apple requires we use whatever name the Authentication Services framework
-  // provides without re-prompting the user.
-  useEffect(() => {
-    if (!user || path !== 'oauth') return
+    let cancelled = false
     ;(async () => {
-      const { data: existing } = await supabase
-        .from('user_profile')
-        .select('family_code, first_name')
-        .eq('user_id', user.id)
-        .single()
+      const { data: { user: u } } = await supabase.auth.getUser()
+      if (!u) { navigate('/signin', { replace: true }); return }
+      if (cancelled) return
+      setUser(u)
+      const meta = u.user_metadata || {}
+      const derived = deriveName(meta)
+      setOwnerFirst(derived.firstName)
+      setOwnerLast(derived.lastName)
+      setOwnerPhone(meta.phone || '')
 
-      if (existing?.family_code) {
-        setOauthFamilyCode(existing.family_code)
-        setOauthFirstName(existing.first_name || '')
+      const { data: p } = await supabase.from('user_profile').select('*').eq('user_id', u.id).single()
+      if (cancelled) return
+
+      if (p?.onboarding_complete) { navigate('/dashboard', { replace: true }); return }
+
+      if (p) {
+        // Existing row: a member who never finished the old flow, or an owner
+        // mid-setup. Members have nothing to set up.
+        if (p.role === 'member') {
+          await supabase.from('user_profile').update({ onboarding_complete: true }).eq('user_id', u.id)
+          navigate('/dashboard', { replace: true })
+          return
+        }
+        setProfile(p)
+        setPath(p.is_senior ? 'self' : 'family')
+        setOwnerFirst(p.first_name || derived.firstName)
+        setOwnerLast(p.last_name || derived.lastName)
+        setOwnerPhone(p.phone || '')
+        if (p.senior_name && !p.is_senior) setSeniorFirst(p.senior_name)
+        if (p.senior_phone) setSeniorPhone(p.senior_phone)
+        if (p.checkin_alert_time && p.checkin_alert_time !== '12:00') setAlertTime(p.checkin_alert_time)
+        setReady(true)
         return
       }
 
-      const { firstName, lastName } = deriveNameFromMetadata(user.user_metadata || {})
-      const code = await generateFamilyCode()
-      // Fall through to a generic label if BOTH names are blank (rare:
-      // Apple Sign-In hides the name on the second sign-in attempt).
-      // Never leave family_name NULL — the family-scoped RLS policies
-      // need a non-NULL value so other family members can join.
-      const familyName = lastName
-        ? `The ${lastName} Family`
-        : firstName
-        ? `${firstName}'s Family`
-        : 'Your Family'
+      // No row: an OAuth sign-in. What were they doing before the redirect?
+      let pending = null
+      try {
+        const raw = localStorage.getItem(PENDING_SIGNUP_KEY)
+        if (raw) pending = JSON.parse(raw)
+        localStorage.removeItem(PENDING_SIGNUP_KEY)
+      } catch { /* ignore */ }
 
-      await supabase.from('user_profile').upsert({
-        user_id: user.id,
-        first_name: firstName,
-        last_name: lastName,
-        family_name: familyName,
-        role: 'admin',
-        family_code: code,
-        senior_name: firstName,
-        signup_source: getAttribution(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        onboarding_complete: false,
-        subscription_tier: 'trial',
-        trial_status: 'active',
-        trial_start_date: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
-
-      setOauthFamilyCode(code)
-      setOauthFirstName(firstName)
+      if (pending?.code && (pending.mode === 'join' || pending.mode === 'senior')) {
+        const { data: rows } = await supabase.rpc('lookup_invite_code', { invite_code: pending.code })
+        const inv = rows?.[0]
+        if (inv) {
+          const asSenior = pending.mode === 'senior' && !inv.has_senior
+          const first = derived.firstName || (asSenior ? inv.senior_name : '') || 'Family'
+          const { error: pErr } = await supabase.from('user_profile').upsert({
+            ...baseProfileRow(u.id),
+            first_name: first, last_name: derived.lastName, family_name: inv.family_name,
+            phone: meta.phone || null,
+            role: 'member', invited_by: inv.user_id, family_code: null,
+            is_senior: asSenior, senior_name: asSenior ? first : null,
+            onboarding_complete: true,
+          }, { onConflict: 'user_id' })
+          if (!pErr) { navigate('/dashboard', { replace: true }); return }
+          setError('Joining the family failed: ' + pErr.message)
+        }
+      }
+      setPath(pending?.mode === 'self' ? 'self' : 'family')
+      setReady(true)
     })()
-  }, [user, path])
+    return () => { cancelled = true }
+  }, [navigate])
 
-  const meta = user?.user_metadata || {}
-  const seniorName = oauthFirstName || meta.first_name || 'your loved one'
-  const familyCode = oauthFamilyCode || meta.family_code || ''
+  const isOauthNew = ready && !profile
+  const familyCode = profile?.family_code || ''
+  const [oauthCode, setOauthCode] = useState('')
+  const codeForLinks = familyCode || oauthCode
 
-  function displayStep() {
-    return config.signupSteps + step + 1
-  }
-
-  function goBack() {
-    if (step > 0) setStep(s => s - 1)
-  }
-
-  // ─── Check-in demo ────────────────────────────────────────────────
-  async function handleDemoCheckIn() {
-    if (!user || checkedIn || checkInLoading) return
-    setCheckInLoading(true)
-    // Surface insert errors instead of swallowing them. The demo
-    // check-in originally ignored its result, which masked an RLS
-    // bug for months (user_profile.family_name NULL → invisible row
-    // → INSERT...RETURNING rejected). Catch and log so the next
-    // regression is visible immediately.
-    const { error } = await supabase.from('checkins').insert({
-      user_id: user.id,
-      family_name: meta.family_name || '',
-      checked_in_at: new Date().toISOString(),
-    })
-    setCheckInLoading(false)
-    if (error) {
-      console.error('Demo check-in failed:', error)
-      // Still set checkedIn=true so the user can proceed through
-      // onboarding even if telemetry-style insert failed. The real
-      // dashboard check-in runs through the normal RLS path.
-    }
-    setCheckedIn(true)
-  }
-
-  // ─── Copy family code ─────────────────────────────────────────────
-  async function handleCopyCode() {
-    await copyToClipboard(familyCode)
-    setCodeCopied(true)
-    setTimeout(() => setCodeCopied(false), 2000)
-  }
-
-  // ─── Share family code ─────────────────────────────────────────────
-  async function handleShare() {
-    const appUrl = getAppUrl()
-    const url = `${appUrl}/signup?code=${familyCode}`
-    const text = `Join ${seniorName}'s family on SeniorSafe! Use code ${familyCode} or tap this link: ${url}`
-
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Join SeniorSafe', text }) } catch { /* cancelled */ }
-    } else {
-      await copyToClipboard(text)
-      setCodeCopied(true)
-      setTimeout(() => setCodeCopied(false), 2000)
-    }
-  }
-
-  // ─── Save profile and finish (admin paths) ────────────────────────
-  // Profile already exists (created in SignUpPage). Update with onboarding data.
-  async function handleFinish() {
-    if (!user) return
+  // ─── Persist step 1 ────────────────────────────────────────────────
+  async function saveOwnerSetup() {
+    dismissKeyboard()
+    if (path === 'family' && !seniorFirst.trim()) { setError("Please enter their first name."); return }
+    if (isOauthNew && !ownerFirst.trim()) { setError('Please enter your first name.'); return }
     setSaving(true)
+    setError('')
 
-    const { error } = await supabase.from('user_profile')
-      .update({
-        checkin_alert_time: checkinTime,
-        onboarding_complete: true,
-      })
-      .eq('user_id', user.id)
+    const first = ownerFirst.trim()
+    const last = ownerLast.trim()
+    const isSelf = path === 'self'
+    const senior = seniorFirst.trim()
+    const sPhone = seniorPhone.trim() || null
 
+    if (isOauthNew) {
+      const code = await generateFamilyCode()
+      const familyName = last ? `The ${last} Family` : `${first || senior || 'Your'}'s Family`
+      const { error: pErr } = await supabase.from('user_profile').upsert({
+        ...baseProfileRow(user.id),
+        first_name: first, last_name: last, family_name: familyName,
+        phone: ownerPhone.trim() || null,
+        role: 'admin', family_code: code,
+        is_senior: isSelf,
+        senior_name: isSelf ? first : senior,
+        senior_phone: isSelf ? null : sPhone,
+        checkin_alert_time: alertTime,
+        onboarding_complete: false,
+      }, { onConflict: 'user_id' })
+      if (pErr) { setError('Saving failed: ' + pErr.message); setSaving(false); return }
+      setOauthCode(code)
+      setProfile({ user_id: user.id, first_name: first, family_code: code, is_senior: isSelf })
+    } else {
+      const { error: uErr } = await supabase.from('user_profile').update({
+        senior_name: isSelf ? first : senior,
+        senior_phone: isSelf ? null : sPhone,
+        checkin_alert_time: alertTime,
+        ...(ownerPhone.trim() ? { phone: ownerPhone.trim() } : {}),
+      }).eq('user_id', user.id)
+      if (uErr) { setError('Saving failed: ' + uErr.message); setSaving(false); return }
+    }
     setSaving(false)
-    if (error) {
-      alert('Error saving profile: ' + error.message)
-    } else {
-      navigate('/dashboard')
-    }
+    setStep(1)
   }
 
-  // ─── Finish for member path ────────────────────────────────────────
-  async function handleMemberFinish() {
-    if (!user) return
+  async function finish() {
     setSaving(true)
-
-    await supabase
-      .from('user_profile')
+    const { error: uErr } = await supabase.from('user_profile')
       .update({ onboarding_complete: true })
       .eq('user_id', user.id)
-
     setSaving(false)
-    navigate('/dashboard')
+    if (uErr) { setError('Saving failed: ' + uErr.message); return }
+    navigate('/dashboard', { replace: true })
   }
 
-  // ─── OAuth: final save ─────────────────────────────────────────────
-  async function handleOauthFinish() {
-    if (!user) return
+  // "I'm holding their phone": finish the owner's setup, sign out of this
+  // device, and open the senior's link right here.
+  async function handOffThisPhone() {
     setSaving(true)
-
-    await supabase.from('user_profile')
-      .update({
-        checkin_alert_time: checkinTime,
-        onboarding_complete: true,
-      })
-      .eq('user_id', user.id)
-
+    await supabase.from('user_profile').update({ onboarding_complete: true }).eq('user_id', user.id)
+    await supabase.auth.signOut()
     setSaving(false)
-    navigate('/dashboard')
+    navigate(`/signup?code=${codeForLinks}&who=senior`, { replace: true })
   }
 
-  if (!user) return null
-
-  // ═════════════════════════════════════════════════════════════════════
-  //  SHARED STEPS: Medical Disclaimer + Emergency Interstitial
-  //  These show for ALL paths before path-specific steps
-  // ═════════════════════════════════════════════════════════════════════
-
-  // Step 0: Medical Disclaimer
-  if (step === 0) {
-    return (
-      <Shell displayStep={displayStep()} total={config.total} onBack={null}>
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
-            <Shield size={32} color="#1B365D" strokeWidth={1.5} />
-          </div>
-          <h1 className="text-[#1B365D] font-bold text-2xl">
-            Before You Begin
-          </h1>
-        </div>
-
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
-          <p className="text-[#1B365D] text-base leading-relaxed">
-            SeniorSafe is a family coordination tool. It is <strong>not</strong> a medical device, does not provide medical advice, and is not intended to diagnose, treat, cure, or prevent any medical condition.
-          </p>
-          <p className="text-[#1B365D] text-base leading-relaxed mt-3">
-            Always consult a qualified healthcare provider for medical concerns.
-          </p>
-        </div>
-
-        <BigButton onClick={() => setStep(1)}>I Understand</BigButton>
-      </Shell>
-    )
+  async function copy(text, key) {
+    await copyToClipboard(text)
+    setCopied(key)
+    setTimeout(() => setCopied(''), 2500)
   }
 
-  // Step 1: Emergency Service Interstitial
-  if (step === 1) {
-    return (
-      <Shell displayStep={displayStep()} total={config.total} onBack={() => setStep(0)}>
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center">
-            <AlertTriangle size={32} color="#DC2626" strokeWidth={1.5} />
-          </div>
-          <h1 className="text-[#1B365D] font-bold text-2xl">
-            Important
-          </h1>
-        </div>
-
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
-          <p className="text-gray-800 text-base leading-relaxed">
-            SeniorSafe is <strong>NOT</strong> an emergency monitoring service. Our check-in system helps families stay connected, but it does not replace 911, medical alert systems, or in-person care.
-          </p>
-          <p className="text-red-700 text-base leading-relaxed mt-3 font-semibold">
-            If someone is in danger, call 911 immediately.
-          </p>
-        </div>
-
-        <BigButton onClick={() => setStep(2)}>I Understand</BigButton>
-      </Shell>
-    )
-  }
-
-  // ═════════════════════════════════════════════════════════════════════
-  //  PATH A: Parent Setup — Onboarding Steps (offset by 2 for disclaimers)
-  // ═════════════════════════════════════════════════════════════════════
-  if (path === 'parent-setup') {
-    // Step 2 — Set check-in time
-    if (step === 2) {
-      return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
-              <Clock size={32} color="#1B365D" strokeWidth={1.5} />
-            </div>
-            <h1 className="text-[#1B365D] font-bold text-2xl">
-              Set {seniorName}'s check-in time
-            </h1>
-            <p className="text-gray-500 text-lg leading-relaxed">
-              What time should {seniorName} tap "I'm Okay" each morning?
-            </p>
-          </div>
-
-          <select
-            value={checkinTime}
-            onChange={e => setCheckinTime(e.target.value)}
-            className="w-full px-4 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-[#1B365D] text-gray-800 font-semibold text-xl bg-white"
-          >
-            {TIME_OPTIONS.map(t => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-
-          <p className="text-[#1B365D]/70 text-base bg-[#1B365D]/5 rounded-xl p-4 text-center">
-            If {seniorName} doesn't check in by this time, your family will be notified.
-          </p>
-
-          <BigButton onClick={() => setStep(3)}>Next</BigButton>
-        </Shell>
-      )
+  async function share(text) {
+    if (navigator.share) {
+      try { await navigator.share({ title: 'SeniorSafe', text }) } catch { /* cancelled */ }
+    } else {
+      await copy(text, 'share')
     }
+  }
 
-    // Step 3 — Try the first check-in
-    if (step === 3) {
+  if (!ready) return null
+
+  const timeLabel = formatTime12(alertTime)
+
+  // ═════════════════════════════════════════════════════════════════════
+  //  FAMILY path: the adult child
+  // ═════════════════════════════════════════════════════════════════════
+  if (path === 'family') {
+    if (step === 0) {
       return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-          <div className="flex flex-col items-center gap-3 text-center">
-            {!checkedIn ? (
+        <Shell step={1} total={2}>
+          <Heading title="Who do you look after?" sub="One person for now. They'll be the one tapping the button each morning." />
+          <div className="flex flex-col gap-4">
+            {isOauthNew && (
               <>
-                <h1 className="text-[#1B365D] font-bold text-2xl">
-                  Try the first check-in
-                </h1>
-                <p className="text-gray-500 text-lg leading-relaxed">
-                  Hand the phone to {seniorName} and let them try it — one tap!
-                </p>
-
-                <div className="w-full mt-4">
-                  <button
-                    onClick={handleDemoCheckIn}
-                    disabled={checkInLoading}
-                    className="w-full rounded-2xl py-8 flex flex-col items-center gap-3 bg-[#1B365D] shadow-lg active:scale-[0.97] transition-transform"
-                  >
-                    <CheckCircle size={48} color="#D4A843" strokeWidth={1.5} />
-                    <span className="text-white font-bold text-2xl">
-                      {checkInLoading ? 'Checking in...' : "I'm Okay Today"}
-                    </span>
-                    <span className="text-white/60 text-base">
-                      Tap to let your family know you're doing well
-                    </span>
-                  </button>
-                </div>
-
-                <p className="text-gray-400 text-sm mt-2">
-                  Go ahead, hand them the phone and let them tap it!
-                </p>
-
-                {/* Escape hatch added 2026-05-27: production data showed
-                    100% of users abandon at this step. Most likely cause is
-                    they're NOT physically with the senior at signup time
-                    (ad-driven traffic clicks at their own kitchen table),
-                    so demo-the-check-in is a wall they cannot cross. Skip
-                    advances them to the family-code step without recording
-                    a check-in. first_checkin_date stays null (honest). */}
-                <button
-                  type="button"
-                  onClick={() => setStep(4)}
-                  className="mt-4 text-sm text-gray-500 underline underline-offset-2 hover:text-[#1B365D]"
-                >
-                  Skip the demo, I&apos;ll do this with them later
-                </button>
-              </>
-            ) : (
-              <>
-                {/* Celebration */}
-                <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle size={56} color="#16A34A" strokeWidth={2} />
-                </div>
-                <h1 className="text-green-700 font-bold text-2xl mt-2">
-                  Perfect!
-                </h1>
-                <p className="text-gray-600 text-xl leading-relaxed">
-                  {seniorName} is all set.
-                </p>
-                <p className="text-gray-400 text-base mt-1">
-                  They just need to do this once a day.
-                </p>
+                <Field label="Your first name" value={ownerFirst} onChange={setOwnerFirst} autoFocus />
+                <Field label="Your mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="The daily check-in comes to you as a text." value={ownerPhone} onChange={setOwnerPhone} />
               </>
             )}
+            <Field label="Their first name" placeholder="e.g. Mom, Margaret" value={seniorFirst} onChange={v => { setSeniorFirst(v); setError('') }} autoFocus={!isOauthNew} />
+            <Field label="Their mobile number" type="tel" inputMode="tel" placeholder="(336) 555-0100" hint="We'll text them a link that opens straight to their button. You can add this later." value={seniorPhone} onChange={setSeniorPhone} />
+            <Select
+              label="Check-in time"
+              value={alertTime}
+              onChange={setAlertTime}
+              options={TIME_OPTIONS}
+              hint={`If ${seniorFirst.trim() || 'they'} ${seniorFirst.trim() ? "hasn't" : "haven't"} tapped "I'm Okay" by ${timeLabel}, you get an alert.`}
+            />
           </div>
-
-          {checkedIn && (
-            <BigButton onClick={() => setStep(4)}>Next</BigButton>
+          <ErrorText>{error}</ErrorText>
+          <BigButton onClick={saveOwnerSetup} disabled={saving}>{saving ? 'Saving...' : 'Continue'}</BigButton>
+          {isOauthNew && (
+            <p className="text-center text-gray-600">
+              Setting this up for yourself? <TextLink onClick={() => { setPath('self'); setError('') }}>Start here</TextLink>
+            </p>
           )}
         </Shell>
       )
     }
 
-    // Step 4 — Show family code
-    if (step === 4) {
-      return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#D4A843]/20 flex items-center justify-center">
-              <Sparkles size={32} color="#D4A843" strokeWidth={1.5} />
-            </div>
-            <h1 className="text-[#1B365D] font-bold text-2xl">
-              Now set up YOUR account
-            </h1>
-            <p className="text-gray-500 text-lg leading-relaxed">
-              Open SeniorSafe on <strong>your</strong> phone and use this code to join {seniorName}'s family.
-            </p>
-          </div>
+    const name = seniorFirst.trim() || 'them'
+    const text = seniorInviteText({ seniorName: seniorFirst.trim(), ownerFirstName: ownerFirst.trim(), code: codeForLinks })
+    const link = seniorInviteLink(codeForLinks)
+    const hasPhone = seniorPhone.replace(/\D/g, '').length >= 10
 
-          {/* Large code display */}
-          <div className="bg-[#FAF8F4] rounded-2xl p-6 flex flex-col items-center gap-4">
-            <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Family Code</p>
-            <p className="text-4xl font-bold tracking-[0.25em] text-[#1B365D]">
-              {familyCode}
-            </p>
-
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={handleCopyCode}
-                className="flex-1 py-3 rounded-xl bg-[#1B365D] text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-              >
-                <Copy size={18} />
-                {codeCopied ? 'Copied!' : 'Copy Code'}
-              </button>
-              <button
-                onClick={handleShare}
-                className="flex-1 py-3 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-              >
-                <Share2 size={18} />
-                Share
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-[#1B365D]/5 rounded-xl p-4 flex flex-col gap-2">
-            <p className="text-[#1B365D] font-semibold text-base">What happens next:</p>
-            <p className="text-gray-600 text-base">
-              You'll get notified every time {seniorName} checks in — and if they don't check in on time.
-            </p>
-          </div>
-
-          <BigButton onClick={handleFinish} disabled={saving}>
-            {saving ? 'Saving...' : 'Done'}
-          </BigButton>
-        </Shell>
-      )
-    }
-  }
-
-  // ═════════════════════════════════════════════════════════════════════
-  //  PATH B: Member Join — Onboarding Step (offset by 2 for disclaimers)
-  // ═════════════════════════════════════════════════════════════════════
-  if (path === 'member-join') {
-    const adminSeniorName = meta.family_name || `${seniorName}'s family`
     return (
-      <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-        <div className="flex flex-col items-center gap-4 text-center pt-4">
-          <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
-            <CheckCircle size={56} color="#16A34A" strokeWidth={2} />
-          </div>
-          <h1 className="text-[#1B365D] font-bold text-2xl">
-            You're connected!
-          </h1>
-          <p className="text-gray-600 text-xl">
-            Welcome to <strong>{adminSeniorName}</strong>
-          </p>
-        </div>
-
-        <div className="bg-[#FAF8F4] rounded-2xl p-5 flex flex-col gap-4">
-          <p className="text-[#1B365D] font-semibold text-base">Here's what you'll get:</p>
-          <div className="flex flex-col gap-3">
-            <FeatureRow emoji="✓" text="Daily check-in notifications" />
-            <FeatureRow emoji="✓" text="Family message board" />
-            <FeatureRow emoji="✓" text="Shared document vault" />
-            <FeatureRow emoji="✓" text="Medication & appointment tracking" />
-            <FeatureRow emoji="✓" text="Emergency alerts" />
-          </div>
-        </div>
-
-        <BigButton onClick={handleMemberFinish} disabled={saving}>
-          {saving ? 'Loading...' : 'Get Started'}
-        </BigButton>
-      </Shell>
-    )
-  }
-
-  // ═════════════════════════════════════════════════════════════════════
-  //  PATH C: Self Setup — Onboarding Steps (offset by 2 for disclaimers)
-  // ═════════════════════════════════════════════════════════════════════
-  if (path === 'self-setup') {
-    // Step 2 — Set check-in time
-    if (step === 2) {
-      return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
-              <Clock size={32} color="#1B365D" strokeWidth={1.5} />
-            </div>
-            <h1 className="text-[#1B365D] font-bold text-2xl">
-              Set your daily check-in time
-            </h1>
-            <p className="text-gray-500 text-lg leading-relaxed">
-              What time would you like to check in each morning?
-            </p>
-          </div>
-
-          <select
-            value={checkinTime}
-            onChange={e => setCheckinTime(e.target.value)}
-            className="w-full px-4 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-[#1B365D] text-gray-800 font-semibold text-xl bg-white"
-          >
-            {TIME_OPTIONS.map(t => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-
-          <p className="text-[#1B365D]/70 text-base bg-[#1B365D]/5 rounded-xl p-4 text-center">
-            If you haven't checked in by this time, your family will be notified.
-          </p>
-
-          <BigButton onClick={() => setStep(3)}>Next</BigButton>
-        </Shell>
-      )
-    }
-
-    // Step 3 — Invite your family
-    if (step === 3) {
-      return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
-              <Users size={32} color="#1B365D" strokeWidth={1.5} />
-            </div>
-            <h1 className="text-[#1B365D] font-bold text-2xl">
-              Invite your family
-            </h1>
-            <p className="text-gray-500 text-lg leading-relaxed">
-              Share this code with your children so they can check on you.
-            </p>
-          </div>
-
-          {/* Large code display */}
-          <div className="bg-[#FAF8F4] rounded-2xl p-6 flex flex-col items-center gap-4">
-            <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Your Family Code</p>
-            <p className="text-4xl font-bold tracking-[0.25em] text-[#1B365D]">
-              {familyCode}
-            </p>
-
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={handleCopyCode}
-                className="flex-1 py-3 rounded-xl bg-[#1B365D] text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-              >
-                <Copy size={18} />
-                {codeCopied ? 'Copied!' : 'Copy Code'}
-              </button>
-              <button
-                onClick={handleShare}
-                className="flex-1 py-3 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-              >
-                <Share2 size={18} />
-                Share
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <BigButton onClick={() => setStep(4)}>Next</BigButton>
-            <button
-              onClick={() => setStep(4)}
-              className="w-full py-4 rounded-xl bg-gray-100 text-gray-500 font-semibold text-lg"
-            >
-              I'll do this later
-            </button>
-          </div>
-        </Shell>
-      )
-    }
-
-    // Step 4 — Try your first check-in
-    if (step === 4) {
-      return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-          <div className="flex flex-col items-center gap-3 text-center">
-            {!checkedIn ? (
-              <>
-                <h1 className="text-[#1B365D] font-bold text-2xl">
-                  Try your first check-in
-                </h1>
-                <p className="text-gray-500 text-lg leading-relaxed">
-                  This is what you'll do every morning — one tap!
-                </p>
-
-                <div className="w-full mt-4">
-                  <button
-                    onClick={handleDemoCheckIn}
-                    disabled={checkInLoading}
-                    className="w-full rounded-2xl py-8 flex flex-col items-center gap-3 bg-[#1B365D] shadow-lg active:scale-[0.97] transition-transform"
-                  >
-                    <CheckCircle size={48} color="#D4A843" strokeWidth={1.5} />
-                    <span className="text-white font-bold text-2xl">
-                      {checkInLoading ? 'Checking in...' : "I'm Okay Today"}
-                    </span>
-                    <span className="text-white/60 text-base">
-                      Tap to let your family know you're doing well
-                    </span>
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle size={56} color="#16A34A" strokeWidth={2} />
-                </div>
-                <h1 className="text-green-700 font-bold text-2xl mt-2">
-                  Perfect!
-                </h1>
-                <p className="text-gray-600 text-xl">
-                  You're all set. Just do this once a day.
-                </p>
-              </>
-            )}
-          </div>
-
-          {checkedIn && (
-            <BigButton onClick={handleFinish} disabled={saving}>
-              {saving ? 'Saving...' : 'Go to Dashboard'}
+      <Shell step={2} total={2} onBack={() => setStep(0)}>
+        <Heading title={`Invite ${name}`} sub={`${name} needs SeniorSafe on their phone. The link opens straight to their button with their name on it.`} />
+        <div className="flex flex-col gap-3">
+          {hasPhone ? (
+            <BigButton href={smsHref(seniorPhone, text)}>
+              <MessageSquare size={22} /> Text {name} the link
+            </BigButton>
+          ) : (
+            <BigButton onClick={() => share(text)}>
+              <Share2 size={22} /> Share the link
             </BigButton>
           )}
-        </Shell>
-      )
-    }
-  }
-
-  // ═════════════════════════════════════════════════════════════════════
-  //  PATH: OAuth (Apple / Google) — name auto-populated from provider metadata
-  // ═════════════════════════════════════════════════════════════════════
-  if (path === 'oauth') {
-    // Steps 0 & 1 are medical disclaimer + emergency interstitial (handled above)
-    // Profile is auto-created via useEffect — no name step.
-
-    // Step 2 — Set check-in time
-    if (step === 2) {
-      return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center">
-              <Clock size={32} color="#1B365D" strokeWidth={1.5} />
-            </div>
-            <h1 className="text-[#1B365D] font-bold text-2xl">
-              Set your daily check-in time
-            </h1>
-            <p className="text-gray-500 text-lg leading-relaxed">
-              What time should the daily check-in happen?
-            </p>
-          </div>
-
-          <select
-            value={checkinTime}
-            onChange={e => setCheckinTime(e.target.value)}
-            className="w-full px-4 py-5 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-[#1B365D] text-gray-800 font-semibold text-xl bg-white"
-          >
-            {TIME_OPTIONS.map(t => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-
-          <p className="text-[#1B365D]/70 text-base bg-[#1B365D]/5 rounded-xl p-4 text-center">
-            If no one checks in by this time, your family will be notified.
-          </p>
-
-          <BigButton onClick={() => setStep(3)}>Next</BigButton>
-        </Shell>
-      )
-    }
-
-    // Step 3 — Try the first check-in
-    if (step === 3) {
-      return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-          <div className="flex flex-col items-center gap-3 text-center">
-            {!checkedIn ? (
-              <>
-                <h1 className="text-[#1B365D] font-bold text-2xl">
-                  Try the first check-in
-                </h1>
-                <p className="text-gray-500 text-lg leading-relaxed">
-                  This is what it looks like every morning — one tap!
-                </p>
-
-                <div className="w-full mt-4">
-                  <button
-                    onClick={handleDemoCheckIn}
-                    disabled={checkInLoading}
-                    className="w-full rounded-2xl py-8 flex flex-col items-center gap-3 bg-[#1B365D] shadow-lg active:scale-[0.97] transition-transform"
-                  >
-                    <CheckCircle size={48} color="#D4A843" strokeWidth={1.5} />
-                    <span className="text-white font-bold text-2xl">
-                      {checkInLoading ? 'Checking in...' : "I'm Okay Today"}
-                    </span>
-                    <span className="text-white/60 text-base">
-                      Tap to let your family know you're doing well
-                    </span>
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle size={56} color="#16A34A" strokeWidth={2} />
-                </div>
-                <h1 className="text-green-700 font-bold text-2xl mt-2">
-                  Perfect!
-                </h1>
-                <p className="text-gray-600 text-xl">
-                  You're all set. Just do this once a day.
-                </p>
-              </>
-            )}
-          </div>
-
-          {checkedIn && (
-            <BigButton onClick={() => setStep(4)}>Next</BigButton>
-          )}
-        </Shell>
-      )
-    }
-
-    // Step 4 — Show family code
-    if (step === 4) {
-      return (
-        <Shell displayStep={displayStep()} total={config.total} onBack={goBack}>
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#D4A843]/20 flex items-center justify-center">
-              <Sparkles size={32} color="#D4A843" strokeWidth={1.5} />
-            </div>
-            <h1 className="text-[#1B365D] font-bold text-2xl">
-              Invite your family
-            </h1>
-            <p className="text-gray-500 text-lg leading-relaxed">
-              Share this code so family members can join.
-            </p>
-          </div>
-
-          <div className="bg-[#FAF8F4] rounded-2xl p-6 flex flex-col items-center gap-4">
-            <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Family Code</p>
-            <p className="text-4xl font-bold tracking-[0.25em] text-[#1B365D]">
-              {familyCode}
-            </p>
-
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={handleCopyCode}
-                className="flex-1 py-3 rounded-xl bg-[#1B365D] text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-              >
-                <Copy size={18} />
-                {codeCopied ? 'Copied!' : 'Copy Code'}
-              </button>
-              <button
-                onClick={handleShare}
-                className="flex-1 py-3 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-              >
-                <Share2 size={18} />
-                Share
-              </button>
-            </div>
-          </div>
-
-          <BigButton onClick={handleOauthFinish} disabled={saving}>
-            {saving ? 'Saving...' : 'Done'}
+          <BigButton secondary onClick={() => copy(link, 'link')}>
+            {copied === 'link' ? <><CheckCircle size={22} /> Copied</> : <><Copy size={22} /> Copy the link</>}
           </BigButton>
-        </Shell>
-      )
-    }
+        </div>
+
+        <div className="bg-[#FAF8F4] border border-[#E7E2D8] rounded-2xl p-4 flex flex-col gap-2">
+          <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>What happens next</p>
+          <p className="text-[#2D2A24]" style={{ fontSize: '16px', lineHeight: 1.5 }}>
+            {name} opens the link, picks an email and password, and sees their "I'm Okay" button. You get a text every time they tap it, and an alert if they haven't by {timeLabel}. Your dashboard shows "waiting for {name}" until then.
+          </p>
+        </div>
+
+        <BigButton onClick={finish} disabled={saving}>{saving ? 'One moment...' : 'Done, take me to the app'}</BigButton>
+
+        <div className="text-center">
+          <TextLink onClick={() => setHandoff(true)}>I'm holding {name}'s phone right now</TextLink>
+        </div>
+        <ErrorText>{error}</ErrorText>
+
+        {handoff && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-6">
+            <div className="bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-xl">
+              <div className="flex items-center gap-3">
+                <Smartphone size={26} color="#1B365D" />
+                <h2 className="text-[#1B365D] font-bold text-xl">Set up {name}'s phone now</h2>
+              </div>
+              <p className="text-[#2D2A24]" style={{ fontSize: '16px', lineHeight: 1.5 }}>
+                We'll sign you out of this phone and open {name}'s setup here. Later, sign in on your own phone with your email to see their check-ins.
+              </p>
+              <BigButton onClick={handOffThisPhone} disabled={saving}>{saving ? 'One moment...' : `Continue on this phone`}</BigButton>
+              <button onClick={() => setHandoff(false)} className="text-gray-500 font-medium py-2">Cancel</button>
+            </div>
+          </div>
+        )}
+      </Shell>
+    )
   }
 
-  return null
-}
-
-// ═════════════════════════════════════════════════════════════════════════
-//  Shared UI Components
-// ═════════════════════════════════════════════════════════════════════════
-
-function Shell({ displayStep, total, onBack, children }) {
-  const pct = (displayStep / total) * 100
-  return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Header */}
-      <div className="bg-[#1B365D] flex-shrink-0">
-        <div className="px-6 pt-12 pb-4 max-w-md mx-auto w-full flex items-center justify-between">
-          {onBack ? (
-            <button onClick={onBack} className="p-2 -ml-2 rounded-lg text-white/70 active:text-white">
-              <ChevronLeft size={24} />
-            </button>
-          ) : (
-            <div className="w-8" />
+  // ═════════════════════════════════════════════════════════════════════
+  //  SELF path: the senior setting up for themselves
+  // ═════════════════════════════════════════════════════════════════════
+  if (step === 0) {
+    return (
+      <Shell step={1} total={2}>
+        <Heading large title="Your daily check-in" sub={`Each morning you'll tap one button to let your family know you're okay. Pick the time they should hear from you by.`} />
+        <div className="flex flex-col gap-4">
+          {isOauthNew && (
+            <>
+              <Field large label="Your first name" value={ownerFirst} onChange={setOwnerFirst} autoFocus />
+              <Field large label="Your mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="Optional. Lets your family send you a text nudge." value={ownerPhone} onChange={setOwnerPhone} />
+            </>
           )}
-          <span className="text-[#D4A843] text-sm font-semibold">
-            Step {displayStep} of {total}
-          </span>
-          <div className="w-8" />
+          <Select large label="Check in by" value={alertTime} onChange={setAlertTime} options={TIME_OPTIONS} hint={`If you haven't tapped "I'm Okay" by ${timeLabel}, your family gets an alert.`} />
         </div>
-        <div className="w-full h-1 bg-white/20">
-          <div className="h-full bg-[#D4A843] transition-all duration-500" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
+        <ErrorText>{error}</ErrorText>
+        <BigButton large onClick={saveOwnerSetup} disabled={saving}>{saving ? 'Saving...' : 'Continue'}</BigButton>
+        {isOauthNew && (
+          <p className="text-center text-gray-600">
+            Setting this up for someone else? <TextLink onClick={() => { setPath('family'); setError('') }}>Start here</TextLink>
+          </p>
+        )}
+      </Shell>
+    )
+  }
 
-      {/* Content */}
-      <div className="flex-1 px-6 pt-8 pb-10 max-w-md mx-auto w-full flex flex-col gap-6 overflow-y-auto keyboard-safe-bottom">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function BigButton({ onClick, disabled, children }) {
+  const mText = memberInviteText({ seniorName: ownerFirst.trim(), code: codeForLinks })
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full py-5 rounded-2xl bg-[#1B365D] text-[#D4A843] font-bold text-xl disabled:opacity-40 active:scale-[0.98] transition-transform mt-2"
-    >
-      {children}
-    </button>
-  )
-}
-
-function FeatureRow({ emoji, text }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="text-green-600 font-bold text-lg">{emoji}</span>
-      <span className="text-gray-700 text-base">{text}</span>
-    </div>
+    <Shell step={2} total={2} onBack={() => setStep(0)}>
+      <Heading large title="Invite your family" sub="Send this to the people who should hear from you each morning. You can add more later." />
+      <div className="bg-[#FAF8F4] rounded-2xl p-6 flex flex-col items-center gap-2">
+        <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Your family code</p>
+        <p className="text-[#1B365D] font-bold tracking-[0.25em]" style={{ fontSize: '40px' }}>{codeForLinks}</p>
+      </div>
+      <div className="flex flex-col gap-3">
+        <BigButton large onClick={() => share(mText)}><Share2 size={22} /> Share the link</BigButton>
+        <BigButton large secondary onClick={() => copy(memberInviteLink(codeForLinks), 'link')}>
+          {copied === 'link' ? <><CheckCircle size={22} /> Copied</> : <><Copy size={22} /> Copy the link</>}
+        </BigButton>
+      </div>
+      <ErrorText>{error}</ErrorText>
+      <BigButton large onClick={finish} disabled={saving}>{saving ? 'One moment...' : 'Done'}</BigButton>
+      <div className="text-center"><TextLink onClick={finish}>I'll invite them later</TextLink></div>
+    </Shell>
   )
 }
