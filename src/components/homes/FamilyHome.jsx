@@ -44,6 +44,10 @@ export default function FamilyHome({
   seniorJoined = true,
   isOwner = false,
   inviteSmsHref,
+  onSendInvite,
+  inviteSending = false,
+  inviteSentTo = '',
+  inviteError = '',
   onCopyInvite,
   copied = false,
   alertLabel,
@@ -259,10 +263,29 @@ export default function FamilyHome({
 
           {status.tone === 'join' && isOwner && (
             <div className="mt-4 flex flex-col gap-2">
-              {inviteSmsHref && (
-                <a href={inviteSmsHref} className="w-full py-3.5 rounded-xl bg-[#1B365D] text-[#D4A843] font-bold text-base flex items-center justify-center gap-2">
-                  <MessageSquare size={18} /> Text {name} the link again
-                </a>
+              {inviteSmsHref && onSendInvite && (
+                <button
+                  onClick={onSendInvite}
+                  disabled={inviteSending}
+                  className="w-full py-3.5 rounded-xl bg-[#1B365D] text-[#D4A843] font-bold text-base flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  <MessageSquare size={18} /> {inviteSending ? 'Sending…' : `Text ${name} the link again`}
+                </button>
+              )}
+              {inviteSentTo && (
+                <p className="text-green-800 font-semibold text-center flex items-center justify-center gap-2 text-base">
+                  <CheckCircle size={18} /> Sent to {inviteSentTo}
+                </p>
+              )}
+              {inviteError && (
+                <div className="bg-[#FDF2F0] border border-[#B5483F]/40 rounded-xl p-3 flex flex-col gap-1">
+                  <p className="text-[#7A2E28] text-base">{inviteError}</p>
+                  {inviteSmsHref && (
+                    <a href={inviteSmsHref} className="text-[#1B365D] font-semibold underline underline-offset-2 text-base">
+                      Text it from this phone instead
+                    </a>
+                  )}
+                </div>
               )}
               <button onClick={onCopyInvite} className="w-full py-3.5 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-base flex items-center justify-center gap-2">
                 {copied ? <><CheckCircle size={18} /> Copied</> : <><Copy size={18} /> Copy the link</>}

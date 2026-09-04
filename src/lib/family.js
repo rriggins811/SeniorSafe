@@ -69,6 +69,31 @@ export function memberInviteText({ seniorName, code }) {
   return `Join ${whom} SeniorSafe family so you get the daily "I'm okay" check-in too. Tap this link and sign up: ${memberInviteLink(code)}`
 }
 
+// Ask the server to text an invite. kind 'senior' texts the number the owner
+// entered at setup; kind 'member' texts the number given. Returns
+// { ok, to } or { ok: false, error }. Callers fall back to the sms: link
+// (the person's own Messages app) when this fails.
+export async function sendInvite(kind, to) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return { ok: false, error: 'Please sign in again.' }
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invite`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ kind, to }),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) return { ok: false, error: body?.error || 'The text did not go through.' }
+    return { ok: true, to: body.to }
+  } catch {
+    return { ok: false, error: 'The text did not go through.' }
+  }
+}
+
 // sms: link that opens the phone's Messages app with the text filled in.
 // "?&body=" is the form both iOS and Android honor.
 export function smsHref(phone, body) {

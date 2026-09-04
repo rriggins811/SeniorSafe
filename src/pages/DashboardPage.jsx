@@ -8,7 +8,7 @@ import { copyToClipboard } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
 import { formatTime12 } from '../lib/time'
 import {
-  loadFamily, notifyFamily, seniorInviteLink, seniorInviteText, smsHref,
+  loadFamily, notifyFamily, seniorInviteLink, seniorInviteText, smsHref, sendInvite,
 } from '../lib/family'
 import ParentHome from '../components/homes/ParentHome'
 import FamilyHome from '../components/homes/FamilyHome'
@@ -75,6 +75,9 @@ export default function DashboardPage() {
   const [nudgeWarning, setNudgeWarning] = useState('')
   const [copied, setCopied] = useState(false)
   const [unreadMsgCount, setUnreadMsgCount] = useState(0)
+  const [inviteSending, setInviteSending] = useState(false)
+  const [inviteSentTo, setInviteSentTo] = useState('')
+  const [inviteError, setInviteError] = useState('')
 
   // Shared
   const [medsDue, setMedsDue] = useState(0)
@@ -345,6 +348,16 @@ export default function DashboardPage() {
     setTimeout(() => setCopied(false), 2500)
   }
 
+  async function textSeniorInvite() {
+    if (inviteSending) return
+    setInviteSending(true)
+    setInviteError('')
+    const r = await sendInvite('senior')
+    setInviteSending(false)
+    if (r.ok) setInviteSentTo(r.to || family.seniorPhone)
+    else setInviteError(r.error || 'The text did not go through.')
+  }
+
   // ─── Render ──────────────────────────────────────────────────────
   if (loadError) {
     return (
@@ -420,6 +433,10 @@ export default function DashboardPage() {
       seniorJoined={seniorJoined}
       isOwner={isOwner}
       inviteSmsHref={family.seniorPhone ? smsHref(family.seniorPhone, inviteText) : null}
+      onSendInvite={textSeniorInvite}
+      inviteSending={inviteSending}
+      inviteSentTo={inviteSentTo}
+      inviteError={inviteError}
       onCopyInvite={copyInvite}
       copied={copied}
       alertLabel={alertLabel}

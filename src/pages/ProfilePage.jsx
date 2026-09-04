@@ -17,6 +17,8 @@ export default function ProfilePage() {
     phone: '',
     sms_notifications: true,
     checkin_alert_time: '12:00',
+    senior_name: '',
+    senior_phone: '',
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -62,6 +64,8 @@ export default function ProfilePage() {
             phone: data?.phone || user.user_metadata?.phone || '',
             sms_notifications: data?.sms_notifications !== false,
             checkin_alert_time: data?.checkin_alert_time || '12:00',
+            senior_name: data?.senior_name || '',
+            senior_phone: data?.senior_phone || '',
           })
           setLoading(false)
         })
@@ -89,9 +93,14 @@ export default function ProfilePage() {
       sms_notifications: form.sms_notifications,
     }
 
-    // Only save checkin_alert_time for admin users
+    // Only the family owner sets the check-in time. An owner who looks after
+    // someone else also keeps that person's name and number here.
     if (profile?.role === 'admin') {
       updateData.checkin_alert_time = form.checkin_alert_time
+      if (!profile?.is_senior) {
+        updateData.senior_name = form.senior_name.trim() || null
+        updateData.senior_phone = form.senior_phone.trim() || null
+      }
     }
 
     const [profileResult] = await Promise.all([
@@ -286,6 +295,7 @@ export default function ProfilePage() {
 
   const isAdmin = profile?.role === 'admin'
   const isMember = profile?.role === 'member'
+  const looksAfterSomeone = isAdmin && profile && !profile.is_senior
   const isPaid = profile?.subscription_tier === 'paid' || profile?.subscription_tier === 'trial'
   const hasStripeSubscription = !!profile?.stripe_subscription_id
 
@@ -405,6 +415,39 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* Person you look after (owner who is not the senior) */}
+              {looksAfterSomeone && (
+                <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-4">Person you look after</p>
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Their first name</label>
+                      <input
+                        type="text"
+                        value={form.senior_name}
+                        onChange={e => setForm(f => ({ ...f, senior_name: e.target.value }))}
+                        placeholder="Mom, Margaret"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                        style={{ fontSize: '16px' }}
+                      />
+                      <p className="text-gray-400 text-xs mt-1.5">Once they join, the name on their own account is what everyone sees.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Their mobile number</label>
+                      <input
+                        type="tel"
+                        value={form.senior_phone}
+                        onChange={e => setForm(f => ({ ...f, senior_phone: e.target.value }))}
+                        placeholder="(336) 555-0100"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                        style={{ fontSize: '16px' }}
+                      />
+                      <p className="text-gray-400 text-xs mt-1.5">Where their invite link and nudges are texted.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Check-In Alert Time (admin only) */}
               {isAdmin && (
                 <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
@@ -412,9 +455,11 @@ export default function ProfilePage() {
                   <div className="flex items-start gap-3">
                     <Clock size={18} className="text-[#1B365D] mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-700">Daily check-in deadline</p>
+                      <p className="text-sm font-medium text-gray-700">Daily check-in time</p>
                       <p className="text-xs text-gray-400 mt-0.5 mb-3">
-                        If no &ldquo;I&rsquo;m Okay&rdquo; check-in by this time, your family will be alerted.
+                        {looksAfterSomeone
+                          ? `If ${form.senior_name.trim() || 'they'} hasn't tapped "I'm Okay" by this time, the family gets an alert.`
+                          : "If you haven't tapped \"I'm Okay\" by this time, your family gets an alert."}
                       </p>
                       <select
                         value={form.checkin_alert_time}

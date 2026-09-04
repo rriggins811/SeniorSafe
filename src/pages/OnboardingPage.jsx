@@ -11,7 +11,7 @@ import {
 import { TIME_OPTIONS, formatTime12 } from '../lib/time'
 import { baseProfileRow, PENDING_SIGNUP_KEY } from '../lib/signup'
 import {
-  seniorInviteLink, seniorInviteText, memberInviteLink, memberInviteText, smsHref,
+  seniorInviteLink, seniorInviteText, memberInviteLink, memberInviteText, smsHref, sendInvite,
 } from '../lib/family'
 
 // Two screens, for two kinds of owner:
@@ -49,6 +49,9 @@ export default function OnboardingPage() {
   const [error, setError] = useState('')
   const [copied, setCopied] = useState('')
   const [handoff, setHandoff] = useState(false)
+  const [inviteSending, setInviteSending] = useState(false)
+  const [inviteSentTo, setInviteSentTo] = useState('')
+  const [inviteError, setInviteError] = useState('')
 
   // Owner details (oauth users type their own name here; email users already did)
   const [ownerFirst, setOwnerFirst] = useState('')
@@ -198,6 +201,18 @@ export default function OnboardingPage() {
     navigate(`/signup?code=${codeForLinks}&who=senior`, { replace: true })
   }
 
+  // Text the senior their link from the server. If that fails (function not
+  // reachable, Twilio down) the screen offers the person's own Messages app.
+  async function textSeniorInvite() {
+    if (inviteSending) return
+    setInviteSending(true)
+    setInviteError('')
+    const r = await sendInvite('senior')
+    setInviteSending(false)
+    if (r.ok) setInviteSentTo(r.to || seniorPhone)
+    else setInviteError(r.error || 'The text did not go through.')
+  }
+
   async function copy(text, key) {
     await copyToClipboard(text)
     setCopied(key)
@@ -262,9 +277,24 @@ export default function OnboardingPage() {
         <Heading title={`Invite ${name}`} sub={`${name} needs SeniorSafe on their phone. The link opens straight to their button with their name on it.`} />
         <div className="flex flex-col gap-3">
           {hasPhone ? (
-            <BigButton href={smsHref(seniorPhone, text)}>
-              <MessageSquare size={22} /> Text {name} the link
-            </BigButton>
+            <>
+              <BigButton onClick={textSeniorInvite} disabled={inviteSending}>
+                <MessageSquare size={22} /> {inviteSending ? 'Sending...' : inviteSentTo ? `Text ${name} again` : `Text ${name} the link`}
+              </BigButton>
+              {inviteSentTo && (
+                <p className="text-green-700 font-semibold text-center flex items-center justify-center gap-2" style={{ fontSize: '16px' }}>
+                  <CheckCircle size={18} /> Sent to {inviteSentTo}
+                </p>
+              )}
+              {inviteError && (
+                <div className="bg-[#FDF2F0] border border-[#B5483F]/40 rounded-xl p-3 flex flex-col gap-2">
+                  <p className="text-[#7A2E28]" style={{ fontSize: '15px' }}>{inviteError}</p>
+                  <a href={smsHref(seniorPhone, text)} className="text-[#1B365D] font-semibold underline underline-offset-2" style={{ fontSize: '16px' }}>
+                    Text it from this phone instead
+                  </a>
+                </div>
+              )}
+            </>
           ) : (
             <BigButton onClick={() => share(text)}>
               <Share2 size={22} /> Share the link

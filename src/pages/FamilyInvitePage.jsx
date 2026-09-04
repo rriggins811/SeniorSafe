@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { generateFamilyCode } from '../lib/familyCode'
 import { copyToClipboard } from '../lib/platform'
 import {
-  loadFamily, seniorInviteLink, seniorInviteText, memberInviteLink, memberInviteText, smsHref,
+  loadFamily, seniorInviteLink, seniorInviteText, memberInviteLink, memberInviteText, smsHref, sendInvite,
 } from '../lib/family'
 
 // The owner's view of who is in the family, who still needs to join, and how
@@ -18,6 +18,35 @@ export default function FamilyInvitePage() {
   const [showAgeGate, setShowAgeGate] = useState(false) // COPPA age gate
   const [ageGateAction, setAgeGateAction] = useState(null)
   const [showAgeBlocked, setShowAgeBlocked] = useState(false)
+  const [seniorSending, setSeniorSending] = useState(false)
+  const [seniorSentTo, setSeniorSentTo] = useState('')
+  const [seniorError, setSeniorError] = useState('')
+  const [memberPhone, setMemberPhone] = useState('')
+  const [memberSending, setMemberSending] = useState(false)
+  const [memberSentTo, setMemberSentTo] = useState('')
+  const [memberError, setMemberError] = useState('')
+
+  async function textSenior() {
+    if (seniorSending) return
+    setSeniorSending(true)
+    setSeniorError('')
+    const r = await sendInvite('senior')
+    setSeniorSending(false)
+    if (r.ok) setSeniorSentTo(r.to || '')
+    else setSeniorError(r.error || 'The text did not go through.')
+  }
+
+  async function textMember() {
+    if (memberSending) return
+    if (memberPhone.replace(/\D/g, '').length < 10) { setMemberError('Enter a 10-digit mobile number.'); return }
+    setMemberSending(true)
+    setMemberError('')
+    setMemberSentTo('')
+    const r = await sendInvite('member', memberPhone)
+    setMemberSending(false)
+    if (r.ok) { setMemberSentTo(r.to || memberPhone); setMemberPhone('') }
+    else setMemberError(r.error || 'The text did not go through.')
+  }
 
   async function reload() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -124,9 +153,20 @@ export default function FamilyInvitePage() {
                 {isOwner && !seniorJoined && !family.isSenior && (
                   <div className="flex flex-col gap-2 mt-4">
                     {family.seniorPhone && (
-                      <a href={smsHref(family.seniorPhone, seniorText)} className="w-full py-3.5 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base flex items-center justify-center gap-2">
-                        <MessageSquare size={18} /> Text {seniorName || 'them'} the link
-                      </a>
+                      <button onClick={textSenior} disabled={seniorSending} className="w-full py-3.5 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base flex items-center justify-center gap-2 disabled:opacity-60">
+                        <MessageSquare size={18} /> {seniorSending ? 'Sending...' : `Text ${seniorName || 'them'} the link`}
+                      </button>
+                    )}
+                    {seniorSentTo && (
+                      <p className="text-green-800 font-semibold text-center flex items-center justify-center gap-2 text-base"><CheckCircle size={18} /> Sent to {seniorSentTo}</p>
+                    )}
+                    {seniorError && (
+                      <div className="bg-[#FDF2F0] border border-[#B5483F]/40 rounded-xl p-3 flex flex-col gap-1">
+                        <p className="text-[#7A2E28] text-base">{seniorError}</p>
+                        {family.seniorPhone && (
+                          <a href={smsHref(family.seniorPhone, seniorText)} className="text-[#1B365D] font-semibold underline underline-offset-2 text-base">Text it from this phone instead</a>
+                        )}
+                      </div>
                     )}
                     <button onClick={() => copy(seniorInviteLink(code), 'senior')} className="w-full py-3.5 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-base flex items-center justify-center gap-2">
                       {copied === 'senior' ? <><CheckCircle size={18} /> Copied</> : <><Copy size={18} /> Copy {seniorName ? `${seniorName}'s` : 'their'} link</>}
@@ -142,6 +182,26 @@ export default function FamilyInvitePage() {
                   <p className="text-gray-600 text-base leading-relaxed mb-4">
                     Siblings, a spouse, a caregiver. Everyone who joins gets the daily check-in text and can send a nudge.
                   </p>
+                  <div className="flex flex-col gap-2 mb-4">
+                    <label className="text-gray-700 font-medium text-base">Text an invite to</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        value={memberPhone}
+                        onChange={e => { setMemberPhone(e.target.value); setMemberError('') }}
+                        placeholder="(336) 555-0100"
+                        className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-[#2D2A24]"
+                        style={{ fontSize: '17px' }}
+                      />
+                      <button onClick={() => gated(textMember)} disabled={memberSending} className="px-4 py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base flex items-center gap-2 disabled:opacity-60">
+                        <MessageSquare size={18} /> {memberSending ? 'Sending' : 'Send'}
+                      </button>
+                    </div>
+                    {memberSentTo && <p className="text-green-800 font-semibold text-base flex items-center gap-2"><CheckCircle size={18} /> Sent to {memberSentTo}</p>}
+                    {memberError && <p className="text-[#7A2E28] text-base">{memberError}</p>}
+                  </div>
+                  <p className="text-gray-500 text-sm mb-2">Or share the code and link another way:</p>
                   <div className="bg-[#FAF8F4] rounded-xl py-4 flex flex-col items-center gap-1 mb-4">
                     <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Family code</p>
                     <span className="text-[#1B365D] font-bold tracking-[0.25em] select-all" style={{ fontSize: '32px' }}>{code || '------'}</span>
