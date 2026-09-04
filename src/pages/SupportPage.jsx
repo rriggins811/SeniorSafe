@@ -13,11 +13,11 @@ const sections = [
     items: [
       {
         q: 'How do I create an account?',
-        a: 'Tap "Get Started" on the welcome screen and fill in your name, email, and a secure password. You\'ll be guided through a short onboarding to personalize your experience. If you received an invite code from a family member, enter it during signup to join their family group automatically.'
+        a: 'Tap "Get Started" and create your own account with your name, mobile number, email, and a password. Then tell us who you look after and the time they should check in by. We give you a link to text them; when they open it, they choose an email and password and see their "I\'m Okay" button. If someone sent you a link or a family code, use that instead and you\'ll join their family.'
       },
       {
         q: 'How do I invite family members?',
-        a: 'Go to the Family Hub and tap "Invite Family." You\'ll see a unique 6-character family code you can share via text or email. Family members visit the signup page with your code (or enter it manually) to join your family group. You can invite as many family members as you\'d like.'
+        a: 'Tap the family icon at the top of your home screen. You can text an invite straight to a sibling or caregiver\'s number, or share the link and 6-character family code another way. Everyone who joins gets the daily check-in text and can send a nudge.'
       },
       {
         q: 'What is the daily check-in?',
@@ -91,7 +91,7 @@ const sections = [
       },
       {
         q: 'Can multiple family members use the app?',
-        a: 'Absolutely! One family admin creates the account and invites other members using a unique family code. All members can view check-ins, messages, medications, appointments, and emergency info. The admin manages the subscription and can toggle features like vault sharing.'
+        a: 'Yes. One person sets up the family and manages the subscription, one person is the one who checks in each day, and everyone else joins with the link or family code. All members see check-ins, messages, medications, appointments, and emergency info.'
       },
       {
         q: 'What happens if I forget my password?',
