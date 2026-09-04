@@ -405,6 +405,13 @@ function buildContext(opts: {
   return lines.join('\n')
 }
 
+// House style: no em dashes. The model still reaches for them now and then,
+// so the stream is tidied on the way out. One character each, so chunk
+// boundaries cannot split them.
+function tidy(text: string): string {
+  return text.replace(/\u2014/g, ', ').replace(/\u2013/g, '-').replace(/ , /g, ', ')
+}
+
 function json(body: unknown, status: number, headers: HeadersInit) {
   return new Response(JSON.stringify(body), { status, headers: { ...headers, 'Content-Type': 'application/json' } })
 }
@@ -594,7 +601,7 @@ serve(async (req) => {
                 cacheCreateTokens = u.cache_creation_input_tokens || 0
               }
               if (evt.type === 'message_delta' && evt.usage?.output_tokens != null) outputTokens = evt.usage.output_tokens
-              if (evt.type === 'content_block_delta' && evt.delta?.text) await write('text', { text: evt.delta.text })
+              if (evt.type === 'content_block_delta' && evt.delta?.text) await write('text', { text: tidy(evt.delta.text) })
             } catch { /* skip */ }
           }
         }
