@@ -78,6 +78,7 @@ export default function DashboardPage() {
   const [inviteSending, setInviteSending] = useState(false)
   const [inviteSentTo, setInviteSentTo] = useState('')
   const [inviteError, setInviteError] = useState('')
+  const [history, setHistory] = useState([])   // last 14 days, oldest first
 
   // Shared
   const [medsDue, setMedsDue] = useState(0)
@@ -132,6 +133,40 @@ export default function DashboardPage() {
                 setLastCheckinId(row.id)
               }
             })
+
+          // The last 14 days, for the family board. Days before the senior
+          // joined are shown as blank, not missed.
+          if (!fam.isSenior) {
+            const since = new Date()
+            since.setDate(since.getDate() - 13)
+            since.setHours(0, 0, 0, 0)
+            const joinedDay = new Date(fam.senior.created_at)
+            joinedDay.setHours(0, 0, 0, 0)
+            supabase.from('checkins')
+              .select('checked_in_at')
+              .eq('user_id', seniorId)
+              .gte('checked_in_at', since.toISOString())
+              .then(({ data }) => {
+                const have = new Set((data || []).map(r => {
+                  const d = new Date(r.checked_in_at)
+                  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+                }))
+                const days = []
+                for (let i = 0; i < 14; i++) {
+                  const d = new Date(since)
+                  d.setDate(since.getDate() + i)
+                  days.push({
+                    key: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
+                    label: d.toLocaleDateString('en-US', { weekday: 'narrow' }),
+                    dayNum: d.getDate(),
+                    checked: have.has(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`),
+                    joined: d >= joinedDay,
+                    isToday: i === 13,
+                  })
+                }
+                setHistory(days)
+              })
+          }
 
           // The senior's medications and appointments, whoever is looking.
           supabase.from('medications').select('id, times, frequency').eq('user_id', seniorId).eq('active', true)
@@ -443,6 +478,7 @@ export default function DashboardPage() {
       late={late}
       adminCheckIn={seniorCheckIn}
       adminCheckInLoaded={seniorCheckInLoaded}
+      history={history}
       medsDue={medsDue}
       medsTotal={medsTotal}
       nextAppt={nextAppt}

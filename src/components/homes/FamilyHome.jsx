@@ -54,6 +54,7 @@ export default function FamilyHome({
   late: lateProp,
   adminCheckIn,
   adminCheckInLoaded,
+  history = [],
   medsDue = 0,
   medsTotal = 0,
   nextAppt,
@@ -88,6 +89,16 @@ export default function FamilyHome({
   const taken = Math.max(0, (medsTotal || 0) - (medsDue || 0))
   const checkInTime = formatCheckInTime(adminCheckIn?.checked_in_at)
   const callHref = formatTelHref(seniorPhone)
+
+  // History strip: only days since the senior joined count, and today only
+  // counts once it is decided (checked in, or past the alert time).
+  const pastDays = history.filter(h => h.joined && !h.isToday)
+  const missedDays = pastDays.filter(h => !h.checked).length
+  const historySummary = pastDays.length === 0
+    ? `${name} joined today. The strip fills in from tomorrow.`
+    : missedDays === 0
+    ? `Checked in every day for the last ${pastDays.length} day${pastDays.length === 1 ? '' : 's'}.`
+    : `Missed ${missedDays} of the last ${pastDays.length} day${pastDays.length === 1 ? '' : 's'}.`
 
   let status = {
     tone: 'wait',
@@ -333,6 +344,33 @@ export default function FamilyHome({
             </div>
           )}
         </section>
+
+        {seniorJoined && history.length > 0 && (
+          <section className="bg-white rounded-2xl p-4 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4A843] mb-3">Last 14 days</p>
+            <div className="grid grid-cols-14 gap-1" style={{ gridTemplateColumns: 'repeat(14, minmax(0, 1fr))' }}>
+              {history.map(h => {
+                const decidedToday = h.isToday && (h.checked || late)
+                const state = !h.joined ? 'blank'
+                  : h.checked ? 'ok'
+                  : h.isToday && !decidedToday ? 'pending'
+                  : 'missed'
+                const dot = state === 'ok' ? 'bg-green-500'
+                  : state === 'missed' ? 'bg-[#B5483F]/70'
+                  : state === 'pending' ? 'border-2 border-[#D4A843] bg-white'
+                  : 'border border-dashed border-[#E7E2D8] bg-transparent'
+                const title = state === 'ok' ? 'Checked in' : state === 'missed' ? 'No check-in' : state === 'pending' ? 'Today, not yet' : 'Before they joined'
+                return (
+                  <div key={h.key} className="flex flex-col items-center gap-1" title={title} aria-label={`${h.label} ${h.dayNum}: ${title}`}>
+                    <span className={`w-full aspect-square max-w-[22px] rounded-full ${dot} ${h.isToday ? 'ring-2 ring-offset-1 ring-[#1B365D]/30' : ''}`} />
+                    <span className="text-[10px] text-[#6B645A] leading-none">{h.label}</span>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-[#6B645A] text-sm mt-3">{historySummary}</p>
+          </section>
+        )}
 
         {showAddFamily && (
           <button
