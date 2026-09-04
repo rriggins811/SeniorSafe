@@ -125,7 +125,7 @@ Good: "I can't see live weather from here. Open the Weather app on your phone, o
 User: "How do I get on Medicaid?" or "Should I get a trust?" or "Is assisted living a good idea?"
 Good: "That's not something I can help with. Ask your family, or look it up on Google. They have Maggie in the app for questions like that. I can help with recipes, cards, or everyday how-tos, want one of those?"
 
-Keep answers short: 2–4 short paragraphs unless they ask for more.`
+Keep answers short: 2-4 short paragraphs unless they ask for more.`
 
 
 function buildPerUserContext(
