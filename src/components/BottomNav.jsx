@@ -1,21 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { Home, FolderLock, Users, Bot, Lock } from 'lucide-react'
+import { Home, FolderLock, Users, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import AIMark from './AIMark'
 
-// Base tabs visible to every tier.
-const BASE_NAV_TABS = [
-  { label: 'Home',   icon: Home,       path: '/dashboard', premium: false, kind: 'lucide' },
-  { label: 'Vault',  icon: FolderLock, path: '/vault',     premium: true,  kind: 'lucide' },
-  { label: 'Family', icon: Users,      path: '/family',    premium: false, kind: 'lucide' },
-  { label: 'AI',     icon: Bot,        path: '/ai',        premium: false, kind: 'lucide' },
-]
-
-// Maggie sits ALONGSIDE the daily-buddy SeniorSafe AI, not in place of it.
-// Build 27: Maggie tab is visible to ALL tiers — tapping routes free /
-// Premium users to the Premium+ paywall; Premium+ users get the chat
-// directly. The tier gate is enforced inside MaggiePage, not here.
 const MAGGIE_TAB = {
   label: 'Maggie', icon: null, path: '/maggie', premium: false, kind: 'aimark',
 }
@@ -27,6 +15,7 @@ export default function BottomNav({ inline = false }) {
   const { pathname } = useLocation()
   const [tier, setTier] = useState('paid')
   const [unreadCount, setUnreadCount] = useState(0)
+  const [isSenior, setIsSenior] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -36,11 +25,12 @@ export default function BottomNav({ inline = false }) {
 
       const { data: profile } = await supabase
         .from('user_profile')
-        .select('subscription_tier, last_family_read_at, family_name, family_code, role, invited_by')
+        .select('subscription_tier, last_family_read_at, family_name, family_code, role, invited_by, is_senior')
         .eq('user_id', user.id)
         .single()
 
       if (cancelled) return
+      setIsSenior(profile ? !!profile.is_senior : true)
 
       // Members inherit their admin's tier (where the family subscription lives).
       let effectiveTier = profile?.subscription_tier || 'free'
@@ -75,10 +65,17 @@ export default function BottomNav({ inline = false }) {
 
   const isFree = tier === 'free'
 
-  // Build 27: 5-tab layout for everyone. Maggie tab is visible to all
-  // tiers — non-Premium+ users get bounced to the upgrade page from
-  // MaggiePage (so they can see what they're missing).
-  const tabs = [...BASE_NAV_TABS, MAGGIE_TAB]
+  // The senior's home is a kiosk with no tab bar. Everyone else in the family
+  // gets Home / Vault / Family / Maggie. SeniorSafe AI lives on the senior's
+  // phone. Until the profile loads, render nothing rather than flash tabs.
+  if (isSenior !== false) return null
+
+  const tabs = [
+    { label: 'Home',   icon: Home,       path: '/dashboard', premium: false, kind: 'lucide' },
+    { label: 'Vault',  icon: FolderLock, path: '/vault',     premium: true,  kind: 'lucide' },
+    { label: 'Family', icon: Users,      path: '/family',    premium: false, kind: 'lucide' },
+    MAGGIE_TAB,
+  ]
 
   const wrapClass = inline
     ? 'bg-[#FAF8F4] border-t border-[#E7E2D8] flex-shrink-0'
