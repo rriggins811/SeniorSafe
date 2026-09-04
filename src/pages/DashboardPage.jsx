@@ -68,6 +68,9 @@ export default function DashboardPage() {
   const [helpFailed, setHelpFailed] = useState(false)
   const [quickDialContacts, setQuickDialContacts] = useState([])
   const [dailyQuote, setDailyQuote] = useState(null)
+  const [dueDoses, setDueDoses] = useState([])          // scheduled earlier today, not logged
+  const [takingDose, setTakingDose] = useState('')
+  const [todaysAppointments, setTodaysAppointments] = useState([])
 
   // Family board state
   const [nudgeCount, setNudgeCount] = useState(0)
@@ -168,26 +171,50 @@ export default function DashboardPage() {
               })
           }
 
-          // The senior's medications and appointments, whoever is looking.
-          supabase.from('medications').select('id, times, frequency').eq('user_id', seniorId).eq('active', true)
+          // The family's medications and appointments (RLS scopes them to the
+          // family; the adult child usually types Mom's list in from their own
+          // phone, so never filter by who created the row).
+          // For the senior's own screen we also work out which doses are due
+          // right now (scheduled earlier today, not logged), so the home screen
+          // can say "time for your medicine" only when it is true.
+          supabase.from('medications').select('id, med_name, dosage, times, frequency').eq('active', true)
             .then(({ data: meds }) => {
-              if (!meds?.length) { setMedsDue(0); setMedsTotal(0); return }
-              supabase.from('med_logs').select('medication_id, scheduled_time').eq('user_id', seniorId).eq('date', todayStr)
+              if (!meds?.length) { setMedsDue(0); setMedsTotal(0); setDueDoses([]); return }
+              supabase.from('med_logs').select('medication_id, scheduled_time').eq('date', todayStr)
                 .then(({ data: logs }) => {
+                  const taken = new Set((logs || []).map(l => `${l.medication_id}-${l.scheduled_time}`))
+                  const now = new Date()
+                  const nowMin = now.getHours() * 60 + now.getMinutes()
                   let totalDue = 0
-                  meds.forEach(m => { if (m.frequency !== 'As needed') totalDue += (m.times?.length || 1) })
+                  const due = []
+                  meds.forEach(m => {
+                    if (m.frequency === 'As needed') return
+                    const times = m.times?.length ? m.times : ['08:00']
+                    totalDue += times.length
+                    times.forEach(t => {
+                      const [h, mi] = String(t).split(':').map(Number)
+                      if (h * 60 + mi <= nowMin && !taken.has(`${m.id}-${t}`)) {
+                        due.push({ medication_id: m.id, med_name: m.med_name, dosage: m.dosage, time: t })
+                      }
+                    })
+                  })
+                  due.sort((a, b) => a.time.localeCompare(b.time))
                   setMedsTotal(totalDue)
                   setMedsDue(Math.max(0, totalDue - (logs?.length || 0)))
+                  setDueDoses(due)
                 })
             })
           supabase.from('appointments')
-            .select('title, appointment_date, appointment_time, provider_name')
-            .eq('user_id', seniorId)
+            .select('id, title, appointment_date, appointment_time, provider_name, location, notes')
             .gte('appointment_date', todayStr)
             .order('appointment_date', { ascending: true })
             .order('appointment_time', { ascending: true })
-            .limit(1)
-            .then(({ data }) => setNextAppt(data?.[0] || null))
+            .limit(5)
+            .then(({ data }) => {
+              const rows = data || []
+              setNextAppt(rows[0] || null)
+              setTodaysAppointments(rows.filter(a => a.appointment_date === todayStr))
+            })
         } else {
           setSeniorCheckInLoaded(true)
         }
@@ -349,6 +376,26 @@ export default function DashboardPage() {
     }
   }
 
+  // "I took it" on the home screen. Same row MedicationsPage writes, so the
+  // two screens agree.
+  async function takeDose(dose) {
+    if (!user || !family || takingDose) return
+    const key = `${dose.medication_id}-${dose.time}`
+    setTakingDose(key)
+    const { error } = await supabase.from('med_logs').insert({
+      user_id: user.id,
+      family_name: family.familyName,
+      medication_id: dose.medication_id,
+      taken_at: new Date().toISOString(),
+      scheduled_time: dose.time,
+      date: localDateStr(),
+    })
+    setTakingDose('')
+    if (error) { alert('Could not save that. Please try again.'); return }
+    setDueDoses(prev => prev.filter(d => `${d.medication_id}-${d.time}` !== key))
+    setMedsDue(n => Math.max(0, n - 1))
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut()
     navigate('/')
@@ -429,8 +476,10 @@ export default function DashboardPage() {
         checkInStatus={checkInStatus}
         lastCheckInLabel={lastCheckIn ? `Today at ${fmtTime(lastCheckIn)}` : null}
         onCheckIn={handleCheckIn}
-        medsDue={medsDue}
-        onMeds={() => navigate('/medications')}
+        dueDoses={dueDoses}
+        takingDose={takingDose}
+        onTakeDose={takeDose}
+        todaysAppointments={todaysAppointments}
         quickDialContacts={quickDialContacts}
         dailyQuote={dailyQuote}
         showNoteInput={showNoteInput}

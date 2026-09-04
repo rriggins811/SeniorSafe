@@ -4,6 +4,7 @@ import {
   Users, Calendar, Heart, FolderLock, Lock, X,
 } from 'lucide-react'
 import HelpModal from './HelpModal'
+import { formatTime12 } from '../../lib/time'
 
 function formatTelHref(phone) {
   if (!phone) return 'tel:'
@@ -19,8 +20,6 @@ export default function ParentHome({
   checkInStatus,
   lastCheckInLabel,
   onCheckIn,
-  medsDue,
-  onMeds,
   quickDialContacts = [],
   dailyQuote,
   showNoteInput,
@@ -43,6 +42,10 @@ export default function ParentHome({
   onAsk,
   onNavigate,
   unreadMsgCount = 0,
+  dueDoses = [],
+  takingDose = '',
+  onTakeDose,
+  todaysAppointments = [],
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const go = (path) => { setMoreOpen(false); onNavigate && onNavigate(path) }
@@ -123,6 +126,72 @@ export default function ParentHome({
             <p className="text-center text-sm text-[#6B645A]">{lastCheckInLabel}</p>
           )}
 
+          {/* Medicine that is due right now. Gone once it is taken. */}
+          {dueDoses.length > 0 && (
+            <section className="bg-white rounded-[24px] border-2 border-[#D4A843] p-5 shadow-sm" aria-live="polite">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#D4A843]/20 flex items-center justify-center flex-shrink-0">
+                  <Pill size={26} color="#8A6A1E" strokeWidth={1.8} />
+                </div>
+                <p className="text-[#1B365D] font-bold" style={{ fontSize: '22px', lineHeight: 1.15 }}>
+                  {dueDoses.length === 1 ? 'Time for your medicine' : `${dueDoses.length} medicines are due`}
+                </p>
+              </div>
+              <div className="flex flex-col divide-y divide-[#E7E2D8]">
+                {dueDoses.map(d => {
+                  const key = `${d.medication_id}-${d.time}`
+                  return (
+                    <div key={key} className="py-3 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[#1B365D] font-semibold" style={{ fontSize: '20px' }}>{d.med_name}</p>
+                        <p className="text-[#6B645A]" style={{ fontSize: '16px' }}>
+                          {[d.dosage, formatTime12(d.time)].filter(Boolean).join(', ')}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => onTakeDose && onTakeDose(d)}
+                        disabled={takingDose === key}
+                        className="px-5 py-3 rounded-2xl bg-[#1B365D] text-[#D4A843] font-bold flex-shrink-0 disabled:opacity-60"
+                        style={{ fontSize: '18px', minHeight: '56px' }}
+                      >
+                        {takingDose === key ? 'Saving...' : 'I took it'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Appointment day only. */}
+          {todaysAppointments.length > 0 && (
+            <section className="bg-white rounded-[24px] border-2 border-[#1B365D] p-5 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center flex-shrink-0">
+                  <Calendar size={26} color="#1B365D" strokeWidth={1.8} />
+                </div>
+                <p className="text-[#1B365D] font-bold" style={{ fontSize: '22px', lineHeight: 1.15 }}>
+                  {todaysAppointments.length === 1 ? 'You have an appointment today' : `You have ${todaysAppointments.length} appointments today`}
+                </p>
+              </div>
+              <div className="flex flex-col divide-y divide-[#E7E2D8]">
+                {todaysAppointments.map(a => (
+                  <button key={a.id} onClick={() => onNavigate && onNavigate('/appointments')} className="py-3 text-left w-full">
+                    <p className="text-[#1B365D] font-semibold" style={{ fontSize: '20px' }}>
+                      {a.appointment_time ? `${formatTime12(String(a.appointment_time).slice(0, 5))}, ` : ''}{a.title}
+                    </p>
+                    {(a.provider_name || a.location) && (
+                      <p className="text-[#6B645A]" style={{ fontSize: '16px' }}>
+                        {[a.provider_name, a.location].filter(Boolean).join(' at ')}
+                      </p>
+                    )}
+                    {a.notes && <p className="text-[#6B645A] mt-1" style={{ fontSize: '15px' }}>{a.notes}</p>}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           {noteSaved && (
             <div className="bg-green-50 border border-green-200 rounded-2xl p-3 text-center">
               <p className="text-green-700 text-sm font-semibold">Note sent to your family</p>
@@ -196,21 +265,6 @@ export default function ParentHome({
               <p className="text-[#6B645A] text-sm">Recipes, weather, everyday help</p>
             </div>
           </button>
-
-          {medsDue > 0 && (
-            <button
-              onClick={onMeds}
-              className="w-full bg-white rounded-2xl px-4 py-4 flex items-center gap-3 shadow-sm"
-            >
-              <div className="w-11 h-11 rounded-xl bg-[#1B365D]/8 flex items-center justify-center">
-                <Pill size={20} color="#1B365D" strokeWidth={1.7} />
-              </div>
-              <p className="text-[#1B365D] font-semibold text-left flex-1" style={{ fontSize: '16px' }}>
-                {medsDue} dose{medsDue === 1 ? '' : 's'} left today
-              </p>
-              <ChevronRight size={18} color="#C4BDB3" />
-            </button>
-          )}
 
           {quickDialContacts.length > 0 && (
             <div>
