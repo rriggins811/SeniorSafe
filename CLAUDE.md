@@ -1,5 +1,76 @@
 # SeniorSafe — Claude Code Project Brief
-Last updated: May 12, 2026
+Last updated: September 4, 2026
+
+---
+
+## READ THIS FIRST — state of the app on 2026-09-04
+
+Everything below this section is session history. Some of it is stale (the March
+"known issues", the freemium notes, the `user_profile` column list). Trust this
+section, then verify against production.
+
+### What is live (app.seniorsafeapp.com, Vercel auto-deploys `main`)
+- **Setup flow (rebuilt 2026-09-04).** The adult child signs up alone on their own
+  phone (`SignUpPage`, mode `family`), names the person they look after and picks a
+  check-in time, then sends a link (`OnboardingPage`, two screens). The senior opens
+  `/signup?code=XXXXXX&who=senior`, lands on "Hi Jackie", picks an email + password,
+  and goes straight to the button. Siblings join with `/signup?code=XXXXXX`.
+  "Setting up for yourself" (mode `self`) still exists for a senior alone.
+- **Two homes** (`src/components/homes/`): `ParentHome` is the senior's kiosk (no tab
+  bar, big button, Help, Ask a question). `FamilyHome` is the adult child's board
+  (status by name, 14-day strip, senior's meds/appointments, nudge, call, invite).
+  `DashboardPage` picks one from `lib/family.js`, NOT from `role`.
+- **Who is who.** `user_profile.is_senior` marks the one person per family who checks
+  in. Owner = `role='admin'`, holds `family_code`, subscription, `checkin_alert_time`,
+  `senior_name`, `senior_phone`. Family key = `COALESCE(invited_by, user_id)`.
+  Legacy owners were backfilled `is_senior=true`. Unique index enforces one senior
+  per family. `is_senior` is a protected column (trigger); set it only on insert.
+- **Missed-check-in cron** (`missed-checkin-alerts` v32) iterates seniors, takes tier
+  and alert time from the owner, timezone from the senior, alerts everyone else in
+  the family. Paid/trial families only.
+- **Migrations applied:** `20260904_family_senior_flag.sql` (Ryan ran it by pasting;
+  MCP DDL is blocked in Claude Code's auto mode).
+
+### Committed but NOT deployed (as of this note)
+- `send-invite` and `invite-reminders` edge functions + `20260904_invite_delivery.sql`.
+  The web UI calls `send-invite` and falls back to the phone's Messages app when it
+  is missing. Push the web build only after those are deployed.
+- `@capacitor/text-zoom` wired in `App.jsx` (needs `npx cap sync` + native build).
+- `ai-chat` in git has a strict everyday-only prompt (from 2026-08-19). Live `ai-chat`
+  (v53) still runs the old prompt that names a $47/$297 Blueprint. **Ryan has to
+  decide: two AIs (August/Grok direction) or one merged Maggie (Sept 2 brief).**
+  Do not deploy either until he says.
+
+### Traps (all of these cost real time)
+- Prompt and function changes go through git. Deploy from the on-disk file. Ryan
+  deploys by pasting the file into the dashboard editor: em dashes get mangled
+  by that paste, so keep function source ASCII.
+- `ai-chat` `BASE_SYSTEM_PROMPT` must stay over 1024 tokens or prompt caching
+  silently stops.
+- New Postgres functions default to PUBLIC EXECUTE. REVOKE in the same migration.
+- `guard_paid_profile_delete` blocks deleting trial/paid profiles; use
+  `SET LOCAL app.allow_paid_delete = 'on'` in the same transaction.
+- Creating a test account fires the Meta CAPI "trial" event and, within 15 min,
+  a GHL contact. Delete test accounts in the same session.
+- Sending SMS: `send-sms` only allows recipients whose phone is on a family
+  profile row. The senior's `senior_phone` is not, which is why `send-invite`
+  exists.
+
+### Native
+- Store: 1.1.1, Android `versionCode 6`, iOS build 31. Google Play developer
+  verification due **2026-09-30**.
+- Archive checklist: `git pull`, `npm install`, `npm run build`, `npx cap sync`,
+  then Xcode / Android Studio.
+
+### Where things are
+- Repo `~/Projects/senior-safe`, Supabase `ynsakoxsmuvwfjgbhxky` (shared with rss-site
+  and blueprint-site), Vercel project `senior-safe`.
+- Prompt sources and reference docs: the "SeniorSafe App" folder inside Ryan's
+  "Running the business" Drive folder (maggie-system-prompt-v1.md, knowledge bases,
+  Google Play plan, ASO doc).
+- Ryan's own live family: owner `ryan.riggins+family@gmail.com`, senior Jackie.
+
+---
 
 ---
 
