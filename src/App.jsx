@@ -28,6 +28,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { isNative } from './lib/platform'
 import { initializePurchases } from './utils/purchases'
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard'
+import { TextZoom } from '@capacitor/text-zoom'
 
 function ProtectedRoute({ children, skipOnboardingCheck }) {
   const [session, setSession] = useState(undefined)
@@ -103,6 +104,17 @@ export default function App() {
 
     document.addEventListener('touchstart', handleTouchStart, { passive: true })
     return () => document.removeEventListener('touchstart', handleTouchStart)
+  }, [])
+
+  // Honor the phone's accessibility text size. The web view ignores it by
+  // default, so a senior who turns text up in Settings would see no change.
+  // Capped at 1.5x so the kiosk layout holds; the parent home is already
+  // large at 1x.
+  useEffect(() => {
+    if (!isNative()) return
+    TextZoom.getPreferred()
+      .then(({ value }) => TextZoom.set({ value: Math.min(Math.max(value || 1, 1), 1.5) }))
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
