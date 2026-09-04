@@ -34,7 +34,7 @@ async function sendFailureAlertEmail(familyName: string, phone: string, seniorNa
     `The family member above did NOT receive a missed check-in alert.`, `Please follow up manually.`,
   ].join('\n')
   if (!RESEND_API_KEY) {
-    console.error(`SMS_FAILURE_ALERT — No RESEND_API_KEY configured. Details:\n${body}`)
+    console.error(`SMS_FAILURE_ALERT: No RESEND_API_KEY configured. Details:\n${body}`)
     return false
   }
   try {
@@ -149,7 +149,7 @@ serve(async (_req) => {
 
       const seniorName = senior.first_name || owner.senior_name || 'Your loved one'
       const familyLabel = owner.family_name || senior.family_name || seniorName
-      const message = `${seniorName} hasn't checked in today. — SeniorSafe. Reply STOP to opt out`
+      const message = `${seniorName} hasn't checked in today. SeniorSafe. Reply STOP to opt out`
 
       for (const member of recipients) {
         if (!member.device_token) continue
