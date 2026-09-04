@@ -1051,47 +1051,38 @@ Plan respite BEFORE you need it. By the time you feel desperate, you're past the
 
 ### SeniorSafe App
 
-**Download:** app.seniorsafeapp.com
+**Where:** app.seniorsafeapp.com, and in the App Store and Google Play.
 
-**14-day free reverse trial** gives full access to all features. After 14 days, user chooses a plan.
+**14-day free trial** of the paid plan for every new family. After 14 days the family is on the free plan unless they subscribe.
 
-| Tier | Price | Features |
-|------|-------|----------|
-| **Free** | $0 | Daily check-ins, 10 lifetime AI messages, basic features |
-| **Premium** | $14.99/month | Full app (med tracking, doc vault, family SMS, check-ins), 500 AI messages/month (Claude Haiku 4.5), standard helpful assistant |
-| **Maggie** | $39.99/month | Everything in Premium + 500-750 AI messages/month (Claude Sonnet 4.6), advanced transition coach AND senior-life expert, remembers family context across sessions, Blueprint tool orchestration |
+| Plan | Price | What you get |
+|------|-------|--------------|
+| **Free** | $0 | Daily "I'm Okay" check-in that the family sees in the app, the emergency card, one invited family member, and 10 messages with Maggie, total (not per month). No texts. |
+| **Paid** | $14.99 a month or $143.88 a year | Everything: a text to the family every time the senior checks in, an automatic alert when they have not by their set time, nudges, medication reminders by text, appointments, family messages and photos, the document vault, unlimited family members, and Maggie every day (a generous monthly budget per family). |
 
-**Key Features:**
-- Daily "I'm Okay" check-in
-- Medication tracking
-- Document vault (upload all Blueprint tools, legal docs, photos)
-- Emergency info card
-- Family SMS notifications for missed check-ins
-- AI assistant trained on Blueprint content (Maggie tier: deep expertise)
+There is one assistant, Maggie, for everyone in the family. There is no separate "Premium+" or higher tier.
 
-**Privacy principle:** Individual chat histories are always private. Mom's chats are private from family. Son's chats are private from family. The AI flags safety concerns to family WITHOUT exposing the conversation.
+**Privacy principle:** Individual chats are always private. Mom's chats are private from the family. A son's chats are private from the family. Maggie flags safety concerns to family without exposing the conversation.
 
-### Senior Transition Blueprint
+### Senior Transition Blueprint and the Roadmap
 
-**Blueprint Core ($47):** Self-paced 19-module course hosted in GHL (GoHighLevel). 60+ downloadable tools. For families who prefer traditional learning. Every buyer gets a post-purchase offer for a 14-day free trial of SeniorSafe Maggie.
+Both are free at rigginsstrategicsolutions.com. The Blueprint is Ryan's 19-module course with 60+ downloadable tools; the Roadmap is the short read that tells a family where they are and what to do next. There is no paid course. Ryan makes his living from the SeniorSafe app and from referring families to vetted real estate agents anywhere in the country (the referring agent pays Ryan a referral fee at closing; the family never does).
 
-**Blueprint Guided Program ($297, or $247 for active SeniorSafe subscribers):** Everything in Blueprint Core PLUS a personalized transition plan tailored to the family's specific situation, a 60-minute coaching call with Ryan, and 90 days of email support post-call. Best for complex situations: multiple properties, family conflict, cognitive decline, financial exploitation concerns.
+### Ryan's Books (Amazon)
 
-### Ryan's Books (Available on Amazon)
+**The Unheard Conversation ($9.99 ebook / $14.99 paperback):** The emotional companion to the Blueprint. Specific language for starting and maintaining conversations about the transition, even with a resistant parent. Read before Module 13.
 
-**The Unheard Conversation ($9.99 ebook / $14.99 paperback):** The emotional companion to the Blueprint. Specific language for starting and maintaining conversations about the transition, even with a resistant parent. Essential reading before Module 13.
+**The Other Side of the Conversation ($9.99 ebook / $14.99 paperback):** Ryan's story from the investor side. How wholesalers, predatory cash buyers, and the real estate industry take advantage of families in vulnerable situations. Read before Module 9.
 
-**The Other Side of the Conversation ($9.99 ebook / $14.99 paperback):** Ryan's story from the investor side. How wholesalers, predatory cash buyers, and the real estate industry take advantage of families in vulnerable situations. Consumer protection guide. Essential reading before Module 9.
+### Free help from Ryan
 
-### Free Resources
-
-- Free strategy call: Book at rigginsstrategicsolutions.com or via booking link
-- SeniorSafe app (free tier): app.seniorsafeapp.com
-- RSS social media for daily tips
+- A free 20-minute call, booked at rigginsstrategicsolutions.com
+- A referral to a vetted, senior-friendly real estate agent in any state
+- Phone (336) 553-8933, email ryan@rigginsstrategicsolutions.com
 
 ### Complete Loops Follow-Up System
 
-Ryan's signature 30/60/90/180/365-day check-in framework. Distinguishes RSS from competitors who disappear after the sale closes. Built into both the Blueprint and SeniorSafe app. See Section 11 for full framework.
+Ryan's 30/60/90/180/365-day check-in framework. Built into both the Blueprint and the SeniorSafe app. See Section 11 for the full framework.
 
 ---
 

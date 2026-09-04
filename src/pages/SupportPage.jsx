@@ -32,8 +32,8 @@ const sections = [
         a: 'The Document Vault is a secure place to store important documents like legal papers, medical records, financial documents, and personal files. Upload PDFs, photos, and images up to 10MB each. Documents are organized by category and protected with bank-level encryption. Admin users can toggle vault sharing to let family members view documents read-only.'
       },
       {
-        q: 'How does the AI Assistant work?',
-        a: 'The AI Assistant is your personal guide for navigating senior transitions. Ask questions about senior housing, caregiving, legal planning, medication management, or any family coordination topic. Premium subscribers get full SeniorSafe AI access. Premium+ subscribers get full Maggie + SeniorSafe AI access. The assistant knows your family\'s specific situation and provides personalized guidance.'
+        q: 'Who is Maggie?',
+        a: 'Her name is Maggie, and everyone in the family gets the same one. For the person who checks in, she is an everyday helper: a recipe, a birthday card, how to do something on the phone. For the family, she knows Ryan\'s Senior Transition Blueprint and gives real answers about senior living, selling the house, Medicaid, siblings, and caregiver burnout, then tells you which professional should look at the specifics. She is not a doctor, lawyer, or financial advisor. Chats are private to the person typing. The free plan includes 10 messages, total; the paid plan includes her every day.'
       },
       {
         q: 'What is the Emergency Info Card?',
@@ -59,11 +59,11 @@ const sections = [
     items: [
       {
         q: 'What\'s included in the free plan?',
-        a: 'The free plan includes daily check-ins (in-app only, no SMS), viewing family messages, and access to the Emergency Info Card. Features like the Document Vault, AI Assistant, Medications, Appointments, Family Photos, and SMS notifications require a Premium subscription.'
+        a: 'The daily "I\'m Okay" check-in, which the family sees in the app, the emergency card, the I Need Help alert, one invited family member, and 10 messages with Maggie, total. The free plan does not send texts: no check-in texts and no missed check-in alert.'
       },
       {
-        q: 'How much does Premium cost?',
-        a: 'SeniorSafe Premium is $14.99 per month. It includes all features: SMS check-in notifications, the "I Need Help" emergency alerts, Document Vault, AI Assistant (20 messages/month), Medication Tracking with SMS reminders, Appointments, Family Photos, and priority support.'
+        q: 'How much does the paid plan cost?',
+        a: 'One paid plan: $14.99 a month, or $143.88 a year. It turns on the check-in texts, the missed check-in alert, nudges, medication reminders by text, unlimited family members, the document vault, and Maggie every day. Every new family gets the first 14 days free.'
       },
       {
         q: 'How do I upgrade to Premium?',

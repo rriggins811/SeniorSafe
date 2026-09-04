@@ -1,27 +1,15 @@
 /**
  * Check if a subscription tier has premium access.
- * 'paid', 'trial', and 'premium_plus' all grant full Premium feature access.
+ * 'paid' and 'trial' grant the paid plan. 'premium_plus' is legacy, treated as paid.
  */
 export function isPremium(tier) {
   return tier === 'paid' || tier === 'trial' || tier === 'premium_plus'
 }
 
-/**
- * Premium+ tier ($39.99/month) unlocks Maggie AI as a paid entitlement.
- * Stays narrowly scoped to the paid tier — used by RevenueCat / billing UI.
- */
-export function isPremiumPlus(tier) {
-  return tier === 'premium_plus'
-}
-
-/**
- * Maggie access gate. Premium+ paid users AND trial users (the 14-day
- * Blueprint-signup trial that grants the full Premium+ experience) both
- * unlock Maggie. Used by MaggiePage UI and the maggie-chat edge function.
- */
-export function canAccessMaggie(tier) {
-  return tier === 'premium_plus' || tier === 'trial'
-}
+// 2026-09-04: one assistant, two plans (free and paid). 'premium_plus' is a
+// legacy value that a few old rows or receipts may still carry; treat it as
+// paid. Maggie is available on every plan; the server enforces the free
+// plan's 10-messages-ever limit.
 
 /**
  * Calculate trial days remaining from trial_start_date.
