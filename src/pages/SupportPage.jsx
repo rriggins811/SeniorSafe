@@ -5,20 +5,14 @@ import {
   Calendar, Globe, BookOpen, Settings, CreditCard, MessageCircle
 } from 'lucide-react'
 import { openExternalLink } from '../lib/platform'
+import { SETUP_FAQ } from '../content/setupFaq'
 
 const sections = [
+  ...SETUP_FAQ.map(sec => ({ ...sec, icon: sec.audience === 'senior' ? HelpCircle : BookOpen })),
   {
     title: 'Getting Started',
     icon: BookOpen,
     items: [
-      {
-        q: 'How do I create an account?',
-        a: 'Tap "Get Started" and create your own account with your name, mobile number, email, and a password. Then tell us who you look after and the time they should check in by. We give you a link to text them; when they open it, they choose an email and password and see their "I\'m Okay" button. If someone sent you a link or a family code, use that instead and you\'ll join their family.'
-      },
-      {
-        q: 'How do I invite family members?',
-        a: 'Tap the family icon at the top of your home screen. You can text an invite straight to a sibling or caregiver\'s number, or share the link and 6-character family code another way. Everyone who joins gets the daily check-in text and can send a nudge.'
-      },
       {
         q: 'What is the daily check-in?',
         a: 'The daily check-in is the "I\'m Okay Today" button on your dashboard. Tap it once each day to let your family know you\'re doing well. Premium subscribers get automatic SMS notifications sent to all family members. If you haven\'t checked in by your set time, family members will see a reminder on their dashboard.'
