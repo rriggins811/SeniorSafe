@@ -2,12 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CAPACITOR_DEBUG</key>
+	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>SeniorSafe App</string>
+	<string>SeniorSafe App</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -20,10 +20,29 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.rigginsstrategicsolutions.seniorsafe</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.rigginsstrategicsolutions.seniorsafe</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>SeniorSafe uses your camera to capture documents for your secure vault.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SeniorSafe uses the microphone for voice messages to your care team.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SeniorSafe accesses your photos to upload documents to your secure vault.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -47,22 +66,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>SeniorSafe uses your camera to capture documents for your secure vault.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SeniorSafe accesses your photos to upload documents to your secure vault.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>SeniorSafe uses the microphone for voice messages to your care team.</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.rigginsstrategicsolutions.seniorsafe</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.rigginsstrategicsolutions.seniorsafe</string>
-			</array>
-		</dict>
-	</array>
 </dict>
 </plist>
