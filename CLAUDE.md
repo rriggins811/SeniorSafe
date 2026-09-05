@@ -48,7 +48,7 @@ section, then verify against production.
   nobody holds it. Store products for Premium+ still exist but nothing sells them.
 - `send-invite` (v1), `invite-reminders` (v1, cron 15:00 UTC) and their
   migrations are live. `notification_log` accepts `invite` / `invite_reminder`.
-- `@capacitor/text-zoom` is wired; needs the native 1.1.2 build to reach phones.
+- `@capacitor/text-zoom` is wired; shipped in native 1.2.0 (Android versionCode 7, iOS build 33) on 2026-09-05. App Store Connect app id is 6761343239. Next native release must be at least 1.2.1 / build 34 / versionCode 8.
 
 ### Traps (all of these cost real time)
 - Prompt and function changes go through git. Deploy from the on-disk file. Ryan
