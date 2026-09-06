@@ -48,6 +48,7 @@ section, then verify against production.
   nobody holds it. Store products for Premium+ still exist but nothing sells them.
 - `send-invite` (v1), `invite-reminders` (v1, cron 15:00 UTC) and their
   migrations are live. `notification_log` accepts `invite` / `invite_reminder`.
+- NEXT (2026-09-06, wait for Ryan's GO): card required at signup, 14 days free, then $14.99/month on web (Stripe Checkout with trial), Apple (intro offer) and Google (base-plan free trial); paste the stripe-webhook fix first. Plan: RSS-Business/SeniorSafe App/NEXT_STEPS_for_Ryan_2026-09-04.md.
 - `@capacitor/text-zoom` is wired; shipped in native 1.2.0 (Android versionCode 7, iOS build 33) on 2026-09-05. App Store Connect app id is 6761343239. Next native release must be at least 1.2.1 / build 34 / versionCode 8.
 
 ### Traps (all of these cost real time)
