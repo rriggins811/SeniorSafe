@@ -11,7 +11,7 @@ import Stripe from "https://esm.sh/stripe@14.14.0?target=deno"
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2023-10-16' })
 const WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET')!
 
-// Service-role client — bypasses RLS so we can update any user's profile
+// Service-role client - bypasses RLS so we can update any user's profile
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -110,7 +110,7 @@ async function ghlProxyUpsertAndTag(
 }
 
 // ---------------------------------------------------------------------------
-// Meta Conversions API (CAPI) — SeniorSafe Purchase fire
+// Meta Conversions API (CAPI) - SeniorSafe Purchase fire
 // ---------------------------------------------------------------------------
 const META_PIXEL_ID = Deno.env.get('META_PIXEL_ID') ?? '1237498758330884'
 const META_GRAPH_API_VERSION = Deno.env.get('META_GRAPH_API_VERSION') ?? 'v20.0'
@@ -227,6 +227,15 @@ async function lookupSubscriberFields(userId: string): Promise<{
     firstName: profile?.first_name ?? null,
     lastName: profile?.last_name ?? null,
   }
+}
+
+// Stripe API versions from 2025-03-31 (Basil) onward moved current_period_end
+// off the Subscription object and onto each subscription item. Our endpoint is
+// on 2025-09-30, so webhook payloads use the new shape while SDK calls pinned
+// to 2023-10-16 still use the old one. Read whichever is present.
+function periodEndOf(sub: { current_period_end?: number; items?: { data?: Array<{ current_period_end?: number }> } } | null | undefined): string | undefined {
+  const ts = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end
+  return typeof ts === 'number' ? new Date(ts * 1000).toISOString() : undefined
 }
 
 // ---------------------------------------------------------------------------
@@ -355,7 +364,7 @@ serve(async (req: Request) => {
       if (subscriptionId) {
         try {
           const sub = await stripe.subscriptions.retrieve(subscriptionId)
-          periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+          periodEnd = periodEndOf(sub)
           interval = sub.items?.data?.[0]?.price?.recurring?.interval || undefined
           firstPriceId = sub.items?.data?.[0]?.price?.id || undefined
         } catch (subErr) {
@@ -421,7 +430,7 @@ serve(async (req: Request) => {
       if (!userId) break
 
       if (status === 'active' || status === 'trialing') {
-        const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
+        const periodEnd = periodEndOf(subscription)
         const interval = subscription.items?.data?.[0]?.price?.recurring?.interval || undefined
         const firstPriceId = subscription.items?.data?.[0]?.price?.id || undefined
         const tier = resolveTier(subscription.metadata?.tier, firstPriceId)
@@ -438,7 +447,7 @@ serve(async (req: Request) => {
           console.log(`Cascaded tier ${tier} to ${members.length} family member(s)`)
         }
       } else if (status === 'past_due' || status === 'unpaid') {
-        console.log(`Subscription ${subscription.id} is ${status} — keeping paid for now`)
+        console.log(`Subscription ${subscription.id} is ${status} - keeping paid for now`)
       } else {
         await updateUserTier(userId, 'free', customerId, subscription.id)
 
@@ -508,7 +517,7 @@ serve(async (req: Request) => {
       const invoice = event.data.object as Stripe.Invoice
       const customerId = invoice.customer as string
 
-      console.log(`Payment failed for customer ${customerId} — attempt: ${invoice.attempt_count}`)
+      console.log(`Payment failed for customer ${customerId} - attempt: ${invoice.attempt_count}`)
 
       const userId = await getUserIdByStripeCustomer(customerId)
       if (!userId) break
@@ -538,7 +547,7 @@ serve(async (req: Request) => {
         const name = adminProfile.senior_name || adminProfile.first_name || 'Your'
         const sent = await sendTwilioSMS(
           toPhone,
-          `Your SeniorSafe payment could not be processed. ${name}'s Premium features are paused. Update payment at app.seniorsafeapp.com/upgrade — SeniorSafe. Reply STOP to opt out`
+          `Your SeniorSafe payment could not be processed. ${name}'s Premium features are paused. Update payment at app.seniorsafeapp.com/upgrade. SeniorSafe. Reply STOP to opt out`
         )
         if (sent) {
           console.log(`Payment failure SMS sent to ${toPhone}`)
