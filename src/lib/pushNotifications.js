@@ -20,6 +20,24 @@ export async function registerPushNotifications(userId) {
       return
     }
 
+    // Android 8+ needs a channel or the system drops the notification. The
+    // server sends channel_id 'seniorsafe' (send-push-notification).
+    if (Capacitor.getPlatform() === 'android') {
+      try {
+        await PushNotifications.createChannel({
+          id: 'seniorsafe',
+          name: 'SeniorSafe alerts',
+          description: 'Check-ins, missed check-ins, medication and family messages',
+          importance: 5,
+          visibility: 1,
+          sound: 'default',
+          vibration: true,
+        })
+      } catch (chErr) {
+        console.warn('Push channel setup failed:', chErr)
+      }
+    }
+
     await PushNotifications.register()
 
     PushNotifications.addListener('registration', async (token) => {
