@@ -49,7 +49,7 @@ function fmtDate(iso: string | undefined): string {
 }
 
 async function sendEmail(to: string, subject: string, text: string): Promise<boolean> {
-  const key = Deno.env.get('RESEND_API_KEY')
+  const key = Deno.env.get('RESEND_API_KEY') || Deno.env.get('RESEND_AUDIENCES_API_KEY')
   if (!key) { console.warn('RESEND_API_KEY not set; email skipped'); return false }
   try {
     const res = await fetch('https://api.resend.com/emails', {
