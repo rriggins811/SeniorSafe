@@ -27,6 +27,8 @@ function getLocalTime(tz: string): { hour: number; min: number } {
 
 async function sendFailureAlertEmail(familyName: string, phone: string, seniorName: string, errorDetail: string): Promise<boolean> {
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+  // Must be an address on a domain verified in Resend (RESEND_FROM_ADDRESS secret).
+  const FROM_ADDRESS = Deno.env.get('RESEND_FROM_ADDRESS')?.trim() || 'alerts@seniorsafeapp.com'
   const body = [
     `MISSED CHECK-IN SMS FAILED`, ``,
     `Senior: ${seniorName}`, `Family: ${familyName || 'Unknown'}`, `Failed phone: ${phone}`,
@@ -41,7 +43,7 @@ async function sendFailureAlertEmail(familyName: string, phone: string, seniorNa
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: 'SeniorSafe Alerts <alerts@seniorsafeapp.com>', to: ['support@seniorsafeapp.com'], subject: 'ALERT: Missed check-in SMS failed', text: body }),
+      body: JSON.stringify({ from: `SeniorSafe Alerts <${FROM_ADDRESS}>`, to: ['support@seniorsafeapp.com'], subject: 'ALERT: Missed check-in SMS failed', text: body }),
     })
     if (res.ok) return true
     console.error(`Resend email failed (${res.status}):`, await res.text())

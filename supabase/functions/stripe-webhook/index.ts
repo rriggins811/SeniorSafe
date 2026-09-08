@@ -51,12 +51,14 @@ function fmtDate(iso: string | undefined): string {
 
 async function sendEmail(to: string, subject: string, text: string): Promise<boolean> {
   const key = Deno.env.get('RESEND_API_KEY') || Deno.env.get('RESEND_AUDIENCES_API_KEY')
+  // Must be an address on a domain verified in Resend (RESEND_FROM_ADDRESS secret).
+  const fromAddress = Deno.env.get('RESEND_FROM_ADDRESS')?.trim() || 'alerts@seniorsafeapp.com'
   if (!key) { console.warn('RESEND_API_KEY not set; email skipped'); return false }
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: 'SeniorSafe <alerts@seniorsafeapp.com>', to: [to], subject, text }),
+      body: JSON.stringify({ from: `SeniorSafe <${fromAddress}>`, to: [to], subject, text }),
       signal: AbortSignal.timeout(8000),
     })
     return res.ok

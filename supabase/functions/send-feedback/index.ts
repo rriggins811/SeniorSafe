@@ -108,6 +108,8 @@ serve(async (req) => {
 
     // --- Send email via Resend ---
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+    // Must be an address on a domain verified in Resend (RESEND_FROM_ADDRESS secret).
+    const FROM_ADDRESS = Deno.env.get('RESEND_FROM_ADDRESS')?.trim() || 'alerts@seniorsafeapp.com'
     if (!RESEND_API_KEY) {
       console.error('RESEND_API_KEY missing — feedback saved to DB but not emailed')
       return new Response(JSON.stringify({
@@ -159,7 +161,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'SeniorSafe Feedback <alerts@seniorsafeapp.com>',
+        from: `SeniorSafe Feedback <${FROM_ADDRESS}>`,
         to: ['support@seniorsafeapp.com'],
         reply_to: userEmail,
         subject: `SeniorSafe Feedback from ${userEmail}`,
