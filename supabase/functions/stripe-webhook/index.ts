@@ -26,6 +26,7 @@ type Tier = 'free' | 'paid' | 'premium_plus' | 'trial'
 const PRICE_TO_TIER: Record<string, Tier> = {
   'price_1T99bMFoeumweL6DaOZyam4h': 'paid',
   'price_1T99e4FoeumweL6DuVorGKRY': 'paid',
+  'price_1UDRZmFoeumweL6DZzvPb6w6': 'paid', // annual $140 (2026-09-08)
   'price_1TUSe3FoeumweL6DtmuRCVpD': 'paid',
   'price_1TUSeoFoeumweL6DluScBwCU': 'paid',
 }

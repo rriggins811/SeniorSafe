@@ -40,7 +40,7 @@ type Plan = 'monthly' | 'annual'
 const PRICE_MAP: Record<Tier, Record<Plan, string>> = {
   premium: {
     monthly: (Deno.env.get('STRIPE_PRICE_MONTHLY')?.trim()) || 'price_1T99bMFoeumweL6DaOZyam4h',
-    annual:  (Deno.env.get('STRIPE_PRICE_ANNUAL')?.trim())  || 'price_1T99e4FoeumweL6DuVorGKRY',
+    annual:  (Deno.env.get('STRIPE_PRICE_ANNUAL')?.trim())  || 'price_1UDRZmFoeumweL6DZzvPb6w6', // $140 a year (2026-09-08)
   },
 }
 

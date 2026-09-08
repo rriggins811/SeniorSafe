@@ -343,9 +343,9 @@ export default function UpgradePage() {
   }
 
   const monthlyPrice = '$14.99'
-  const annualPrice = '$143.88'
-  const annualMonthly = '$11.99'
-  const savingsPercent = '20%'
+  const annualPrice = '$140'
+  const annualMonthly = '$11.67'
+  const savingsPercent = '22%'
   // Seven free days with a card, once per family (never had a Stripe subscription).
   const tasteEligible = !!profile && !profile.stripe_subscription_id
   const FEATURE_LABELS = {
