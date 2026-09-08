@@ -1053,12 +1053,12 @@ Plan respite BEFORE you need it. By the time you feel desperate, you're past the
 
 **Where:** app.seniorsafeapp.com, and in the App Store and Google Play.
 
-**14-day free trial** of the paid plan for every new family. After 14 days the family is on the free plan unless they subscribe.
+**Free forever.** Nobody enters a card to sign up and nobody is ever downgraded. Paid features show a lock in the app; tapping a lock shows the price. On the web, a family that has never subscribed can start seven free days from a lock (a card is required, and there is no charge if they cancel before the seven days end). The iPhone and Android apps offer the App Store or Google Play introductory trial on the same subscription.
 
 | Plan | Price | What you get |
 |------|-------|--------------|
-| **Free** | $0 | Daily "I'm Okay" check-in that the family sees in the app, the emergency card, one invited family member, and 10 messages with Maggie, total (not per month). No texts. |
-| **Paid** | $14.99 a month or $143.88 a year | Everything: a text to the family every time the senior checks in, an automatic alert when they have not by their set time, nudges, medication reminders by text, appointments, family messages and photos, the document vault, unlimited family members, and Maggie every day (a generous monthly budget per family). |
+| **Free** | $0 | Daily "I'm Okay" check-in with a push nudge, a text to one family contact when a check-in is missed or I Need Help is pressed, check-in history, the emergency card, medication reminders on the senior's screen, the senior's invite (one family contact besides the senior), and 10 messages with Maggie, total (not per month). |
+| **Paid** | $14.99 a month or $140 a year | Texts to everyone in the family (each check-in, the missed check-in alert, I Need Help), siblings joining by family code, missed-dose alerts to the family after 60 minutes, the document vault, family messages and photos including the note on a check-in, appointments, and Maggie every day (a generous monthly budget per family). |
 
 There is one assistant, Maggie, for everyone in the family. There is no separate "Premium+" or higher tier.
 

@@ -59,15 +59,15 @@ const sections = [
     items: [
       {
         q: 'What\'s included in the free plan?',
-        a: 'The daily "I\'m Okay" check-in, which the family sees in the app, the emergency card, the I Need Help alert, one invited family member, and 10 messages with Maggie, total. The free plan does not send texts: no check-in texts and no missed check-in alert.'
+        a: 'Free forever: the daily "I\'m Okay" check-in with a push nudge, a text to one family contact when a check-in is missed or I Need Help is pressed, check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite, and 10 messages with Maggie, total. Nothing to enter, no card, no clock.'
       },
       {
         q: 'How much does the paid plan cost?',
-        a: 'One paid plan: $14.99 a month, or $143.88 a year. It turns on the check-in texts, the missed check-in alert, nudges, medication reminders by text, unlimited family members, the document vault, and Maggie every day. Every new family gets the first 14 days free.'
+        a: 'One paid plan: $14.99 a month, or $140 a year. It turns on texts to everyone in the family, siblings joining by code, missed-dose alerts to the family, the document vault, family messages and photos, appointments, and Maggie every day. Paid features show a lock in the free app; tap one to see the price.'
       },
       {
-        q: 'How do I upgrade to Premium?',
-        a: 'Go to your Profile page and tap "Manage Subscription" to upgrade. You can also tap the upgrade prompt that appears on any locked feature. Payment is processed securely through Stripe. You can cancel anytime from your Profile page.'
+        q: 'How do I start the paid plan?',
+        a: 'Tap any locked feature, or go to your Profile page and tap "See the paid plan". A family that has never subscribed gets seven free days first: you add a card, and if you cancel before the seven days end you are not charged. Payment is processed securely through Stripe on the web, or through the App Store or Google Play in the apps. Cancel anytime from your Profile page.'
       },
       {
         q: 'How do I cancel my subscription?',
