@@ -10,6 +10,12 @@ import EmptyConversations from '../components/illustrations/EmptyConversations'
 // Assistant replies longer than this fold to a preview until tapped.
 const LONG_REPLY = 1400
 const LONG_REPLY_PREVIEW = 900
+// Cut at a paragraph break so bold or list markup is never split mid-way.
+function foldPreview(text) {
+  const head = text.slice(0, LONG_REPLY_PREVIEW)
+  const at = head.lastIndexOf('\n\n')
+  return (at > 300 ? head.slice(0, at) : head.replace(/\s+\S*$/, '')) + '\n\n...'
+}
 
 // Maggie, the one SeniorSafe assistant (2026-09-04 merge). Same page for the
 // senior and the family; the server knows who is typing and adjusts. Seniors
@@ -580,7 +586,7 @@ export default function MaggiePage() {
                   {msg.content ? (
                     msg.role === 'assistant' && msg.content.length > LONG_REPLY && !expanded.has(i) && !(streaming && i === messages.length - 1) ? (
                       <>
-                        {renderRich(msg.content.slice(0, LONG_REPLY_PREVIEW).replace(/\s+\S*$/, '') + ' ...')}
+                        {renderRich(foldPreview(msg.content))}
                         <button type="button" onClick={() => setExpanded(s => { const n = new Set(s); n.add(i); return n })} className="mt-3 block text-[#1B365D] font-semibold underline underline-offset-2" style={{ fontSize: bubbleSize }}>
                           Show the rest
                         </button>
