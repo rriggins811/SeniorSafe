@@ -144,27 +144,27 @@ export const SETUP_FAQ = [
     items: [
       {
         q: 'Is SeniorSafe free?',
-        a: 'Your first 14 days are free with everything turned on. After that it is $14.99 a month, billed to the card you add at signup. Cancel before the 14 days are up and you pay nothing. We text and email you 3 days before the first charge so it is never a surprise.',
+        a: 'Yes. The free plan is free forever, no card: the daily check-in button, a text to one family contact when the check-in is missed or I Need Help is pressed, a push nudge, the check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite by text or link, and 10 messages with Maggie.',
       },
       {
-        q: 'Why do I have to add a card before I set anything up?',
-        a: 'So the texts and alerts never quietly stop. Families who set up without a card used to drop to a stripped-down plan at day 14 without noticing, and the missed check-in alert went silent. With a card on file, day 15 looks exactly like day 14. Nothing is charged today.',
+        q: 'What does the paid plan add, and what does it cost?',
+        a: '$14.99 a month. Texts to everyone in the family (the daily check-in, a missed check-in, I Need Help), siblings and caregivers joining by code, a notification to the family when a dose is not marked taken within an hour, the document vault, family chat with photos and the note on each check-in, appointments, and Maggie every day. Paid features show a lock in the app; tap one to see the price.',
       },
       {
-        q: 'When exactly am I charged?',
-        a: 'On the 15th day after you signed up, and then on that same date each month. The date is shown in Settings under Subscription. On an iPhone or Android phone the charge goes through the App Store or Google Play instead of your card, on the same schedule.',
+        q: 'Is there a trial?',
+        a: 'On the website, tapping a locked feature offers seven free days with a card, once per family, then $14.99 a month unless you cancel first. In the iPhone and Android apps the App Store and Google Play run their own free trial on the same subscription. Nothing is charged during the free days, and we remind you before the first charge.',
       },
       {
         q: 'How do I cancel?',
-        a: 'On the web, open Settings, scroll to Subscription, and tap Cancel Subscription. You keep everything until the end of the period you already paid for (or the end of your free days), and nothing is charged after that. On an iPhone, cancel in Settings > your name > Subscriptions. On Android, cancel in the Play Store under Subscriptions.',
+        a: 'On the web, open Settings, scroll to Subscription, and tap Cancel Subscription. You keep everything until the end of the period you already paid for, and nothing is charged after that. On an iPhone, cancel in Settings > your name > Subscriptions. On Android, cancel in the Play Store under Subscriptions. Cancelling puts the family back on the free plan; the check-in and the one-contact text keep working.',
       },
       {
-        q: 'What happens if I cancel or a payment fails?',
-        a: 'The family drops to the free plan: the daily check-in still works in the app, but the texts to the family and the missed check-in alert stop, and Maggie is limited. A red banner appears on everyone\'s home screen so nobody assumes the alerts are still running. If a card payment fails we retry for about a week and text you once before anything turns off. Turn it back on any time from Settings.',
+        q: 'What happens if a payment fails?',
+        a: 'We retry the card for about a week and text you once before anything turns off. If it never goes through, the family goes back to the free plan. Nothing is deleted.',
       },
       {
         q: 'Does the person I look after pay anything? Do my siblings?',
-        a: 'No. One plan covers the whole family. Only the person who set up the family has a card on file. Everyone else joins by link, free.',
+        a: 'No. One plan covers the whole family, and only the person who set up the family has a card on file. On the free plan, one family contact is included; siblings and caregivers join on the paid plan.',
       },
       {
         q: 'I signed up on the website but use the iPhone app. Where is my subscription?',

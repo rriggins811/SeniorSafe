@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Users, Copy, CheckCircle, UserMinus, Share2, MessageSquare, Clock, Heart } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { logFunnel } from '../lib/funnel'
 import { generateFamilyCode } from '../lib/familyCode'
 import { copyToClipboard } from '../lib/platform'
 import {
@@ -111,8 +112,10 @@ export default function FamilyInvitePage() {
   const seniorJoined = !!family?.senior
   const tier = family?.tier || 'free'
   const members = (family?.all || []).filter(r => r.user_id !== family?.ownerId && !r.is_senior)
+  // Free plan: one family contact. The owner counts when they are not the senior.
+  const contactCount = members.length + (family?.owner && !family.owner.is_senior ? 1 : 0)
   const FREE_MEMBER_LIMIT = 1
-  const atFreeLimit = tier === 'free' && members.length >= FREE_MEMBER_LIMIT
+  const atFreeLimit = tier === 'free' && contactCount >= FREE_MEMBER_LIMIT
 
   const memberText = memberInviteText({ seniorName, code })
   const seniorText = seniorInviteText({ seniorName, ownerFirstName: family?.me?.first_name, code })
@@ -219,16 +222,16 @@ export default function FamilyInvitePage() {
 
               {atFreeLimit && isOwner && (
                 <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-4 text-center">
-                  <p className="text-yellow-800 font-semibold text-base mb-1">The free plan includes 1 family member</p>
-                  <p className="text-yellow-700 text-base mb-3 leading-relaxed">Premium lets everyone in the family join.</p>
-                  <button onClick={() => navigate('/upgrade')} className="px-6 py-2.5 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-base">See Premium</button>
+                  <p className="text-yellow-800 font-semibold text-base mb-1">The free plan covers one family contact</p>
+                  <p className="text-yellow-700 text-base mb-3 leading-relaxed">On the paid plan, siblings and caregivers join by code and get the texts too. $14.99 a month.</p>
+                  <button onClick={() => { logFunnel('lock_tap', 'family'); navigate('/upgrade?feature=family') }} className="px-6 py-2.5 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-base">See the paid plan</button>
                 </div>
               )}
 
               {/* Member list */}
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3 px-1">
-                  Family members ({members.length}{tier === 'free' ? `/${FREE_MEMBER_LIMIT}` : ''})
+                  Family members ({members.length}{tier === 'free' ? ', free plan: one contact' : ''})
                 </p>
                 {members.length === 0 ? (
                   <div className="bg-white rounded-2xl p-6 shadow-sm text-center">

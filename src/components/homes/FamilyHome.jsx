@@ -3,7 +3,9 @@ import {
   ChevronRight, Phone, Heart, FolderLock, Settings, Sparkles, Home, Users, MessageSquare, Copy,
 } from 'lucide-react'
 import BottomNav from '../BottomNav'
-import { isPremium } from '../../lib/subscription'
+import { isPremium, MONTHLY_PRICE } from '../../lib/subscription'
+import { Lock } from 'lucide-react'
+import { logFunnel } from '../../lib/funnel'
 
 // The adult child's morning board. One question first: is Mom okay today.
 // Everything else sits below it.
@@ -76,6 +78,7 @@ export default function FamilyHome({
   trialBannerDismissed,
   onDismissTrial,
   planEnded = false,
+  contactName = '',
   smsToast,
   onDismissToast,
   preview = false,
@@ -235,11 +238,11 @@ export default function FamilyHome({
           <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4 flex items-start gap-3">
             <AlertTriangle size={20} color="#B5483F" className="flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-red-800 font-semibold text-base">Your plan has ended</p>
+              <p className="text-red-800 font-semibold text-base">Your paid plan has ended</p>
               <p className="text-red-700 text-base mt-0.5 leading-relaxed">
                 {isOwner
-                  ? `The daily check-in texts and the missed check-in alert are off. ${name} still sees the button, but nobody is told.`
-                  : `The daily check-in texts and the missed check-in alert are off. Ask the person who set up the family to turn them back on.`}
+                  ? `You are on the free plan now: the check-in still works and ${contactName || 'one contact'} gets a text if ${name} misses it. Texts to everyone, the vault, chat, and appointments are locked.`
+                  : `The family is on the free plan now. Ask the person who set up the family to turn the paid plan back on.`}
               </p>
               {isOwner && (
                 <button
@@ -329,7 +332,7 @@ export default function FamilyHome({
 
           {seniorJoined && !checkedIn && adminCheckInLoaded && (
             <div className="mt-4 flex flex-col gap-2">
-              {premium ? (
+              {true ? (
                 nudgeCount >= 2 ? (
                   <p className="text-base leading-relaxed text-[#7A2E28]">
                     Two nudges already sent today. If you are worried, call {name} or someone nearby.
@@ -397,7 +400,7 @@ export default function FamilyHome({
 
         {showAddFamily && (
           <button
-            onClick={() => onNavigate('/family-invite')}
+            onClick={() => { if (!premium) logFunnel('lock_tap', 'family'); onNavigate(premium ? '/family-invite' : '/upgrade?feature=family') }}
             className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm text-left"
           >
             <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
@@ -405,9 +408,9 @@ export default function FamilyHome({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>Add the rest of the family</p>
-              <p className="text-[#6B645A] text-sm">Siblings and caregivers get the same check-in text.</p>
+              <p className="text-[#6B645A] text-sm">{premium ? 'Siblings and caregivers get the same check-in text.' : `Paid plan, ${MONTHLY_PRICE} a month. Siblings and caregivers get the texts too.`}</p>
             </div>
-            <ChevronRight size={18} color="#C4BDB3" />
+            {premium ? <ChevronRight size={18} color="#C4BDB3" /> : <Lock size={18} color="#D4A843" />}
           </button>
         )}
 
@@ -437,7 +440,7 @@ export default function FamilyHome({
             </button>
 
             <button
-              onClick={() => onNavigate('/appointments')}
+              onClick={() => { if (!premium) logFunnel('lock_tap', 'appointments'); onNavigate(premium ? '/appointments' : '/upgrade?feature=appointments') }}
               className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm"
             >
               <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
@@ -446,16 +449,18 @@ export default function FamilyHome({
               <div className="flex-1 text-left min-w-0">
                 <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>Next appointment</p>
                 <p className="text-[#6B645A] text-sm truncate">
-                  {nextAppt
+                  {!premium
+                    ? `Paid plan, ${MONTHLY_PRICE} a month`
+                    : nextAppt
                     ? `${nextAppt.title}, ${formatApptDate(nextAppt.appointment_date)}${nextAppt.appointment_time ? ` ${formatApptTime(nextAppt.appointment_time)}` : ''}`
                     : 'Nothing upcoming'}
                 </p>
               </div>
-              <ChevronRight size={18} color="#C4BDB3" />
+              {premium ? <ChevronRight size={18} color="#C4BDB3" /> : <Lock size={18} color="#D4A843" />}
             </button>
 
             <button
-              onClick={() => onNavigate('/family')}
+              onClick={() => { if (!premium) logFunnel('lock_tap', 'chat'); onNavigate(premium ? '/family' : '/upgrade?feature=chat') }}
               className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm"
             >
               <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
@@ -464,7 +469,9 @@ export default function FamilyHome({
               <div className="flex-1 text-left min-w-0">
                 <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>Family</p>
                 <p className="text-[#6B645A] text-sm">
-                  {unreadMsgCount > 0
+                  {!premium
+                    ? `Chat and photos, paid plan, ${MONTHLY_PRICE} a month`
+                    : unreadMsgCount > 0
                     ? `${unreadMsgCount} new message${unreadMsgCount === 1 ? '' : 's'}`
                     : 'No new messages'}
                 </p>

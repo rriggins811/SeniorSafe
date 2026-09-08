@@ -73,7 +73,7 @@ export default function BottomNav({ inline = false }) {
   const tabs = [
     { label: 'Home',   icon: Home,       path: '/dashboard', premium: false, kind: 'lucide' },
     { label: 'Vault',  icon: FolderLock, path: '/vault',     premium: true,  kind: 'lucide' },
-    { label: 'Family', icon: Users,      path: '/family',    premium: false, kind: 'lucide' },
+    { label: 'Family', icon: Users,      path: '/family',    premium: true,  kind: 'lucide' },
     MAGGIE_TAB,
   ]
 

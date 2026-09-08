@@ -296,7 +296,7 @@ async function updateUserTier(
 ) {
   const update: Record<string, unknown> = { subscription_tier: tier }
   if (tier === 'paid' || tier === 'premium_plus') update.trial_status = 'converted'
-  if (tier === 'trial') update.trial_status = 'active'
+  if (tier === 'trial') { update.trial_status = 'active'; update.trial_start_date = new Date().toISOString() }
   if (stripeCustomerId) update.stripe_customer_id = stripeCustomerId
   if (stripeSubscriptionId) update.stripe_subscription_id = stripeSubscriptionId
   if (periodEnd !== undefined) update.subscription_period_end = periodEnd

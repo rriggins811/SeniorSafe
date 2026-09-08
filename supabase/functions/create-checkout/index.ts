@@ -44,9 +44,9 @@ const PRICE_MAP: Record<Tier, Record<Plan, string>> = {
   },
 }
 
-// Card-on-file trial: every new owner gets 14 days free and is charged on
-// day 15 unless they cancel. Only one trial per family, ever.
-const TRIAL_DAYS = 14
+// The taste (2026-09-08 late morning): a family that taps a lock gets seven
+// free days with a card, once (never had a Stripe subscription), then $14.99.
+const TASTE_DAYS = 7
 
 serve(async (req: Request) => {
   const cors = getCorsHeaders(req)
@@ -99,9 +99,9 @@ serve(async (req: Request) => {
     const plan: Plan = body.plan
     const tier: Tier = (body.tier as Tier) || 'premium'
     const admin_user_id: string | undefined = body.admin_user_id
-    // trial: true comes from the card step right after signup (StartTrialPage).
+    // trial: true comes from the plan page when the family has never had a
+    // Stripe subscription (the seven-day taste).
     const wantsTrial: boolean = body.trial === true
-    const returnTo: string = body.return_to === 'start-trial' ? 'start-trial' : 'dashboard'
 
     if (tier !== 'premium') {
       return new Response(JSON.stringify({ error: 'Invalid tier. Use "premium".' }), {
@@ -183,21 +183,13 @@ serve(async (req: Request) => {
       .eq('user_id', targetUserId)
       .single()
 
-    let trialDays = 0
     const hadStripeBefore = Boolean(targetProfile?.stripe_subscription_id)
-    if (!hadStripeBefore && targetProfile?.trial_status === 'active' && targetProfile?.trial_start_date) {
-      const start = new Date(targetProfile.trial_start_date)
-      const now = new Date()
-      const elapsed = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-      trialDays = Math.max(0, TRIAL_DAYS - elapsed)
-      // The card step runs minutes after signup; give the full 14 days.
-      if (wantsTrial && elapsed <= 1) trialDays = TRIAL_DAYS
-    }
+    const trialDays = wantsTrial && !hadStripeBefore ? TASTE_DAYS : 0
 
     // ---- Determine return URL (use origin of request) ----
     const origin = req.headers.get('Origin') || 'https://app.seniorsafeapp.com'
-    const successUrl = returnTo === 'start-trial' ? `${origin}/start-trial?done=1` : `${origin}/dashboard?upgraded=true`
-    const cancelUrl = returnTo === 'start-trial' ? `${origin}/start-trial` : `${origin}/upgrade`
+    const successUrl = `${origin}/dashboard?upgraded=true`
+    const cancelUrl = `${origin}/upgrade`
 
     // ---- Create Stripe Checkout Session ----
     const sessionParams: Record<string, unknown> = {

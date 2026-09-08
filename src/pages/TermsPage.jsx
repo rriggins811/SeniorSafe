@@ -50,7 +50,9 @@ The medication tracking feature is a personal reminder tool only. It does not re
   },
   {
     title: '9. Subscriptions & Billing',
-    body: `SeniorSafe is a monthly subscription of $14.99 (or $143.88 a year on the web) that starts with a 14-day free trial. A payment method is collected when the family is set up. Nothing is charged during the free trial. Unless you cancel before the trial ends, the subscription begins automatically and renews each period until cancelled. We send a reminder by text and email three days before the first charge. One free trial per family.
+    body: `SeniorSafe's free plan is free forever and needs no payment method: the daily check-in, a text to one family contact when a check-in is missed or I Need Help is pressed, push nudges, check-in history, the emergency card, medication reminders on the senior's screen, the senior's invite, and 10 messages with Maggie.
+
+The paid plan is a monthly subscription of $14.99 (or $143.88 a year on the web). Paid features are shown in the app behind a lock; tapping one shows the price. On the web, a family that has never subscribed may start with seven free days by adding a payment method; unless you cancel before those days end, the subscription begins automatically and renews each period until cancelled. We send a reminder by text and email before the first charge. One free trial per family. In the iPhone and Android apps the App Store and Google Play offer their own introductory free trial on the same subscription.
 
 For iPhone and iPad subscribers: payment is charged to your Apple ID account. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings > your name > Subscriptions.
 
@@ -58,7 +60,7 @@ For Android subscribers: payment is charged through Google Play. Manage or cance
 
 For web subscribers: payment is processed through Stripe. Cancel at any time in Settings under Subscription; access continues to the end of the period already paid for, and no further charges are made.
 
-If a payment fails, we retry for several days and notify you before any feature is turned off. When a subscription ends for any reason, the family keeps the free plan (daily check-in in the app without texts or the missed check-in alert, limited assistant use).
+If a payment fails, we retry for several days and notify you before any feature is turned off. When a subscription ends for any reason, the family returns to the free plan described above; nothing is deleted.
 
 No refunds are provided for partial billing periods. Prices may change with notice.`,
   },

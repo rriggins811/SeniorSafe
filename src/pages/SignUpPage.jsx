@@ -179,7 +179,7 @@ export default function SignUpPage() {
     }, { onConflict: 'user_id' })
     setLoading(false)
     if (pErr) { setError('Account created, but saving your details failed: ' + pErr.message); return }
-    navigate('/start-trial', { replace: true })
+    navigate(`/onboarding?path=${isSelf ? 'self' : 'family'}`)
   }
 
   // Member (sibling, caregiver) or the senior joining by link.
@@ -301,6 +301,24 @@ export default function SignUpPage() {
         </Shell>
       )
     }
+    // Free plan: one family contact. A second adult needs the paid plan.
+    const familyFull = (invite.subscription_tier || 'free') === 'free' && (invite.contact_count || 0) >= 1
+    if (familyFull) {
+      return (
+        <Shell onBack={() => { if (urlCode) navigate('/signup'); else setInvite(null) }}>
+          <Heading
+            title={seniorName ? `${seniorName}'s family is on the free plan` : `${invite.family_name || 'This family'} is on the free plan`}
+            sub={`The free plan covers one family contact, and ${ownerFirst || 'the person who set it up'} already has that seat. On the paid plan ($14.99 a month) everyone in the family joins and gets the texts.`}
+          />
+          <p className="text-[#1B365D]" style={{ fontSize: '17px', lineHeight: 1.45 }}>
+            Ask {ownerFirst || 'them'} to open SeniorSafe, tap Family, and turn on the paid plan. Then use this link again.
+          </p>
+          <p className="text-center text-gray-500">
+            Already have an account? <TextLink to="/signin">Sign in</TextLink>
+          </p>
+        </Shell>
+      )
+    }
     return (
       <Shell onBack={() => { if (urlCode) navigate('/signup'); else setInvite(null) }}>
         <Heading
@@ -330,7 +348,7 @@ export default function SignUpPage() {
   if (mode === 'self') {
     return (
       <Shell onBack={() => { setMode('family'); setError('') }}>
-        <Heading title="Set up SeniorSafe for yourself" sub="Your first 14 days are free, then $14.99 a month. Cancel anytime. You add a card on the next screen, and nothing is charged today." />
+        <Heading title="Set up SeniorSafe for yourself" sub="Free, no card. You'll pick your check-in time and invite one family member on the next screens." />
         <div className="flex flex-col gap-4">
           <Field large label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} autoFocus />
           <Field large label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
@@ -359,7 +377,7 @@ export default function SignUpPage() {
         <Heading title="Set up SeniorSafe" />
       </div>
       <p className="text-[#6B645A]" style={{ fontSize: '17px', lineHeight: 1.45 }}>
-        About two minutes. Your first 14 days are free, then $14.99 a month, cancel anytime. You add a card on the next screen (nothing is charged today), then the person you look after, and they get a link that opens straight to their button.
+        Free, no card, about two minutes. You'll add the person you look after on the next screen, and they get a link that opens straight to their button.
       </p>
       <OAuthButtons onGoogle={() => startOAuth('google')} onApple={() => startOAuth('apple')} googleLoading={oauthLoading === 'google'} appleLoading={oauthLoading === 'apple'} />
       <Divider>or with email</Divider>

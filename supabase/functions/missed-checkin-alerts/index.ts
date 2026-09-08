@@ -112,8 +112,8 @@ serve(async (_req) => {
         owner = o as ProfileRow
       }
 
-      // Only paid and trial families get the alert.
-      if (!['paid', 'trial', 'premium_plus'].includes(owner.subscription_tier || '')) { skipped++; continue }
+      // Free plan (2026-09-08): ONE family contact gets the text. Paid: everyone.
+      const paidFamily = ['paid', 'trial', 'premium_plus'].includes(owner.subscription_tier || '')
       checked++
 
       const tz = senior.timezone || owner.timezone || 'America/New_York'
@@ -142,9 +142,15 @@ serve(async (_req) => {
       // 3. Everyone in the family except the senior.
       const { data: familyRows } = await supabase
         .from('user_profile')
-        .select('user_id, first_name, phone, device_token, device_platform')
+        .select('user_id, first_name, phone, device_token, device_platform, created_at')
         .or(`user_id.eq.${ownerId},invited_by.eq.${ownerId}`)
-      const recipients = (familyRows || []).filter(r => r.user_id !== senior.user_id)
+      let recipients = (familyRows || []).filter(r => r.user_id !== senior.user_id)
+      if (!paidFamily) {
+        // The one contact: the owner when they are not the senior, else the first member to join.
+        const contact = recipients.find(r => r.user_id === ownerId)
+          || [...recipients].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())[0]
+        recipients = contact ? [contact] : []
+      }
       if (recipients.length === 0) { skipped++; continue }
 
       const seniorName = senior.first_name || owner.senior_name || 'Your loved one'

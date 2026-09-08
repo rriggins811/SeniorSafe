@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, Camera, Trash2, FileText, X, FolderLock, Lock, Eye, EyeOff, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import LockedFeature from '../components/LockedFeature'
 import BottomNav from '../components/BottomNav'
 import { openExternalLink } from '../lib/platform'
 import EmptyVault from '../components/illustrations/EmptyVault'
@@ -240,40 +241,7 @@ export default function VaultPage() {
 
   // Show upgrade prompt for free tier (null = still loading, show nothing yet)
   if (subscriptionTier === 'free') {
-    return (
-      <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
-        <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
-          <div className="max-w-lg mx-auto flex items-center gap-3">
-            <div className="bg-white/15 rounded-xl p-2">
-              <FolderLock size={22} color="#D4A843" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h1 className="text-white text-xl font-bold leading-tight">Family Vault</h1>
-              <p className="text-white/60 text-sm">Your important documents</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center gap-5">
-          <div className="bg-[#1B365D] rounded-2xl p-5">
-            <Lock size={40} color="#D4A843" strokeWidth={1.5} />
-          </div>
-          <div>
-            <h2 className="text-[#1B365D] text-xl font-bold mb-2">Premium Feature</h2>
-            <p className="text-gray-500 text-base leading-relaxed max-w-xs">
-              The Family Vault is available on SeniorSafe Premium. Store important documents securely for your whole family.
-            </p>
-          </div>
-          <button onClick={() => navigate('/upgrade')} className="w-full max-w-xs py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-lg">
-            Upgrade to Premium
-          </button>
-          <p className="text-gray-400 text-sm">Starting at $11.99/month</p>
-          <button onClick={() => navigate('/dashboard')} className="text-[#1B365D] text-sm underline">
-            ← Back to Dashboard
-          </button>
-        </div>
-        <BottomNav />
-      </div>
-    )
+    return <LockedFeature feature="vault" title="Document vault" description="Power of attorney, insurance cards, medication lists, and the papers the whole family needs in a hurry, in one place everyone can reach." Icon={FolderLock} />
   }
 
   // Member view: admin hasn't shared vault

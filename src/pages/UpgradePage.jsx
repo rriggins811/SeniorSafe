@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import {
   Shield, CheckCircle, X, Sparkles, ArrowLeft,
   Heart, Pill, FolderLock, Bot, Users, Bell, Clock,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { isIOS, isAndroid } from '../lib/platform'
-import { needsBilling } from '../lib/subscription'
+import { TASTE_DAYS } from '../lib/subscription'
+import { logFunnel } from '../lib/funnel'
 import {
   purchaseMonthly as rcPurchaseMonthly,
   restorePurchases as rcRestorePurchases,
@@ -95,21 +96,21 @@ function DoubleBillingModal({ open, platform, onClose }) {
 }
 
 const FREE_FEATURES = [
-  { icon: Heart,  text: 'Daily "I\'m Okay" check-in, seen by the family in the app' },
-  { icon: Bell,   text: '"I Need Help" alert to the family' },
-  { icon: Shield, text: 'Emergency Info card' },
-  { icon: Users,  text: '1 invited family member' },
-  { icon: Bot,    text: '10 messages with Maggie, total' },
+  { text: 'The daily "I\'m Okay" check-in and the push nudge, free forever' },
+  { text: 'A text to one family contact when a check-in is missed or I Need Help is pressed' },
+  { text: 'Check-in history, the emergency card, and medication reminders on the senior\'s screen' },
+  { text: 'The senior\'s invite by text or link' },
+  { text: '10 messages with Maggie, total' },
 ]
 
 const PAID_FEATURES = [
-  { icon: Heart,      text: 'A text to the family every time your loved one checks in' },
-  { icon: Bell,       text: 'An automatic alert to everyone if they have not checked in by their set time' },
-  { icon: Clock,      text: 'A gentle nudge you can send from the app, with a daily limit so it never feels like nagging' },
-  { icon: Users,      text: 'Every sibling and caregiver in the loop, no limit' },
-  { icon: Bot,        text: 'Maggie every day: everyday help for your parent, real answers about the transition for you, and she remembers your family' },
-  { icon: Pill,       text: 'Medication reminders by text, so no dose is missed' },
-  { icon: FolderLock, text: 'A secure vault for wills, insurance, and medical records the family can reach when it matters' },
+  { icon: Bell,       text: 'Texts to everyone in the family: the daily check-in, a missed check-in, and I Need Help' },
+  { icon: Users,      text: 'Siblings and caregivers join by code, no limit' },
+  { icon: Pill,       text: 'A notification to the family when a dose is not marked taken within an hour' },
+  { icon: FolderLock, text: 'The document vault: wills, insurance, medical records the family can reach when it matters' },
+  { icon: Heart,      text: 'Family chat with photos, and a note on each check-in' },
+  { icon: Clock,      text: 'Appointments the whole family can see' },
+  { icon: Bot,        text: 'Maggie every day, with a monthly budget instead of a taste' },
 ]
 
 export default function UpgradePage() {
@@ -117,6 +118,9 @@ export default function UpgradePage() {
   const [plan, setPlan] = useState('monthly') // 'monthly' or 'annual'
   const [loading, setLoading] = useState(false)
   const [tier, setTier] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [params] = useSearchParams()
+  const feature = params.get('feature') || ''
   const [error, setError] = useState('')
   const [isMember] = useState(false)
   const [adminUserId] = useState(null)
@@ -156,14 +160,16 @@ export default function UpgradePage() {
             return
           }
 
-          if (needsBilling(data)) { navigate('/start-trial', { replace: true }); return }
+          setProfile(data)
           setTier(data?.subscription_tier || 'free')
+          logFunnel('upgrade_view', feature || null)
         })
     })
   }, [navigate])
 
   async function handleCheckout() {
     const tier = 'premium'
+    logFunnel('checkout_start', feature || null, { plan })
     setLoading(true)
     setError('')
 
@@ -175,7 +181,7 @@ export default function UpgradePage() {
       if (!session) throw new Error('Not logged in')
 
       const { data, error: fnError } = await supabase.functions.invoke('create-checkout', {
-        body: { plan, tier, ...(isMember && adminUserId ? { admin_user_id: adminUserId } : {}) },
+        body: { plan, tier, trial: tasteEligible, ...(isMember && adminUserId ? { admin_user_id: adminUserId } : {}) },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -340,6 +346,13 @@ export default function UpgradePage() {
   const annualPrice = '$143.88'
   const annualMonthly = '$11.99'
   const savingsPercent = '20%'
+  // Seven free days with a card, once per family (never had a Stripe subscription).
+  const tasteEligible = !!profile && !profile.stripe_subscription_id
+  const FEATURE_LABELS = {
+    vault: 'The document vault', appointments: 'Appointments', chat: 'Family chat', family: 'More family members',
+    missed_dose: 'Missed-dose alerts', texts: 'Texts to everyone', maggie: 'Maggie every day', note: 'Check-in notes',
+  }
+  const featureLabel = FEATURE_LABELS[feature] || ''
 
   // Already on the paid plan.
   if (tier === 'paid' || tier === 'premium_plus') {
@@ -403,7 +416,9 @@ export default function UpgradePage() {
                 : 'Upgrade Your Plan'}
             </h1>
             <p className="text-white/60 text-sm">
-              {isMember
+              {featureLabel
+                ? `${featureLabel} is on the paid plan. One plan, everything on.`
+                : isMember
                 ? 'Turn on the texts and alerts for your family'
                 : 'One plan. Everything on.'}
             </p>
@@ -448,12 +463,12 @@ export default function UpgradePage() {
             {onNativeStore ? (
               <>
                 <p className="text-4xl font-bold text-[#1B365D]">{monthlyPrice}<span className="text-lg font-normal text-gray-400">/mo</span></p>
-                <p className="text-gray-400 text-sm mt-1">Billed monthly via {isIOS() ? 'Apple' : 'Google Play'}. Cancel anytime.</p>
+                <p className="text-gray-400 text-sm mt-1">Free trial first, then billed monthly via {isIOS() ? 'Apple' : 'Google Play'}. Cancel anytime.</p>
               </>
             ) : plan === 'monthly' ? (
               <>
                 <p className="text-4xl font-bold text-[#1B365D]">{monthlyPrice}<span className="text-lg font-normal text-gray-400">/mo</span></p>
-                <p className="text-gray-400 text-sm mt-1">Billed monthly. Cancel anytime.</p>
+                <p className="text-gray-400 text-sm mt-1">{tasteEligible ? `${TASTE_DAYS} days free with a card, then billed monthly. Cancel anytime.` : 'Billed monthly. Cancel anytime.'}</p>
               </>
             ) : (
               <>
@@ -506,7 +521,7 @@ export default function UpgradePage() {
                 disabled={iapLoading}
                 className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
               >
-                {iapLoading ? 'Processing...' : `Subscribe, ${monthlyPrice} a month`}
+                {iapLoading ? 'Processing...' : 'Start the free trial'}
               </button>
 
               <button
@@ -524,7 +539,7 @@ export default function UpgradePage() {
                 disabled={loading || tier === null}
                 className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
               >
-                {tier === null ? 'Loading...' : loading ? 'Redirecting to checkout...' : `Subscribe, ${plan === 'monthly' ? monthlyPrice + ' a month' : annualMonthly + ' a month'}`}
+                {tier === null ? 'Loading...' : loading ? 'Redirecting to checkout...' : tasteEligible ? `Start ${TASTE_DAYS} free days` : `Subscribe, ${plan === 'monthly' ? monthlyPrice + ' a month' : annualMonthly + ' a month'}`}
               </button>
 
             </>

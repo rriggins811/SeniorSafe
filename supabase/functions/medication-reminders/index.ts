@@ -89,7 +89,7 @@ serve(async (_req) => {
   const roots = [...new Set([...rootOf.values()])]
   const { data: familyRows } = await supabase
     .from('user_profile')
-    .select('user_id, invited_by, is_senior, first_name, senior_name, timezone, device_token')
+    .select('user_id, invited_by, is_senior, first_name, senior_name, timezone, device_token, subscription_tier')
     .or(roots.map(r => `user_id.eq.${r},invited_by.eq.${r}`).join(','))
   const familiesByRoot = new Map<string, typeof familyRows>()
   for (const r of (familyRows || [])) {
@@ -140,8 +140,9 @@ serve(async (_req) => {
           }
         }
 
-        // 2. Missed dose: tell the rest of the family (once per dose per day).
-        if (sinceDue >= MISSED_AFTER_MINUTES && sinceDue <= MISSED_WINDOW_MINUTES) {
+        // 2. Missed dose: tell the rest of the family (once per dose per day). Paid plan only.
+        const paidFamily = ['paid', 'trial', 'premium_plus'].includes(owner?.subscription_tier || '')
+        if (paidFamily && sinceDue >= MISSED_AFTER_MINUTES && sinceDue <= MISSED_WINDOW_MINUTES) {
           const { data: alerted } = await supabase
             .from('dose_alerts').select('id')
             .eq('medication_id', med.id).eq('date', todayLocal).eq('scheduled_time', scheduledTime).limit(1)

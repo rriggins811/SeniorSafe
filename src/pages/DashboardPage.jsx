@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { sendSMS } from '../lib/sms'
-import { isPremium, trialDaysRemaining, needsBilling, planEnded } from '../lib/subscription'
+import { isPremium, trialDaysRemaining, tasteDaysRemaining, planEnded, primaryContact } from '../lib/subscription'
 import { registerPushNotifications } from '../lib/pushNotifications'
 import { copyToClipboard } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
@@ -103,7 +103,6 @@ export default function DashboardPage() {
         const fam = await loadFamily(u.id)
         if (cancelled) return
         if (!fam) { navigate('/onboarding?path=oauth', { replace: true }); return }
-        if (needsBilling(fam.me)) { navigate('/start-trial', { replace: true }); return }
         if (!fam.me.onboarding_complete && fam.me.role !== 'member') {
           navigate(`/onboarding?path=${fam.me.is_senior ? 'self' : 'family'}`, { replace: true })
           return
@@ -116,8 +115,9 @@ export default function DashboardPage() {
         const todayStr = localDateStr()
         const seniorId = fam.senior?.user_id || null
 
-        if (fam.isOwner && p.trial_status === 'active' && p.trial_start_date) {
-          setTrialDays(trialDaysRemaining(p.trial_start_date))
+        if (fam.isOwner && p.subscription_tier === 'trial') {
+          // A Stripe taste stores its end date; the older no-card trials count from their start.
+          setTrialDays(p.stripe_subscription_id ? tasteDaysRemaining(p) : (p.trial_start_date ? trialDaysRemaining(p.trial_start_date) : null))
         }
 
         if (seniorId) {
@@ -304,20 +304,23 @@ export default function DashboardPage() {
     supabase.from('user_profile').update(updates).eq('user_id', user.id)
       .then(({ error: e }) => { if (e) console.error('Check-in tracking update failed:', e) })
 
-    if (!isPremium(family.tier)) return
-
     const senderName = family.me.first_name || 'Your loved one'
     if (family.others.length === 0) {
-      setSmsToast('Check-in recorded. Invite family so they get the text.')
+      setSmsToast(isPremium(family.tier) ? 'Check-in recorded. Invite family so they get the text.' : 'Check-in recorded. Invite family so they can see it.')
       setTimeout(() => setSmsToast(''), 5000)
       return
     }
-    const { texted } = await notifyFamily(family.others, {
+    // Free plan: the one contact gets a notification, no text. Paid: everyone gets the text.
+    const paid = isPremium(family.tier)
+    const contact = primaryContact(family)
+    const targets = paid ? family.others : (contact ? [contact] : [])
+    const { texted } = await notifyFamily(targets, {
       title: 'Check-In',
       body: `${senderName} just checked in!`,
       type: 'check_in',
-      sms: `${senderName} just checked in on SeniorSafe and is doing well today. Reply STOP to opt out`,
+      sms: paid ? `${senderName} just checked in on SeniorSafe and is doing well today. Reply STOP to opt out` : null,
     })
+    if (!paid) return
     if (texted === 0) {
       setSmsToast('Check-in recorded. Family members need a phone number in Settings to get the text.')
       setTimeout(() => setSmsToast(''), 5000)
@@ -354,8 +357,10 @@ export default function DashboardPage() {
         setHelpSending(false)
         return
       }
-      const withPhone = family.others.filter(m => m.phone)
-      const { texted } = await notifyFamily(family.others, {
+      const contact = primaryContact(family)
+      const targets = isPremium(family.tier) ? family.others : (contact ? [contact] : family.others.slice(0, 1))
+      const withPhone = targets.filter(m => m.phone)
+      const { texted } = await notifyFamily(targets, {
         title: 'Help Requested',
         body: `${name} is requesting help. Please check in with them.`,
         type: 'help_request',
@@ -402,7 +407,6 @@ export default function DashboardPage() {
   // ─── Family actions ──────────────────────────────────────────────
   async function sendNudge() {
     if (!family?.senior || reminding) return
-    if (!isPremium(family.tier)) return
     if (nudgeCount >= 2) return
     setReminding(true)
     const phone = family.seniorPhone
@@ -562,6 +566,8 @@ export default function DashboardPage() {
       trialBannerDismissed={trialBannerDismissed}
       onDismissTrial={() => setTrialBannerDismissed(true)}
       planEnded={planEnded(family.owner)}
+      contactName={primaryContact(family)?.first_name || ''}
+      isOwner={isOwner}
       smsToast={smsToast}
       onDismissToast={() => setSmsToast('')}
     />

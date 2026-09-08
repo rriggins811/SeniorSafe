@@ -18,8 +18,9 @@ export function baseProfileRow(userId) {
     signup_source: getAttribution(),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     device_platform: detectDevicePlatform(),
-    subscription_tier: 'trial',
-    trial_status: 'active',
-    trial_start_date: new Date().toISOString(),
+    // Free forever from day one (2026-09-08). Nobody starts on top, so
+    // nobody is ever downgraded. The paid plan is a lock tap away.
+    subscription_tier: 'free',
+    trial_status: 'none',
   }
 }

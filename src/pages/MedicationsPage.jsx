@@ -156,46 +156,8 @@ export default function MedicationsPage() {
     setMedications(prev => prev.filter(m => m.id !== id))
   }
 
-  if (subscriptionTier === 'free') {
-    return (
-      <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
-        <div className="bg-[#1B365D] px-5 pt-12 pb-5 flex-shrink-0">
-          <div className="max-w-lg mx-auto">
-            <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-white/70 text-sm mb-4">
-              <ArrowLeft size={16} /> Back
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="bg-white/15 rounded-xl p-2">
-                <Pill size={20} color="#D4A843" strokeWidth={1.5} />
-              </div>
-              <div>
-                <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Medications</h1>
-                <p className="text-white/60 text-sm">Daily checklist</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center gap-5">
-          <div className="bg-[#1B365D] rounded-2xl p-5">
-            <Lock size={40} color="#D4A843" strokeWidth={1.5} />
-          </div>
-          <div>
-            <h2 className="text-[#1B365D] text-xl font-bold mb-2">Premium Feature</h2>
-            <p className="text-gray-500 text-base leading-relaxed max-w-xs">
-              Medication tracking and SMS reminders are available on SeniorSafe Premium.
-            </p>
-          </div>
-          <button onClick={() => navigate('/upgrade')} className="w-full max-w-xs py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-lg">
-            Upgrade to Premium
-          </button>
-          <p className="text-gray-400 text-sm">Starting at $11.99/month</p>
-          <button onClick={() => navigate('/dashboard')} className="text-[#1B365D] text-sm underline">
-            ← Back to Dashboard
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // Medications are on the free plan (reminders shown to the senior). The
+  // missed-dose alert to the family is the paid part, enforced server-side.
 
   return (
     <div className="min-h-screen bg-[#FAF8F4] flex flex-col">

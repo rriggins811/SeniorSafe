@@ -633,6 +633,23 @@ export default function ProfilePage() {
               </div>
             </form>
 
+            {/* ───────── Free plan ───────── */}
+            {!isPaid && profile && (
+              <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <CreditCard size={14} className="text-gray-400" />
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Your plan</p>
+                </div>
+                <p className="text-sm text-gray-700 mb-1">You&rsquo;re on the <span className="font-semibold text-[#1B365D]">free plan</span>, free forever.</p>
+                <p className="text-xs text-gray-500 mb-3 leading-relaxed">The daily check-in, a text to one family contact when it is missed or I Need Help is pressed, history, the emergency card, medication reminders, and 10 messages with Maggie.</p>
+                {isAdmin && (
+                  <button type="button" onClick={() => navigate('/upgrade?feature=texts')} className="w-full py-3 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-sm">
+                    See the paid plan, $14.99 a month
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* ───────── Subscription Management (paid users) ───────── */}
             {isPaid && (
               <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">

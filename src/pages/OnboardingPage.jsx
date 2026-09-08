@@ -10,7 +10,6 @@ import {
 } from '../components/SetupUI'
 import { TIME_OPTIONS, formatTime12 } from '../lib/time'
 import { baseProfileRow, PENDING_SIGNUP_KEY } from '../lib/signup'
-import { needsBilling } from '../lib/subscription'
 import {
   seniorInviteLink, seniorInviteText, memberInviteLink, memberInviteText, smsHref, sendInvite,
 } from '../lib/family'
@@ -80,7 +79,6 @@ export default function OnboardingPage() {
       if (cancelled) return
 
       if (p?.onboarding_complete) { navigate('/dashboard', { replace: true }); return }
-      if (needsBilling(p)) { navigate('/start-trial', { replace: true }); return }
 
       if (p) {
         // Existing row: a member who never finished the old flow, or an owner
@@ -310,7 +308,7 @@ export default function OnboardingPage() {
         <div className="bg-[#FAF8F4] border border-[#E7E2D8] rounded-2xl p-4 flex flex-col gap-2">
           <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>What happens next</p>
           <p className="text-[#2D2A24]" style={{ fontSize: '16px', lineHeight: 1.5 }}>
-            {name} opens the link, picks an email and password, and sees their "I'm Okay" button. You get a text every time they tap it, and an alert if they haven't by {timeLabel}. Your dashboard shows "waiting for {name}" until then.
+            {name} opens the link, picks an email and password, and sees their "I'm Okay" button. You see every tap on your home screen, and you get a text if they haven't by {timeLabel}. Your dashboard shows "waiting for {name}" until then.
           </p>
         </div>
 

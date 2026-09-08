@@ -54,9 +54,9 @@ export default function ParentHome({
   // Everything that is not the button lives behind Menu, in large type.
   // Order: what a senior is most likely to want first.
   const menu = [
-    { label: 'Family messages and photos', sub: unreadMsgCount > 0 ? `${unreadMsgCount} new` : null, Icon: Users, path: '/family', premium: false },
+    { label: 'Family messages and photos', sub: unreadMsgCount > 0 ? `${unreadMsgCount} new` : null, Icon: Users, path: '/family', premium: true },
     { label: 'My medications', Icon: Pill, path: '/medications', premium: false },
-    { label: 'My appointments', Icon: Calendar, path: '/appointments', premium: false },
+    { label: 'My appointments', Icon: Calendar, path: '/appointments', premium: true },
     { label: 'My emergency card', Icon: Heart, path: '/emergency', premium: false },
     { label: 'Documents', Icon: FolderLock, path: '/vault', premium: true },
   ]
@@ -173,7 +173,7 @@ export default function ParentHome({
           )}
 
           {/* Appointment day only. */}
-          {todaysAppointments.length > 0 && (
+          {isPremiumUser && todaysAppointments.length > 0 && (
             <section className="bg-white rounded-[24px] border-2 border-[#1B365D] p-5 shadow-sm">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-12 h-12 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center flex-shrink-0">
@@ -324,7 +324,7 @@ export default function ParentHome({
                 return (
                   <button
                     key={item.path}
-                    onClick={() => go(locked ? '/upgrade' : item.path)}
+                    onClick={() => go(item.path)}
                     className="w-full flex items-center gap-4 py-4 text-left"
                   >
                     <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
@@ -333,7 +333,7 @@ export default function ParentHome({
                     <div className="flex-1 min-w-0">
                       <p className="text-[#1B365D] font-semibold" style={{ fontSize: '19px' }}>{item.label}</p>
                       {item.sub && <p className="text-[#B5483F] font-semibold" style={{ fontSize: '15px' }}>{item.sub}</p>}
-                      {locked && <p className="text-[#6B645A]" style={{ fontSize: '15px' }}>Premium feature</p>}
+                      {locked && <p className="text-[#6B645A]" style={{ fontSize: '15px' }}>Paid plan</p>}
                     </div>
                     {locked ? <Lock size={18} color="#D4A843" /> : <ChevronRight size={20} color="#C4BDB3" />}
                   </button>

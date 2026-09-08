@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, ImagePlus, Send, Trash2, X, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { loadFamily } from '../lib/family'
+import { isPremium } from '../lib/subscription'
+import LockedFeature from '../components/LockedFeature'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
 import BottomNav from '../components/BottomNav'
 import EmptyChat from '../components/illustrations/EmptyChat'
@@ -50,6 +53,16 @@ export default function FamilyPage() {
   const msgPhotoRef = useRef(null)
   const photoUploadRef = useRef(null)
   const messagesEndRef = useRef(null)
+  const [familyTier, setFamilyTier] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    supabase.auth.getUser().then(async ({ data: { user: u } }) => {
+      if (!u) return
+      const fam = await loadFamily(u.id)
+      if (!cancelled) setFamilyTier(fam?.tier || 'free')
+    })
+    return () => { cancelled = true }
+  }, [])
 
   async function fetchMessages() {
     setMsgLoading(true)
@@ -227,7 +240,12 @@ export default function FamilyPage() {
     return humanTs(ts)
   }
 
-  // Family Hub is accessible to all tiers (free users get up to 3 family members)
+  // Family chat and photos are on the paid plan (2026-09-08). Until the plan
+  // loads, render nothing rather than flash the lock.
+  if (familyTier === null) return null
+  if (!isPremium(familyTier)) {
+    return <LockedFeature feature="chat" title="Family chat" description="Messages and photos between the people who joined the family, and the note on each check-in. No group text, no strangers." Icon={Users} />
+  }
 
   return (
     <div
