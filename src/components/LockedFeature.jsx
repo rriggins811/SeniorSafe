@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { loadFamily } from '../lib/family'
 import { Lock, ArrowLeft } from 'lucide-react'
-import { isIOS, isAndroid } from '../lib/platform'
 import { MONTHLY_PRICE, TASTE_DAYS, priceLine } from '../lib/subscription'
 import { logFunnel } from '../lib/funnel'
 
