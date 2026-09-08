@@ -179,7 +179,7 @@ export default function SignUpPage() {
     }, { onConflict: 'user_id' })
     setLoading(false)
     if (pErr) { setError('Account created, but saving your details failed: ' + pErr.message); return }
-    navigate(`/onboarding?path=${isSelf ? 'self' : 'family'}`)
+    navigate('/start-trial', { replace: true })
   }
 
   // Member (sibling, caregiver) or the senior joining by link.
@@ -330,7 +330,7 @@ export default function SignUpPage() {
   if (mode === 'self') {
     return (
       <Shell onBack={() => { setMode('family'); setError('') }}>
-        <Heading title="Set up SeniorSafe for yourself" sub="You'll pick your check-in time and invite your family on the next screens." />
+        <Heading title="Set up SeniorSafe for yourself" sub="Your first 14 days are free, then $14.99 a month. Cancel anytime. You add a card on the next screen, and nothing is charged today." />
         <div className="flex flex-col gap-4">
           <Field large label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} autoFocus />
           <Field large label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
@@ -359,7 +359,7 @@ export default function SignUpPage() {
         <Heading title="Set up SeniorSafe" />
       </div>
       <p className="text-[#6B645A]" style={{ fontSize: '17px', lineHeight: 1.45 }}>
-        About two minutes. You'll add the person you look after on the next screen, and they get a link that opens straight to their button.
+        About two minutes. Your first 14 days are free, then $14.99 a month, cancel anytime. You add a card on the next screen (nothing is charged today), then the person you look after, and they get a link that opens straight to their button.
       </p>
       <OAuthButtons onGoogle={() => startOAuth('google')} onApple={() => startOAuth('apple')} googleLoading={oauthLoading === 'google'} appleLoading={oauthLoading === 'apple'} />
       <Divider>or with email</Divider>

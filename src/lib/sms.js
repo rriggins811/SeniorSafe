@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 
 const EDGE_FN_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1/send-sms'
 
-export async function sendSMS(to, message) {
+export async function sendSMS(to, message, notificationType = 'system') {
   if (!to || !message) return false
   try {
     const { data: { session } } = await supabase.auth.getSession()
@@ -15,7 +15,7 @@ export async function sendSMS(to, message) {
         'Authorization': `Bearer ${session.access_token}`,
         'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
-      body: JSON.stringify({ to, message }),
+      body: JSON.stringify({ to, message, notification_type: notificationType }),
     })
     return res.ok
   } catch {

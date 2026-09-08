@@ -21,6 +21,7 @@ import ProfilePage from './pages/ProfilePage'
 import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import UpgradePage from './pages/UpgradePage'
+import StartTrialPage from './pages/StartTrialPage'
 import SupportPage from './pages/SupportPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import InstallPrompt from './components/InstallPrompt'
@@ -170,6 +171,7 @@ export default function App() {
         <Route path="/signup"      element={<SignUpPage />} />
         <Route path="/signin"      element={<SignInPage />} />
         <Route path="/onboarding"  element={<P skipOnboardingCheck><OnboardingPage /></P>} />
+        <Route path="/start-trial" element={<P skipOnboardingCheck><StartTrialPage /></P>} />
         <Route path="/dashboard"   element={<P><DashboardPage /></P>} />
         <Route path="/vault"       element={<P><VaultPage /></P>} />
         <Route path="/ai"          element={<P><AIPage /></P>} />

@@ -24,12 +24,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 // repo copy would have RE-OPENED the arbitrary-upgrade hole. Keep repo == prod.
 // ---------------------------------------------------------------------------
 
-const PREMIUM_PLUS_PRODUCT_IDS = new Set<string>([
-  'com.rigginsstrategicsolutions.seniorsafe.premiumplus.monthly',
-])
+// 2026-09-08: one plan. Any store product maps to 'paid', or to 'trial'
+// while the store's free trial is running (RevenueCat reports period_type
+// 'trial' for the subscription). Premium+ is retired.
+type StoreTier = 'paid' | 'trial'
 
-function tierForProductId(productId: string | null): 'premium_plus' | 'paid' {
-  return productId && PREMIUM_PLUS_PRODUCT_IDS.has(productId) ? 'premium_plus' : 'paid'
+function tierForProductId(_productId: string | null): StoreTier {
+  return 'paid'
 }
 
 const ALLOWED_ORIGINS = [
@@ -63,12 +64,12 @@ const supabaseAdmin = createClient(
 // ---------------------------------------------------------------------------
 async function verifyRevenueCat(
   appUserId: string,
-  tier: 'premium_plus' | 'paid',
-): Promise<{ ok: boolean; reason?: string }> {
+  tier: StoreTier,
+): Promise<{ ok: boolean; reason?: string; periodType?: string; expires?: string | null }> {
   const rcKey = Deno.env.get('REVENUECAT_SECRET_KEY')
   if (!rcKey) {
-    // Not configured yet — preserve prior behaviour, do not block purchases.
-    console.warn('[mark-iap-paid] REVENUECAT_SECRET_KEY not set — skipping server-side verification')
+    // Not configured yet  -  preserve prior behaviour, do not block purchases.
+    console.warn('[mark-iap-paid] REVENUECAT_SECRET_KEY not set  -  skipping server-side verification')
     return { ok: true }
   }
   try {
@@ -80,24 +81,23 @@ async function verifyRevenueCat(
       },
     )
     if (!res.ok) {
-      // Cannot confirm — fail closed when verification is enabled.
+      // Cannot confirm  -  fail closed when verification is enabled.
       return { ok: false, reason: `revenuecat lookup ${res.status}` }
     }
     const data = await res.json()
-    const active = (data?.subscriber?.entitlements ?? {}) as Record<string, unknown>
-    const activeIds = Object.keys(active)
-    if (tier === 'premium_plus') {
-      // Premium+ claim must be backed by an active premium_plus entitlement.
-      if (!('premium_plus' in active)) {
-        return { ok: false, reason: 'no active premium_plus entitlement' }
-      }
-    } else {
-      // Paid claim must be backed by at least one active entitlement.
-      if (activeIds.length === 0) {
-        return { ok: false, reason: 'no active entitlements' }
-      }
+    const active = (data?.subscriber?.entitlements ?? {}) as Record<string, { expires_date?: string | null; product_identifier?: string }>
+    const activeIds = Object.keys(active).filter(k => {
+      const e = active[k]
+      return !e?.expires_date || new Date(e.expires_date).getTime() > Date.now()
+    })
+    if (activeIds.length === 0) {
+      return { ok: false, reason: 'no active entitlements' }
     }
-    return { ok: true }
+    // Is the backing subscription still in its free days?
+    const subs = (data?.subscriber?.subscriptions ?? {}) as Record<string, { period_type?: string; expires_date?: string | null }>
+    const productId = active[activeIds[0]]?.product_identifier
+    const sub = (productId && subs[productId]) || Object.values(subs)[0]
+    return { ok: true, periodType: sub?.period_type, expires: sub?.expires_date ?? active[activeIds[0]]?.expires_date ?? null }
   } catch (err) {
     return { ok: false, reason: `revenuecat error: ${err instanceof Error ? err.message : 'unknown'}` }
   }
@@ -156,7 +156,7 @@ serve(async (req: Request) => {
       adminUserId = body.adminUserId || null
       platform = body.platform || 'apple'
     } catch (_) {
-      // Body is optional — proceed with just auth
+      // Body is optional  -  proceed with just auth
     }
 
     // ---- Resolve + AUTHORIZE the upgrade target ----
@@ -179,10 +179,12 @@ serve(async (req: Request) => {
       targetUserId = adminUserId
     }
 
-    const tier = tierForProductId(productId)
+    let tier: StoreTier = tierForProductId(productId)
 
     // ---- Verify the entitlement server-side (no-op until secret configured) ----
     const rc = await verifyRevenueCat(user.id, tier)
+    if (rc.ok && rc.periodType === 'trial') tier = 'trial'
+    if (rc.ok && rc.expires && !expiresDate) expiresDate = rc.expires
     if (!rc.ok) {
       console.warn(`[mark-iap-paid] RevenueCat verification failed for ${user.id}: ${rc.reason}`)
       return new Response(JSON.stringify({ error: 'Purchase could not be verified' }), {
@@ -196,6 +198,7 @@ serve(async (req: Request) => {
       subscription_tier: tier,
       subscription_source: 'revenuecat',
       subscription_platform: platform,
+      trial_status: tier === 'trial' ? 'active' : 'converted',
     }
 
     if (platform === 'google') {

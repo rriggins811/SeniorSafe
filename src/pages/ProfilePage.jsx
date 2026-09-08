@@ -647,6 +647,8 @@ export default function ProfilePage() {
                   <p className="text-xs text-gray-500 mb-3">
                     {cancelledAt
                       ? `Your plan will end on ${periodEnd}. You'll keep Premium access until then.`
+                      : profile?.subscription_tier === 'trial'
+                      ? `Your free trial ends ${periodEnd}. Your first charge of $14.99 is that day unless you cancel before then.`
                       : `Next billing date: ${periodEnd}`
                     }
                   </p>

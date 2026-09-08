@@ -243,6 +243,15 @@ One person sets up the family and manages the plan (the owner, usually an adult 
 - Who sees that I checked in? Only the family members who joined your family in SeniorSafe. Nobody else.
 - Can I add a note, like "going to the store"? Yes. After you tap "I'm Okay Today," a box appears where you can type a short note. It shows up on your family's screen and in the family messages. If you do not want to, just skip it.
 - What is "Ask a question"? A helper for everyday things: a recipe, the weather, help writing a card, how to do something on your phone. It is not a doctor or a lawyer. For anything medical, legal, or about money, ask your family or a professional.
+
+### Your plan and billing
+- Is SeniorSafe free? Your first 14 days are free with everything turned on. After that it is $14.99 a month, billed to the card you add at signup. Cancel before the 14 days are up and you pay nothing. We text and email you 3 days before the first charge so it is never a surprise.
+- Why do I have to add a card before I set anything up? So the texts and alerts never quietly stop. Families who set up without a card used to drop to a stripped-down plan at day 14 without noticing, and the missed check-in alert went silent. With a card on file, day 15 looks exactly like day 14. Nothing is charged today.
+- When exactly am I charged? On the 15th day after you signed up, and then on that same date each month. The date is shown in Settings under Subscription. On an iPhone or Android phone the charge goes through the App Store or Google Play instead of your card, on the same schedule.
+- How do I cancel? On the web, open Settings, scroll to Subscription, and tap Cancel Subscription. You keep everything until the end of the period you already paid for (or the end of your free days), and nothing is charged after that. On an iPhone, cancel in Settings > your name > Subscriptions. On Android, cancel in the Play Store under Subscriptions.
+- What happens if I cancel or a payment fails? The family drops to the free plan: the daily check-in still works in the app, but the texts to the family and the missed check-in alert stop, and Maggie is limited. A red banner appears on everyone's home screen so nobody assumes the alerts are still running. If a card payment fails we retry for about a week and text you once before anything turns off. Turn it back on any time from Settings.
+- Does the person I look after pay anything? Do my siblings? No. One plan covers the whole family. Only the person who set up the family has a card on file. Everyone else joins by link, free.
+- I signed up on the website but use the iPhone app. Where is my subscription? Wherever you started it. A plan started on the website is managed in Settings on the website; a plan started in the iPhone or Android app is managed through the App Store or Google Play. The app works the same either way, and it will tell you which one you have if you try to subscribe twice.
 `
 
 type KbSection = { n: number; title: string; keywords: string[]; text: string }

@@ -10,6 +10,7 @@ import {
 } from '../components/SetupUI'
 import { TIME_OPTIONS, formatTime12 } from '../lib/time'
 import { baseProfileRow, PENDING_SIGNUP_KEY } from '../lib/signup'
+import { needsBilling } from '../lib/subscription'
 import {
   seniorInviteLink, seniorInviteText, memberInviteLink, memberInviteText, smsHref, sendInvite,
 } from '../lib/family'
@@ -79,6 +80,7 @@ export default function OnboardingPage() {
       if (cancelled) return
 
       if (p?.onboarding_complete) { navigate('/dashboard', { replace: true }); return }
+      if (needsBilling(p)) { navigate('/start-trial', { replace: true }); return }
 
       if (p) {
         // Existing row: a member who never finished the old flow, or an owner

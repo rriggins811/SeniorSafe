@@ -133,36 +133,85 @@ async function sendApnsPush(
   }
 }
 
+// FCM HTTP v1. The legacy fcm/send endpoint (server key) was shut down by
+// Google in 2024, which is why Android pushes silently failed. This signs a
+// short-lived OAuth token from the Firebase service account JSON held in the
+// FCM_SERVICE_ACCOUNT_JSON secret (Firebase console > Project settings >
+// Service accounts > Generate new private key).
+let cachedFcmToken: { token: string; expiry: number } | null = null
+
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const b64 = pem.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '')
+  const bin = atob(b64)
+  const buf = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
+  return buf.buffer
+}
+
+function b64url(input: string | ArrayBuffer): string {
+  const bytes = typeof input === 'string' ? new TextEncoder().encode(input) : new Uint8Array(input)
+  let s = ''
+  for (const b of bytes) s += String.fromCharCode(b)
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+async function getFcmAccessToken(sa: { client_email: string; private_key: string }): Promise<string> {
+  const now = Math.floor(Date.now() / 1000)
+  if (cachedFcmToken && cachedFcmToken.expiry > now + 60) return cachedFcmToken.token
+  const header = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))
+  const claims = b64url(JSON.stringify({
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  }))
+  const key = await crypto.subtle.importKey(
+    'pkcs8', pemToArrayBuffer(sa.private_key),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign'],
+  )
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(`${header}.${claims}`))
+  const assertion = `${header}.${claims}.${b64url(sig)}`
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }).toString(),
+  })
+  if (!res.ok) throw new Error(`FCM token exchange failed: ${res.status} ${await res.text()}`)
+  const json = await res.json()
+  cachedFcmToken = { token: json.access_token, expiry: now + (json.expires_in || 3600) }
+  return cachedFcmToken.token
+}
+
 async function sendFcmPush(
   deviceToken: string,
   title: string,
   body: string,
   data?: Record<string, string>,
 ): Promise<boolean> {
-  // FCM via HTTP v1 API (requires service account key)
-  const fcmKey = Deno.env.get('FCM_SERVER_KEY')
-  if (!fcmKey) {
-    console.error('FCM_SERVER_KEY not configured')
+  const raw = Deno.env.get('FCM_SERVICE_ACCOUNT_JSON')
+  if (!raw) {
+    console.error('FCM_SERVICE_ACCOUNT_JSON not configured; Android push skipped')
     return false
   }
-
   try {
-    const res = await fetch('https://fcm.googleapis.com/fcm/send', {
+    const sa = JSON.parse(raw)
+    const accessToken = await getFcmAccessToken(sa)
+    const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
       method: 'POST',
-      headers: {
-        'Authorization': `key=${fcmKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        to: deviceToken,
-        notification: { title, body, sound: 'default' },
-        data: data || {},
+        message: {
+          token: deviceToken,
+          notification: { title, body },
+          data: Object.fromEntries(Object.entries(data || {}).map(([k, v]) => [k, String(v)])),
+          android: { priority: 'high', notification: { sound: 'default', channel_id: 'seniorsafe' } },
+        },
       }),
     })
-
-    const result = await res.json()
-    if (result.failure > 0) {
-      console.error('FCM delivery failed:', result.results)
+    if (!res.ok) {
+      const err = await res.text().catch(() => '')
+      console.error(`FCM v1 error for ${deviceToken.slice(0, 12)}...:`, res.status, err.slice(0, 300))
       return false
     }
     return true
@@ -212,7 +261,7 @@ serve(async (req) => {
   }
 
   try {
-    // AUTH (security audit #8): this endpoint had NO auth — anyone who knew the URL
+    // AUTH (security audit #8): this endpoint had NO auth  -  anyone who knew the URL
     // could push (and SMS-fallback) to any user by id. Require a caller token:
     // service-role (internal callers: family-message-notify, missed-checkin-alerts)
     // may target anyone; a regular logged-in user may target ONLY their own family.

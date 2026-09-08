@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { isIOS, isAndroid } from '../lib/platform'
+import { needsBilling } from '../lib/subscription'
 import {
   purchaseMonthly as rcPurchaseMonthly,
   restorePurchases as rcRestorePurchases,
@@ -133,7 +134,7 @@ export default function UpgradePage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { navigate('/signin'); return }
-      supabase.from('user_profile').select('subscription_tier, role, invited_by').eq('user_id', user.id).single()
+      supabase.from('user_profile').select('*').eq('user_id', user.id).single()
         .then(async ({ data }) => {
           // Role guard: only admins can manage billing
           if (data && data.role !== 'admin') {
@@ -155,6 +156,7 @@ export default function UpgradePage() {
             return
           }
 
+          if (needsBilling(data)) { navigate('/start-trial', { replace: true }); return }
           setTier(data?.subscription_tier || 'free')
         })
     })

@@ -75,6 +75,7 @@ export default function FamilyHome({
   trialDays,
   trialBannerDismissed,
   onDismissTrial,
+  planEnded = false,
   smsToast,
   onDismissToast,
   preview = false,
@@ -227,6 +228,28 @@ export default function FamilyHome({
             <button onClick={onDismissFailedNotification} aria-label="Dismiss" className="text-orange-400 text-lg leading-none px-1">
               &times;
             </button>
+          </div>
+        )}
+
+        {planEnded && (
+          <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4 flex items-start gap-3">
+            <AlertTriangle size={20} color="#B5483F" className="flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-red-800 font-semibold text-base">Your plan has ended</p>
+              <p className="text-red-700 text-base mt-0.5 leading-relaxed">
+                {isOwner
+                  ? `The daily check-in texts and the missed check-in alert are off. ${name} still sees the button, but nobody is told.`
+                  : `The daily check-in texts and the missed check-in alert are off. Ask the person who set up the family to turn them back on.`}
+              </p>
+              {isOwner && (
+                <button
+                  onClick={() => onNavigate('/upgrade')}
+                  className="mt-2 px-4 py-2 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base"
+                >
+                  Turn it back on
+                </button>
+              )}
+            </div>
           </div>
         )}
 

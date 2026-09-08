@@ -1,147 +1,157 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-function normalizePhone(raw: string): string {
-  const digits = raw.replace(/\D/g, '')
-  return digits.startsWith('1') ? `+${digits}` : `+1${digits}`
-}
+// Medication reminders. Runs every 5 minutes (pg_cron).
+//
+// 2026-09-08: notifications only, no texts. Two things happen here:
+//   1. At dose time (within 5 minutes) the senior's phone gets a notification
+//      if the SeniorSafe app is installed. On the web the due-medicine card on
+//      the senior's home screen is the reminder.
+//   2. If a dose is still not marked taken 60 minutes after its time, the
+//      rest of the family gets a notification, once per dose per day.
+// Ryan's father takes about 15 medications a day; at a text each that would
+// have been the most expensive feature in the app.
 
-// Mask phone for logging: +1336553XXXX → +1336***XXXX
-function maskPhone(phone: string): string {
-  if (phone.length <= 6) return '***'
-  return phone.slice(0, 4) + '***' + phone.slice(-4)
-}
-
-// Convert UTC "now" to user's local time using Intl
-function getLocalTime(tz: string): { hour: number; min: number } {
+// Convert UTC "now" to a user's local clock
+function getLocalTime(tz: string): { hour: number; min: number; date: string } {
   const now = new Date()
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
+    timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
   }).formatToParts(now)
-
   const get = (type: string) => parts.find(p => p.type === type)?.value || '0'
-  return { hour: parseInt(get('hour')), min: parseInt(get('minute')) }
+  return {
+    hour: parseInt(get('hour')) % 24,
+    min: parseInt(get('minute')),
+    date: `${get('year')}-${get('month')}-${get('day')}`,
+  }
 }
+
+function fmt12(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`
+}
+
+const MISSED_AFTER_MINUTES = 60
+const MISSED_WINDOW_MINUTES = 180 // stop alerting 3 hours after the dose time
 
 serve(async (_req) => {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
+  const pushUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notification`
+  const pushHeaders = {
+    'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+    'Content-Type': 'application/json',
+  }
 
-  const ACCOUNT_SID  = Deno.env.get('TWILIO_ACCOUNT_SID')!
-  const AUTH_TOKEN   = Deno.env.get('TWILIO_AUTH_TOKEN')!
-  const FROM_NUMBER  = Deno.env.get('TWILIO_PHONE_NUMBER')!
-  const credentials  = btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`)
+  async function push(userIds: string[], title: string, body: string, type: string, route: string): Promise<number> {
+    if (userIds.length === 0) return 0
+    try {
+      const res = await fetch(pushUrl, {
+        method: 'POST', headers: pushHeaders,
+        body: JSON.stringify({ user_ids: userIds, title, body, notification_type: type, data: { route } }),
+      })
+      const json = await res.json().catch(() => null)
+      return (json?.results || []).filter((r: { push: boolean }) => r.push).length
+    } catch (err) {
+      console.error('push error:', (err as Error).message)
+      return 0
+    }
+  }
 
-  // UTC date — matches what the client stores in med_logs/reminder_logs
-  const todayStr = new Date().toISOString().split('T')[0]
-
-  // Get all active medications with reminders enabled
+  // Active medications with reminders on. reminder_phone is no longer used
+  // for delivery; it only marks that reminders are wanted.
   const { data: meds, error: medsErr } = await supabase
     .from('medications')
-    .select('id, user_id, med_name, dosage, times, reminder_phone')
+    .select('id, user_id, family_name, med_name, dosage, times')
     .eq('active', true)
     .eq('reminder_enabled', true)
-    .not('reminder_phone', 'is', null)
 
   if (medsErr) {
     console.error('Failed to fetch medications:', medsErr.message)
     return new Response(JSON.stringify({ sent: 0, error: medsErr.message }), { status: 500 })
   }
-
   if (!meds?.length) {
     return new Response(JSON.stringify({ sent: 0, message: 'No reminder meds found' }), { status: 200 })
   }
 
-  // Fetch timezone for each user so we compare against their local clock
+  // Family for each medication: the row that entered it may be the adult
+  // child, so resolve the family root and find the senior and the others.
   const userIds = [...new Set(meds.map(m => m.user_id))]
-  const { data: profiles } = await supabase
+  const { data: enterers } = await supabase
+    .from('user_profile').select('user_id, invited_by, timezone').in('user_id', userIds)
+  const rootOf = new Map<string, string>()
+  for (const p of (enterers || [])) rootOf.set(p.user_id, p.invited_by || p.user_id)
+  const roots = [...new Set([...rootOf.values()])]
+  const { data: familyRows } = await supabase
     .from('user_profile')
-    .select('user_id, timezone')
-    .in('user_id', userIds)
-
-  const tzMap = new Map<string, string>()
-  for (const p of (profiles || [])) {
-    tzMap.set(p.user_id, p.timezone || 'America/New_York')
+    .select('user_id, invited_by, is_senior, first_name, senior_name, timezone, device_token')
+    .or(roots.map(r => `user_id.eq.${r},invited_by.eq.${r}`).join(','))
+  const familiesByRoot = new Map<string, typeof familyRows>()
+  for (const r of (familyRows || [])) {
+    const root = r.invited_by || r.user_id
+    if (!familiesByRoot.has(root)) familiesByRoot.set(root, [])
+    familiesByRoot.get(root)!.push(r)
   }
 
-  let sent = 0
+  let reminders = 0
+  let missedAlerts = 0
   const errors: string[] = []
 
   for (const med of meds) {
-    // #16: Each medication wrapped in try/catch — one failure won't stop the rest
     try {
-      // #10: Use user's local time, not UTC, for the ±5 min window check
-      const userTz = tzMap.get(med.user_id) || 'America/New_York'
-      const { hour: localHour, min: localMin } = getLocalTime(userTz)
-      const currentMins = localHour * 60 + localMin
+      const root = rootOf.get(med.user_id) || med.user_id
+      const fam = familiesByRoot.get(root) || []
+      const senior = fam.find(r => r.is_senior) || null
+      const owner = fam.find(r => r.user_id === root) || null
+      const seniorName = senior?.first_name || owner?.senior_name || 'Your loved one'
+      const tz = senior?.timezone || owner?.timezone || 'America/New_York'
+      const { hour, min, date: todayLocal } = getLocalTime(tz)
+      const nowMins = hour * 60 + min
+      const medDisplay = med.dosage ? `${med.med_name} ${med.dosage}` : med.med_name
 
       for (const scheduledTime of (med.times || [])) {
         const [sh, sm] = scheduledTime.split(':').map(Number)
         const scheduledMins = sh * 60 + sm
+        const sinceDue = nowMins - scheduledMins
 
-        // Only send if within ±5 minute window of user's LOCAL time
-        if (Math.abs(currentMins - scheduledMins) > 5) continue
-
-        // Skip if already taken today
+        // Already taken today? (med_logs date is what the client wrote; it
+        // matches the local date the senior sees.)
         const { data: taken } = await supabase
-          .from('med_logs')
-          .select('id')
-          .eq('medication_id', med.id)
-          .eq('date', todayStr)
-          .eq('scheduled_time', scheduledTime)
-          .limit(1)
-
+          .from('med_logs').select('id')
+          .eq('medication_id', med.id).eq('date', todayLocal).eq('scheduled_time', scheduledTime).limit(1)
         if (taken?.length) continue
 
-        // Skip if reminder already sent today for this dose
-        const { data: alreadySent } = await supabase
-          .from('reminder_logs')
-          .select('id')
-          .eq('medication_id', med.id)
-          .eq('date', todayStr)
-          .eq('scheduled_time', scheduledTime)
-          .limit(1)
-
-        if (alreadySent?.length) continue
-
-        const toPhone   = normalizePhone(med.reminder_phone)
-        const medDisplay = med.dosage ? `${med.med_name} ${med.dosage}` : med.med_name
-        const message   = `💊 Medication reminder: Time to take your ${medDisplay}. — SeniorSafe. Reply STOP to opt out`
-
-        // Send SMS via Twilio
-        const body = new URLSearchParams({ To: toPhone, From: FROM_NUMBER, Body: message })
-        const response = await fetch(
-          `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Basic ${credentials}`,
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: body.toString(),
+        // 1. Dose time: nudge the senior's phone (once).
+        if (Math.abs(sinceDue) <= 5 && senior?.device_token) {
+          const { data: already } = await supabase
+            .from('reminder_logs').select('id')
+            .eq('medication_id', med.id).eq('date', todayLocal).eq('scheduled_time', scheduledTime).limit(1)
+          if (!already?.length) {
+            const n = await push([senior.user_id], 'Time for your medicine', `${medDisplay}. Tap I took it when you have.`, 'medication_reminder', '/dashboard')
+            await supabase.from('reminder_logs').insert({
+              medication_id: med.id, user_id: senior.user_id, date: todayLocal, scheduled_time: scheduledTime, sent_at: new Date().toISOString(),
+            })
+            reminders += n
           }
-        )
+        }
 
-        const result = await response.json()
-        console.log(`SMS to ${maskPhone(toPhone)} (tz=${userTz}):`, response.status, result?.sid || result?.message)
-
-        // Only log and count if Twilio actually accepted the message
-        if (response.ok) {
-          await supabase.from('reminder_logs').insert({
-            medication_id: med.id,
-            user_id: med.user_id,
-            date: todayStr,
-            scheduled_time: scheduledTime,
-            sent_at: new Date().toISOString(),
+        // 2. Missed dose: tell the rest of the family (once per dose per day).
+        if (sinceDue >= MISSED_AFTER_MINUTES && sinceDue <= MISSED_WINDOW_MINUTES) {
+          const { data: alerted } = await supabase
+            .from('dose_alerts').select('id')
+            .eq('medication_id', med.id).eq('date', todayLocal).eq('scheduled_time', scheduledTime).limit(1)
+          if (alerted?.length) continue
+          const others = fam.filter(r => !r.is_senior).map(r => r.user_id)
+          const n = await push(others, `${seniorName} may have missed a dose`, `${medDisplay} was due at ${fmt12(scheduledTime)} and is not marked as taken.`, 'missed_dose', '/medications')
+          await supabase.from('dose_alerts').insert({
+            medication_id: med.id, family_root: root, date: todayLocal, scheduled_time: scheduledTime, notified: others.length, delivered: n,
           })
-          sent++
-        } else {
-          console.error(`Twilio error for med ${med.id}:`, result?.message || response.status)
+          missedAlerts += n
         }
       }
     } catch (err) {
@@ -151,7 +161,7 @@ serve(async (_req) => {
     }
   }
 
-  return new Response(JSON.stringify({ sent, errors: errors.length ? errors : undefined }), {
+  return new Response(JSON.stringify({ reminders, missedAlerts, errors: errors.length ? errors : undefined }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
   })

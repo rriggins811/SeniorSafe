@@ -17,20 +17,65 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-type Tier = 'free' | 'paid' | 'premium_plus'
+type Tier = 'free' | 'paid' | 'premium_plus' | 'trial'
 
+// 2026-09-08: one plan. A Stripe subscription that is still in its free days
+// maps to our 'trial' tier (everything on, card on file); once Stripe
+// collects the first payment it becomes 'paid'. Premium+ price ids stay only
+// so an old subscription object never maps to nothing.
 const PRICE_TO_TIER: Record<string, Tier> = {
   'price_1T99bMFoeumweL6DaOZyam4h': 'paid',
   'price_1T99e4FoeumweL6DuVorGKRY': 'paid',
-  'price_1TUSe3FoeumweL6DtmuRCVpD': 'premium_plus',
-  'price_1TUSeoFoeumweL6DluScBwCU': 'premium_plus',
+  'price_1TUSe3FoeumweL6DtmuRCVpD': 'paid',
+  'price_1TUSeoFoeumweL6DluScBwCU': 'paid',
 }
 
 function resolveTier(metadataTier: string | undefined, fallbackPriceId?: string): Tier {
-  if (metadataTier === 'premium_plus') return 'premium_plus'
+  if (metadataTier === 'premium_plus') return 'paid'
   if (metadataTier === 'premium') return 'paid'
   if (fallbackPriceId && PRICE_TO_TIER[fallbackPriceId]) return PRICE_TO_TIER[fallbackPriceId]
   return 'paid'
+}
+
+// Stripe status -> our tier. 'trialing' keeps the family on 'trial' so the
+// in-app countdown and the first-charge date stay honest.
+function tierForStatus(status: string | undefined, base: Tier): Tier {
+  return status === 'trialing' ? 'trial' : base
+}
+
+function fmtDate(iso: string | undefined): string {
+  if (!iso) return 'soon'
+  return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'America/New_York' })
+}
+
+async function sendEmail(to: string, subject: string, text: string): Promise<boolean> {
+  const key = Deno.env.get('RESEND_API_KEY')
+  if (!key) { console.warn('RESEND_API_KEY not set; email skipped'); return false }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'SeniorSafe <alerts@seniorsafeapp.com>', to: [to], subject, text }),
+      signal: AbortSignal.timeout(8000),
+    })
+    return res.ok
+  } catch (err) {
+    console.warn('email failed:', err instanceof Error ? err.message : err)
+    return false
+  }
+}
+
+async function logNotification(userId: string, type: string, channel: 'sms' | 'push' | 'in_app', ok: boolean, phone?: string | null) {
+  await supabaseAdmin.from('notification_log').insert({
+    user_id: userId, notification_type: type, channel, status: ok ? 'sent' : 'failed', recipient_phone: phone || null,
+  })
+}
+
+async function alreadyNotified(userId: string, type: string, withinDays: number): Promise<boolean> {
+  const since = new Date(Date.now() - withinDays * 86400000).toISOString()
+  const { data } = await supabaseAdmin.from('notification_log').select('id')
+    .eq('user_id', userId).eq('notification_type', type).gte('created_at', since).limit(1)
+  return Boolean(data?.length)
 }
 
 // ---------------------------------------------------------------------------
@@ -251,6 +296,7 @@ async function updateUserTier(
 ) {
   const update: Record<string, unknown> = { subscription_tier: tier }
   if (tier === 'paid' || tier === 'premium_plus') update.trial_status = 'converted'
+  if (tier === 'trial') update.trial_status = 'active'
   if (stripeCustomerId) update.stripe_customer_id = stripeCustomerId
   if (stripeSubscriptionId) update.stripe_subscription_id = stripeSubscriptionId
   if (periodEnd !== undefined) update.subscription_period_end = periodEnd
@@ -361,10 +407,15 @@ serve(async (req: Request) => {
       let periodEnd: string | undefined
       let interval: string | undefined
       let firstPriceId: string | undefined
+      let subStatus: string | undefined
       if (subscriptionId) {
         try {
           const sub = await stripe.subscriptions.retrieve(subscriptionId)
-          periodEnd = periodEndOf(sub)
+          subStatus = sub.status
+          // During the free days the useful date is the trial end (first charge).
+          periodEnd = sub.status === 'trialing' && sub.trial_end
+            ? new Date(sub.trial_end * 1000).toISOString()
+            : periodEndOf(sub)
           interval = sub.items?.data?.[0]?.price?.recurring?.interval || undefined
           firstPriceId = sub.items?.data?.[0]?.price?.id || undefined
         } catch (subErr) {
@@ -372,7 +423,7 @@ serve(async (req: Request) => {
         }
       }
 
-      const tier = resolveTier(session.metadata?.tier, firstPriceId)
+      const tier = tierForStatus(subStatus, resolveTier(session.metadata?.tier, firstPriceId))
 
       await updateUserTier(userId, tier, customerId, subscriptionId, periodEnd, interval)
 
@@ -389,6 +440,15 @@ serve(async (req: Request) => {
       }
 
       const fields = await lookupSubscriberFields(userId)
+
+      if (fields.email && tier === 'trial') {
+        await ghlProxyUpsertAndTag(
+          { email: fields.email, firstName: fields.firstName, lastName: fields.lastName },
+          'seniorsafe-card-trial',
+          'seniorsafe_card_trial',
+          'seniorsafe-card-trial',
+        )
+      }
 
       if (fields.email && (tier === 'paid' || tier === 'premium_plus')) {
         await ghlProxyUpsertAndTag(
@@ -430,10 +490,12 @@ serve(async (req: Request) => {
       if (!userId) break
 
       if (status === 'active' || status === 'trialing') {
-        const periodEnd = periodEndOf(subscription)
+        const periodEnd = status === 'trialing' && subscription.trial_end
+          ? new Date(subscription.trial_end * 1000).toISOString()
+          : periodEndOf(subscription)
         const interval = subscription.items?.data?.[0]?.price?.recurring?.interval || undefined
         const firstPriceId = subscription.items?.data?.[0]?.price?.id || undefined
-        const tier = resolveTier(subscription.metadata?.tier, firstPriceId)
+        const tier = tierForStatus(status, resolveTier(subscription.metadata?.tier, firstPriceId))
         await updateUserTier(userId, tier, customerId, subscription.id, periodEnd, interval)
 
         const { data: members } = await supabaseAdmin
@@ -522,19 +584,10 @@ serve(async (req: Request) => {
       const userId = await getUserIdByStripeCustomer(customerId)
       if (!userId) break
 
-      await updateUserTier(userId, 'free', customerId)
-
-      const { data: members } = await supabaseAdmin
-        .from('user_profile')
-        .select('user_id')
-        .eq('invited_by', userId)
-
-      if (members?.length) {
-        for (const m of members) {
-          await updateUserTier(m.user_id, 'free')
-        }
-        console.log(`Downgraded ${members.length} family member(s) to free`)
-      }
+      // Stripe retries the card for about a week. The family keeps its plan
+      // through the retries; customer.subscription.deleted (or an unpaid
+      // status update) is what finally turns things off. One text per week.
+      if (await alreadyNotified(userId, 'payment_failed', 6)) break
 
       const { data: adminProfile } = await supabaseAdmin
         .from('user_profile')
@@ -544,16 +597,49 @@ serve(async (req: Request) => {
 
       if (adminProfile?.phone) {
         const toPhone = normalizePhone(adminProfile.phone)
-        const name = adminProfile.senior_name || adminProfile.first_name || 'Your'
         const sent = await sendTwilioSMS(
           toPhone,
-          `Your SeniorSafe payment could not be processed. ${name}'s Premium features are paused. Update payment at app.seniorsafeapp.com/upgrade. SeniorSafe. Reply STOP to opt out`
+          `SeniorSafe could not charge your card. We will try again for a few days. Update your card at app.seniorsafeapp.com/profile so the family texts keep going. Reply STOP to opt out`
         )
-        if (sent) {
-          console.log(`Payment failure SMS sent to ${toPhone}`)
-        }
+        await logNotification(userId, 'payment_failed', 'sms', sent, toPhone)
+        if (sent) console.log(`Payment failure SMS sent to ${toPhone}`)
       }
 
+      break
+    }
+
+    // Three days before the free days end (Stripe sends this only for trials
+    // longer than 3 days). Text and email the owner so the first charge is
+    // never a surprise.
+    case 'customer.subscription.trial_will_end': {
+      const subscription = event.data.object as Stripe.Subscription
+      const customerId = subscription.customer as string
+      const userId = await getUserIdByStripeCustomer(customerId)
+      if (!userId) break
+      if (await alreadyNotified(userId, 'trial_ending', 10)) break
+
+      const endIso = subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : undefined
+      const when = fmtDate(endIso)
+      const fields = await lookupSubscriberFields(userId)
+      const { data: adminProfile } = await supabaseAdmin
+        .from('user_profile').select('phone').eq('user_id', userId).single()
+
+      if (adminProfile?.phone) {
+        const toPhone = normalizePhone(adminProfile.phone)
+        const sent = await sendTwilioSMS(
+          toPhone,
+          `Your SeniorSafe free trial ends ${when}. Your card will be charged $14.99 a month after that unless you cancel in Settings at app.seniorsafeapp.com/profile. Reply STOP to opt out`
+        )
+        await logNotification(userId, 'trial_ending', 'sms', sent, toPhone)
+      }
+      if (fields.email) {
+        const ok = await sendEmail(
+          fields.email,
+          `Your SeniorSafe free trial ends ${when}`,
+          `Hi ${fields.firstName || 'there'},\n\nYour 14 free days of SeniorSafe end on ${when}. After that your card is charged $14.99 a month and everything stays on: the daily check-in texts to the family, the missed check-in alert, and Maggie.\n\nIf you would rather stop, open Settings at https://app.seniorsafeapp.com/profile and tap Cancel Subscription before ${when}. You will not be charged.\n\nQuestions? Reply to this email or text Ryan at (336) 553-8933.\n\nSeniorSafe`,
+        )
+        await logNotification(userId, 'trial_ending', 'in_app', ok)
+      }
       break
     }
 

@@ -13,38 +13,6 @@ function normalizePhone(raw: string): string {
   return digits.startsWith('1') ? `+${digits}` : `+1${digits}`
 }
 
-async function sendTwilioSMS(to: string, body: string): Promise<boolean> {
-  const ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID')!
-  const AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN')!
-  const FROM_NUMBER = Deno.env.get('TWILIO_PHONE_NUMBER')!
-
-  const credentials = btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`)
-  const params = new URLSearchParams({
-    To: normalizePhone(to),
-    From: FROM_NUMBER,
-    Body: body,
-  })
-
-  try {
-    const res = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${credentials}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString(),
-      }
-    )
-    const data = await res.json()
-    console.log(`SMS to ${to}: ${res.status}`, JSON.stringify(data))
-    return res.ok
-  } catch (err) {
-    console.error(`SMS failed to ${to}:`, err)
-    return false
-  }
-}
 
 serve(async (req) => {
   // This function is called internally by the Postgres trigger via pg_net.
@@ -73,7 +41,7 @@ serve(async (req) => {
 
     // SECURITY (audit #10): this endpoint has NO caller auth (it's a Postgres pg_net
     // trigger sink). Do NOT trust the POSTed record's user_id / family_name /
-    // message_text — a forged POST could otherwise inject attacker text into another
+    // message_text  -  a forged POST could otherwise inject attacker text into another
     // family's SMS/push blast. Re-read the message from the DB by id; the real row is
     // the source of truth for the poster (hence the family) and the content. A forged
     // or unknown id finds no row and is skipped.
@@ -94,47 +62,22 @@ serve(async (req) => {
     const authorName: string | null = msg.author_name
     const messageText: string = msg.message_text || ''
 
-    // 1) Check if the poster is an admin (senior) — only admins trigger SMS
+    // Who posted, and which family is this? Any member's message notifies
+    // the rest of the family (notifications are free; the old admin-only and
+    // 4-a-day rules existed to cap text costs).
     const { data: posterProfile } = await supabaseAdmin
       .from('user_profile')
-      .select('role, first_name, family_code')
+      .select('role, first_name, invited_by')
       .eq('user_id', posterId)
       .single()
-
-    if (!posterProfile || posterProfile.role !== 'admin') {
-      console.log(`Poster ${posterId} is not admin (role=${posterProfile?.role}), skipping SMS.`)
-      return new Response(JSON.stringify({ skipped: true, reason: 'not admin' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    // 2) Check 4/day SMS cap — count today's admin messages in family_messages for this family
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
-
-    const { count: todayCount } = await supabaseAdmin
-      .from('family_messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', posterId)
-      .eq('family_name', familyName)
-      .gte('created_at', todayStart.toISOString())
-
-    // The current message is already in the table (trigger fires AFTER INSERT),
-    // so todayCount includes this message. Cap at 4.
-    if ((todayCount || 0) > 4) {
-      console.log(`Daily SMS cap reached (${todayCount} messages today) for family ${familyName}. Message saved, no SMS.`)
-      return new Response(JSON.stringify({ skipped: true, reason: 'daily cap reached' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
+    const familyRoot: string = posterProfile?.invited_by || posterId
 
     // 3) Look up all OTHER family members
-    const { data: familyMembers } = await supabaseAdmin
+    const { data: familyRows } = await supabaseAdmin
       .from('user_profile')
-      .select('user_id, phone, first_name, sms_notifications')
-      .eq('invited_by', posterId)
+      .select('user_id, first_name')
+      .or(`user_id.eq.${familyRoot},invited_by.eq.${familyRoot}`)
+    const familyMembers = (familyRows || []).filter(r => r.user_id !== posterId)
 
     if (!familyMembers?.length) {
       console.log('No family members to notify.')
@@ -145,11 +88,12 @@ serve(async (req) => {
     }
 
     // Send push notifications to all members
-    const senderName = posterProfile.first_name || authorName || 'Your loved one'
+    const senderName = posterProfile?.first_name || authorName || 'Your loved one'
+    let delivered = 0
     const pushPreview = (messageText || '').trim().slice(0, 50)
     const pushBody = pushPreview || 'Shared something new'
     try {
-      await fetch(
+      const pushRes = await fetch(
         `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notification`,
         {
           method: 'POST',
@@ -166,47 +110,19 @@ serve(async (req) => {
           }),
         },
       )
+      const pushJson = await pushRes.json().catch(() => null)
+      delivered = (pushJson?.results || []).filter((r: { push: boolean }) => r.push).length
     } catch (pushErr) {
       console.error('Push notification error:', pushErr)
     }
 
-    const eligibleMembers = familyMembers.filter(
-      m => m.phone && m.sms_notifications !== false
-    )
-
-    if (eligibleMembers.length === 0) {
-      console.log('Push sent, but no eligible SMS recipients.')
-      return new Response(JSON.stringify({ skipped: false, push: true, sms: 0 }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    // 4) Build SMS message
-    const msgText = (messageText || '').trim()
-
-    let smsBody: string
-    if (msgText.length > 0 && msgText.length <= 100) {
-      smsBody = `${senderName} sent a message in SeniorSafe: "${msgText}" Reply STOP to opt out`
-    } else if (msgText.length > 100) {
-      smsBody = `${senderName} sent a message in SeniorSafe. Open the app to read it. Reply STOP to opt out`
-    } else {
-      // Photo-only message (no text)
-      smsBody = `${senderName} shared something in SeniorSafe. Open the app to see it. Reply STOP to opt out`
-    }
-
-    // 5) Send SMS to each eligible member
-    const results = await Promise.all(
-      eligibleMembers.map(m => sendTwilioSMS(m.phone, smsBody))
-    )
-
-    const successCount = results.filter(Boolean).length
-    console.log(`SMS sent: ${successCount}/${eligibleMembers.length} for family ${familyName}`)
-
+    // 2026-09-08: family messages are notifications only. Texting every
+    // relative for every chatty message was the single biggest cost in the
+    // app. The push above (plus the unread badge in the app) is the delivery.
     return new Response(JSON.stringify({
       success: true,
-      sent: successCount,
-      total: eligibleMembers.length,
+      delivered,
+      total: familyMembers.length,
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

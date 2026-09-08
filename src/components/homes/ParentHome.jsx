@@ -46,6 +46,7 @@ export default function ParentHome({
   takingDose = '',
   onTakeDose,
   todaysAppointments = [],
+  planEnded = false,
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const go = (path) => { setMoreOpen(false); onNavigate && onNavigate(path) }
@@ -98,6 +99,14 @@ export default function ParentHome({
 
       <main className="flex-1 px-5 py-6 max-w-lg mx-auto w-full flex flex-col">
         <div className="flex-1 flex flex-col justify-center gap-4">
+          {planEnded && (
+            <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4" role="status">
+              <p className="text-red-800 font-bold" style={{ fontSize: '19px', lineHeight: 1.2 }}>Your family's plan has ended</p>
+              <p className="text-red-700 mt-1" style={{ fontSize: '17px', lineHeight: 1.4 }}>
+                You can still tap the button, but your family no longer gets a text. Ask them to turn the plan back on.
+              </p>
+            </div>
+          )}
           <button
             onClick={onCheckIn}
             disabled={checkInStatus === 'loading' || alreadyCheckedIn}

@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 // ---------------------------------------------------------------------------
 // Trial Downgrade Cron
-// Runs daily — downgrades expired trial users to free tier.
+// Runs daily  -  downgrades expired trial users to free tier.
 // Schedule in Supabase Dashboard: 0 0 * * * (midnight UTC daily)
 // ---------------------------------------------------------------------------
 
@@ -72,8 +72,22 @@ serve(async (_req) => {
         .eq('user_id', user.user_id)
         .single()
 
+      // 2026-09-08: a trial with a card on file belongs to Stripe, Apple, or
+      // Google. Those platforms end it by charging the card and their webhooks
+      // set 'paid' or 'free'. Leave such rows alone.
+      const stripeTrialing = hasActiveSubscription && currentProfile?.subscription_tier === 'trial'
+      const { data: billing } = await supabaseAdmin
+        .from('user_profile')
+        .select('apple_original_transaction_id, google_original_transaction_id')
+        .eq('user_id', user.user_id)
+        .single()
+      if (stripeTrialing || billing?.apple_original_transaction_id || billing?.google_original_transaction_id) {
+        console.log(`User ${user.user_id} has a card-on-file trial; skipping`)
+        continue
+      }
+
       if (hasActiveSubscription || currentProfile?.subscription_tier === 'paid') {
-        // User converted — mark trial as converted
+        // User converted  -  mark trial as converted
         await supabaseAdmin
           .from('user_profile')
           .update({
@@ -84,7 +98,7 @@ serve(async (_req) => {
         console.log(`User ${user.user_id} converted (active subscription)`)
         converted++
       } else {
-        // No subscription — downgrade to free
+        // No subscription  -  downgrade to free
         await supabaseAdmin
           .from('user_profile')
           .update({
@@ -112,7 +126,7 @@ serve(async (_req) => {
           console.log(`Downgraded ${members.length} family member(s)`)
         }
 
-        console.log(`User ${user.user_id} trial expired → free`)
+        console.log(`User ${user.user_id} trial expired -> free`)
         downgraded++
       }
     }

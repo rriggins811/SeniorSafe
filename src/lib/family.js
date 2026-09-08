@@ -22,7 +22,7 @@ export async function loadFamily(userId) {
   const ownerId = me.invited_by || me.user_id
   const { data: rows } = await supabase
     .from('user_profile')
-    .select('user_id, first_name, last_name, phone, role, invited_by, is_senior, senior_name, senior_phone, family_name, family_code, subscription_tier, checkin_alert_time, timezone, device_token, created_at')
+    .select('user_id, first_name, last_name, phone, role, invited_by, is_senior, senior_name, senior_phone, family_name, family_code, subscription_tier, trial_status, subscription_period_end, stripe_subscription_id, checkin_alert_time, timezone, device_token, created_at')
     .or(`user_id.eq.${ownerId},invited_by.eq.${ownerId}`)
 
   const all = rows || []
@@ -110,14 +110,15 @@ export function telHref(phone) {
 }
 
 // Push + SMS to a list of family rows (anyone except the sender).
-export async function notifyFamily(rows, { title, body, type, sms }) {
+export async function notifyFamily(rows, { title, body, type, sms, route = '/dashboard' }) {
   const targets = (rows || []).filter(r => r && r.user_id)
   if (targets.length === 0) return { pushed: 0, texted: 0 }
 
+  let pushed = 0
   try {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.access_token) {
-      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push-notification`, {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-push-notification`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -128,10 +129,13 @@ export async function notifyFamily(rows, { title, body, type, sms }) {
           title,
           body,
           notification_type: type,
-          sms_fallback_message: sms || null,
-          data: { route: '/dashboard' },
+          // No SMS fallback here: when a text is wanted it is sent below, once.
+          sms_fallback_message: null,
+          data: { route },
         }),
       })
+      const json = await res.json().catch(() => null)
+      pushed = (json?.results || []).filter(r => r.push).length
     }
   } catch (err) {
     console.error('Push notification error:', err)
@@ -140,8 +144,8 @@ export async function notifyFamily(rows, { title, body, type, sms }) {
   let texted = 0
   if (sms) {
     const withPhone = targets.filter(r => r.phone && r.phone.trim())
-    const results = await Promise.all(withPhone.map(r => sendSMS(r.phone, sms)))
+    const results = await Promise.all(withPhone.map(r => sendSMS(r.phone, sms, type)))
     texted = results.filter(Boolean).length
   }
-  return { pushed: targets.length, texted }
+  return { pushed, texted }
 }

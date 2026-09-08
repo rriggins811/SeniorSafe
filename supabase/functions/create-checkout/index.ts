@@ -25,26 +25,28 @@ function getCorsHeaders(req: Request) {
 // ---------------------------------------------------------------------------
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2023-10-16' })
 
-// Price map: tier × plan → live Stripe price ID.
+// Price map: tier x plan -> live Stripe price ID.
 // Env vars win when set, hardcoded live IDs as fallback. Stripe price IDs are
 // public identifiers (they ship to the browser in any Checkout flow), so
 // baking them into the function source is safe and removes a "you must set
 // secrets first" deploy step. To override later, set Supabase function
 // secrets STRIPE_PRICE_MONTHLY / STRIPE_PRICE_ANNUAL / STRIPE_PRICE_PLUS_MONTHLY
 // / STRIPE_PRICE_PLUS_ANNUAL.
-type Tier = 'premium' | 'premium_plus'
+// 2026-09-08: one plan. Premium+ is gone; the price map keeps only the two
+// live prices (Senior Safe Family Plan monthly and annual).
+type Tier = 'premium'
 type Plan = 'monthly' | 'annual'
 
 const PRICE_MAP: Record<Tier, Record<Plan, string>> = {
   premium: {
-    monthly: (Deno.env.get('STRIPE_PRICE_MONTHLY')?.trim()) || 'price_REPLACE_ME_MONTHLY',
-    annual:  (Deno.env.get('STRIPE_PRICE_ANNUAL')?.trim())  || 'price_REPLACE_ME_ANNUAL',
-  },
-  premium_plus: {
-    monthly: (Deno.env.get('STRIPE_PRICE_PLUS_MONTHLY')?.trim()) || 'price_1TUSe3FoeumweL6DtmuRCVpD',
-    annual:  (Deno.env.get('STRIPE_PRICE_PLUS_ANNUAL')?.trim())  || 'price_1TUSeoFoeumweL6DluScBwCU',
+    monthly: (Deno.env.get('STRIPE_PRICE_MONTHLY')?.trim()) || 'price_1T99bMFoeumweL6DaOZyam4h',
+    annual:  (Deno.env.get('STRIPE_PRICE_ANNUAL')?.trim())  || 'price_1T99e4FoeumweL6DuVorGKRY',
   },
 }
+
+// Card-on-file trial: every new owner gets 14 days free and is charged on
+// day 15 unless they cancel. Only one trial per family, ever.
+const TRIAL_DAYS = 14
 
 serve(async (req: Request) => {
   const cors = getCorsHeaders(req)
@@ -97,9 +99,12 @@ serve(async (req: Request) => {
     const plan: Plan = body.plan
     const tier: Tier = (body.tier as Tier) || 'premium'
     const admin_user_id: string | undefined = body.admin_user_id
+    // trial: true comes from the card step right after signup (StartTrialPage).
+    const wantsTrial: boolean = body.trial === true
+    const returnTo: string = body.return_to === 'start-trial' ? 'start-trial' : 'dashboard'
 
-    if (tier !== 'premium' && tier !== 'premium_plus') {
-      return new Response(JSON.stringify({ error: 'Invalid tier. Use "premium" or "premium_plus".' }), {
+    if (tier !== 'premium') {
+      return new Response(JSON.stringify({ error: 'Invalid tier. Use "premium".' }), {
         status: 400,
         headers: { ...cors, 'Content-Type': 'application/json' },
       })
@@ -133,7 +138,7 @@ serve(async (req: Request) => {
         })
       }
       targetUserId = admin_user_id
-      console.log(`👨‍👩‍👧 Member ${user.id} upgrading admin ${admin_user_id}`)
+      console.log(`Member ${user.id} upgrading admin ${admin_user_id}`)
     }
 
     // ---- Double-billing prevention ----
@@ -167,26 +172,32 @@ serve(async (req: Request) => {
       })
     }
 
-    // ---- Check if user is still in trial (offer Stripe trial if so) ----
+    // ---- Trial days ----
+    // A brand-new owner at the card step gets the full 14 days. An older
+    // no-card trial that upgrades keeps whatever days it has left. Anyone
+    // whose trial already ended, or who ever had a Stripe subscription, pays
+    // from day one. One trial per family, ever.
     const { data: targetProfile } = await supabaseAdmin
       .from('user_profile')
-      .select('trial_status, trial_start_date')
+      .select('trial_status, trial_start_date, stripe_subscription_id, stripe_customer_id')
       .eq('user_id', targetUserId)
       .single()
 
-    // Calculate remaining trial days for Stripe trial_period_days
     let trialDays = 0
-    if (targetProfile?.trial_status === 'active' && targetProfile?.trial_start_date) {
+    const hadStripeBefore = Boolean(targetProfile?.stripe_subscription_id)
+    if (!hadStripeBefore && targetProfile?.trial_status === 'active' && targetProfile?.trial_start_date) {
       const start = new Date(targetProfile.trial_start_date)
       const now = new Date()
       const elapsed = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-      trialDays = Math.max(0, 14 - elapsed)
+      trialDays = Math.max(0, TRIAL_DAYS - elapsed)
+      // The card step runs minutes after signup; give the full 14 days.
+      if (wantsTrial && elapsed <= 1) trialDays = TRIAL_DAYS
     }
 
     // ---- Determine return URL (use origin of request) ----
     const origin = req.headers.get('Origin') || 'https://app.seniorsafeapp.com'
-    const successUrl = `${origin}/dashboard?upgraded=true`
-    const cancelUrl = `${origin}/upgrade`
+    const successUrl = returnTo === 'start-trial' ? `${origin}/start-trial?done=1` : `${origin}/dashboard?upgraded=true`
+    const cancelUrl = returnTo === 'start-trial' ? `${origin}/start-trial` : `${origin}/upgrade`
 
     // ---- Create Stripe Checkout Session ----
     const sessionParams: Record<string, unknown> = {
@@ -219,9 +230,13 @@ serve(async (req: Request) => {
       },
     }
 
-    // If user is still in trial, sync remaining trial days to Stripe
+    // Free days on the subscription. The card is always collected
+    // (payment_method_collection 'always'); if a card somehow goes missing at
+    // the end of the trial, Stripe cancels instead of leaving a zombie.
     if (trialDays > 0) {
       subscriptionData.trial_period_days = trialDays
+      subscriptionData.trial_settings = { end_behavior: { missing_payment_method: 'cancel' } }
+      sessionParams.payment_method_collection = 'always'
     }
 
     sessionParams.subscription_data = subscriptionData

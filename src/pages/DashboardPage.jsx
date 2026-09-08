@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { sendSMS } from '../lib/sms'
-import { isPremium, trialDaysRemaining } from '../lib/subscription'
+import { isPremium, trialDaysRemaining, needsBilling, planEnded } from '../lib/subscription'
 import { registerPushNotifications } from '../lib/pushNotifications'
 import { copyToClipboard } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
@@ -103,6 +103,7 @@ export default function DashboardPage() {
         const fam = await loadFamily(u.id)
         if (cancelled) return
         if (!fam) { navigate('/onboarding?path=oauth', { replace: true }); return }
+        if (needsBilling(fam.me)) { navigate('/start-trial', { replace: true }); return }
         if (!fam.me.onboarding_complete && fam.me.role !== 'member') {
           navigate(`/onboarding?path=${fam.me.is_senior ? 'self' : 'family'}`, { replace: true })
           return
@@ -315,14 +316,11 @@ export default function DashboardPage() {
       title: 'Check-In',
       body: `${senderName} just checked in!`,
       type: 'check_in',
-      sms: `✅ ${senderName} just checked in on SeniorSafe and is doing well today. Reply STOP to opt out`,
+      sms: `${senderName} just checked in on SeniorSafe and is doing well today. Reply STOP to opt out`,
     })
     if (texted === 0) {
       setSmsToast('Check-in recorded. Family members need a phone number in Settings to get the text.')
       setTimeout(() => setSmsToast(''), 5000)
-    }
-    if (family.me.phone) {
-      await sendSMS(family.me.phone, `✅ Your I'm Okay check-in was recorded and your family has been notified - SeniorSafe. Reply STOP to opt out`)
     }
   }
 
@@ -350,7 +348,7 @@ export default function DashboardPage() {
     try {
       const time = fmtTime(new Date())
       const name = family.me.first_name || 'Your loved one'
-      const message = `🆘 URGENT: ${name} pressed "I Need Help" at ${time}. Please check on them immediately. - SeniorSafe Alert. Reply STOP to opt out`
+      const message = `URGENT: ${name} pressed "I Need Help" at ${time}. Please check on them immediately. SeniorSafe Alert. Reply STOP to opt out`
       if (family.others.length === 0) {
         alert('No family members found yet. Ask your family to join through your invite link.')
         setHelpSending(false)
@@ -414,7 +412,16 @@ export default function DashboardPage() {
       return
     }
     const senderName = family.me.first_name || 'Your family'
-    await sendSMS(phone, `${senderName} is thinking of you. Just tap I'm Okay when you get a chance! SeniorSafe. Reply STOP to opt out`)
+    const nudgeText = `${senderName} is thinking of you. Just tap I'm Okay when you get a chance! SeniorSafe. Reply STOP to opt out`
+    // Notification when the senior has the app; the text is the fallback for a
+    // senior on the web with no app installed.
+    const { texted: nudgeTexted, pushed } = await notifyFamily([family.senior], {
+      title: `${senderName} is thinking of you`,
+      body: "Just tap I'm Okay when you get a chance.",
+      type: 'nudge',
+      sms: null,
+    })
+    if (!pushed && !nudgeTexted) await sendSMS(phone, nudgeText)
     await supabase.from('nudge_logs').insert({ admin_id: family.senior.user_id, sent_by: user.id })
     const n = nudgeCount + 1
     setNudgeCount(n)
@@ -479,6 +486,7 @@ export default function DashboardPage() {
         dueDoses={dueDoses}
         takingDose={takingDose}
         onTakeDose={takeDose}
+        planEnded={planEnded(family.owner)}
         todaysAppointments={todaysAppointments}
         quickDialContacts={quickDialContacts}
         dailyQuote={dailyQuote}
@@ -553,6 +561,7 @@ export default function DashboardPage() {
       trialDays={trialDays}
       trialBannerDismissed={trialBannerDismissed}
       onDismissTrial={() => setTrialBannerDismissed(true)}
+      planEnded={planEnded(family.owner)}
       smsToast={smsToast}
       onDismissToast={() => setSmsToast('')}
     />
