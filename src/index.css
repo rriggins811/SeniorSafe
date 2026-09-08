@@ -50,10 +50,15 @@ body {
   min-height: 100vh;
 }
 
-h1, h2, h3, h4 {
-  font-family: var(--font-display);
-  color: var(--color-brand-navy);
-  letter-spacing: -0.01em;
+/* In @layer base so Tailwind color utilities (text-white on the navy page
+   headers) win. Unlayered, this rule beat every utility and hid the titles on
+   Medications, Appointments, Emergency Info, Profile and others. */
+@layer base {
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    color: var(--color-brand-navy);
+    letter-spacing: -0.01em;
+  }
 }
 
 /* Editorial eyebrow (small caps, gold, letter-spaced) */
