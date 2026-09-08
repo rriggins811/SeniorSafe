@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Heart, Edit2, Save } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { loadFamily } from '../lib/family'
 
 const BLOOD_TYPES = ['Unknown', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
@@ -46,39 +47,40 @@ export default function EmergencyPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [hasRecord, setHasRecord] = useState(false)
+  const [recordId, setRecordId] = useState(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       setUser(user)
 
-      // Fetch existing emergency info
-      supabase.from('emergency_info').select('*').eq('user_id', user.id).single()
-        .then(({ data }) => {
-          if (data) {
-            const d = { ...EMPTY, ...data }
-            setInfo(d)
-            setDraft(d)
-            setHasRecord(true)
-          } else {
-            setEditMode(true) // No record yet — open in edit mode automatically
-          }
-          setLoading(false)
-        })
+      // One card per family: whoever in the family wrote it, everyone sees it.
+      loadFamily(user.id).then(async (fam) => {
+        const ids = (fam?.all || []).map(r => r.user_id)
+        if (!ids.includes(user.id)) ids.push(user.id)
+        if (fam?.familyName) setFamilyName(fam.familyName)
 
-      // Fetch family_name from profile (source of truth)
-      supabase.from('user_profile').select('family_name').eq('user_id', user.id).single()
-        .then(({ data }) => { if (data?.family_name) setFamilyName(data.family_name) })
+        const { data } = await supabase.from('emergency_info').select('*').in('user_id', ids)
+          .order('updated_at', { ascending: false }).limit(1).maybeSingle()
+        if (data) {
+          const d = { ...EMPTY, ...data }
+          setInfo(d)
+          setDraft(d)
+          setHasRecord(true)
+          setRecordId(data.id)
+        } else {
+          setEditMode(true) // No record yet, open in edit mode automatically
+        }
+        setLoading(false)
 
-      // Auto-populate medications summary if empty
-      supabase.from('medications').select('med_name, dosage').eq('user_id', user.id).eq('active', true)
-        .then(({ data: meds }) => {
-          if (meds?.length) {
-            const summary = meds.map(m => m.dosage ? `${m.med_name} ${m.dosage}` : m.med_name).join(', ')
-            setInfo(prev => ({ ...prev, current_meds_summary: prev.current_meds_summary || summary }))
-            setDraft(prev => ({ ...prev, current_meds_summary: prev.current_meds_summary || summary }))
-          }
-        })
+        // Auto-populate the medications summary from the family's list if it is empty
+        const { data: meds } = await supabase.from('medications').select('med_name, dosage').in('user_id', ids).eq('active', true)
+        if (meds?.length) {
+          const summary = meds.map(m => m.dosage ? `${m.med_name} ${m.dosage}` : m.med_name).join(', ')
+          setInfo(prev => ({ ...prev, current_meds_summary: prev.current_meds_summary || summary }))
+          setDraft(prev => ({ ...prev, current_meds_summary: prev.current_meds_summary || summary }))
+        }
+      })
     })
   }, [])
 
@@ -87,10 +89,10 @@ export default function EmergencyPage() {
   async function handleSave() {
     if (!user) return
     setSaving(true)
-    const payload = { ...draft, user_id: user.id, family_name: familyName }
-    const { error } = hasRecord
-      ? await supabase.from('emergency_info').update(payload).eq('user_id', user.id)
-      : await supabase.from('emergency_info').insert(payload)
+    const { id: _id, user_id: _owner, ...fields } = draft
+    const { error } = hasRecord && recordId
+      ? await supabase.from('emergency_info').update({ ...fields, family_name: familyName, updated_at: new Date().toISOString() }).eq('id', recordId)
+      : await supabase.from('emergency_info').insert({ ...fields, user_id: user.id, family_name: familyName })
     setSaving(false)
     if (error) { alert('Error saving: ' + error.message); return }
     setInfo(draft)
