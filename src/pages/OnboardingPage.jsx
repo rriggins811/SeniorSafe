@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MessageSquare, Copy, Share2, CheckCircle, Smartphone } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { phoneProblem } from '../lib/phone'
 import { generateFamilyCode } from '../lib/familyCode'
 import { copyToClipboard } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
@@ -141,6 +142,11 @@ export default function OnboardingPage() {
   async function saveOwnerSetup() {
     dismissKeyboard()
     if (path === 'family' && !seniorFirst.trim()) { setError("Please enter their first name."); return }
+    // The one free text goes to the owner's number, so it has to be real.
+    const ownerProblem = phoneProblem(ownerPhone)
+    if (path === 'family' && isOauthNew && ownerProblem) { setError(ownerProblem + ' The text when they miss a check-in goes to your number.'); return }
+    if (ownerPhone.trim() && ownerProblem) { setError('Your number: ' + ownerProblem); return }
+    if (seniorPhone.trim() && phoneProblem(seniorPhone)) { setError('Their number: ' + phoneProblem(seniorPhone)); return }
     if (isOauthNew && !ownerFirst.trim()) { setError('Please enter your first name.'); return }
     setSaving(true)
     setError('')
@@ -243,7 +249,7 @@ export default function OnboardingPage() {
             {isOauthNew && (
               <>
                 <Field label="Your first name" value={ownerFirst} onChange={setOwnerFirst} autoFocus />
-                <Field label="Your mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="The daily check-in comes to you as a text." value={ownerPhone} onChange={setOwnerPhone} />
+                <Field label="Your mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="You get a text if they miss a check-in." value={ownerPhone} onChange={setOwnerPhone} />
               </>
             )}
             <Field label="Their first name" placeholder="e.g. Mom, Margaret" value={seniorFirst} onChange={v => { setSeniorFirst(v); setError('') }} autoFocus={!isOauthNew} />

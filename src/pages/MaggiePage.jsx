@@ -7,6 +7,10 @@ import BottomNav from '../components/BottomNav'
 import AIMark from '../components/AIMark'
 import EmptyConversations from '../components/illustrations/EmptyConversations'
 
+// Assistant replies longer than this fold to a preview until tapped.
+const LONG_REPLY = 1400
+const LONG_REPLY_PREVIEW = 900
+
 // Maggie, the one SeniorSafe assistant (2026-09-04 merge). Same page for the
 // senior and the family; the server knows who is typing and adjusts. Seniors
 // get voice on by default and everyday starter prompts. Conversations live in
@@ -113,6 +117,8 @@ export default function MaggiePage() {
   const [voiceUnlocked, setVoiceUnlocked] = useState(false)
 
   const messagesEndRef = useRef(null)
+  // Long replies fold to a preview so the transcript stays scrollable.
+  const [expanded, setExpanded] = useState(() => new Set())
   const inputRef = useRef(null)
   const recognitionRef = useRef(null)
   const soundOnRef = useRef(false)
@@ -537,7 +543,7 @@ export default function MaggiePage() {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-6">
         <div className="max-w-2xl mx-auto flex flex-col gap-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center gap-4 py-6 text-center">
@@ -571,7 +577,16 @@ export default function MaggiePage() {
                   className={`max-w-[85%] px-5 py-4 rounded-2xl whitespace-pre-wrap ${msg.role === 'user' ? 'bg-[#1B365D] text-white rounded-br-sm' : 'bg-white text-[#2D2A24] rounded-bl-sm shadow-[0_2px_6px_rgba(45,42,36,0.06)] border border-[#E7E2D8]'}`}
                   style={{ fontSize: bubbleSize, lineHeight: 1.6 }}
                 >
-                  {msg.content ? renderRich(msg.content) : (streaming && i === messages.length - 1 ? <span className="text-[#6B645A] italic">Thinking...</span> : '')}
+                  {msg.content ? (
+                    msg.role === 'assistant' && msg.content.length > LONG_REPLY && !expanded.has(i) && !(streaming && i === messages.length - 1) ? (
+                      <>
+                        {renderRich(msg.content.slice(0, LONG_REPLY_PREVIEW).replace(/\s+\S*$/, '') + ' ...')}
+                        <button type="button" onClick={() => setExpanded(s => { const n = new Set(s); n.add(i); return n })} className="mt-3 block text-[#1B365D] font-semibold underline underline-offset-2" style={{ fontSize: bubbleSize }}>
+                          Show the rest
+                        </button>
+                      </>
+                    ) : renderRich(msg.content)
+                  ) : (streaming && i === messages.length - 1 ? <span className="text-[#6B645A] italic">Thinking...</span> : '')}
                 </div>
               </div>
             ))

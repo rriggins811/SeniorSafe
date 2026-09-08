@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { setSeniorScreen } from '../InstallPrompt'
 import {
   Shield, CheckCircle, Phone, Settings, LogOut, Pill, Menu, ChevronRight, MessageCircle,
   Users, Calendar, Heart, FolderLock, Lock, X,
@@ -48,6 +49,8 @@ export default function ParentHome({
   todaysAppointments = [],
   planEnded = false,
 }) {
+  // The web install banner never shows on the senior's screen.
+  useEffect(() => { setSeniorScreen(true); return () => setSeniorScreen(false) }, [])
   const [moreOpen, setMoreOpen] = useState(false)
   const go = (path) => { setMoreOpen(false); onNavigate && onNavigate(path) }
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Shield, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { phoneProblem } from '../lib/phone'
 import { generateFamilyCode } from '../lib/familyCode'
 import { isNative } from '../lib/platform'
 import { Browser } from '@capacitor/browser'
@@ -128,7 +129,12 @@ export default function SignUpPage() {
   // ─── Email signups ─────────────────────────────────────────────────
   function validateBasics({ needPhone }) {
     if (!form.firstName.trim()) return 'Please enter a first name.'
-    if (needPhone && form.phone.replace(/\D/g, '').length < 10) return 'Please enter a mobile number so the check-in text reaches you.'
+    if (needPhone) {
+      const p = phoneProblem(form.phone)
+      if (p) return p + ' The text when they miss a check-in goes to this number.'
+    } else if (form.phone.trim() && phoneProblem(form.phone)) {
+      return phoneProblem(form.phone)
+    }
     if (!form.email.trim()) return 'Please enter an email address.'
     if (form.password.length < 6) return 'Choose a password of at least 6 characters.'
     return ''
@@ -328,7 +334,7 @@ export default function SignUpPage() {
         <div className="flex flex-col gap-4">
           <Field label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} autoFocus />
           <Field label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
-          <Field label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="The check-in comes to you as a text." value={form.phone} onChange={v => update('phone', v)} />
+          <Field label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="You get a text if they miss a check-in." value={form.phone} onChange={v => update('phone', v)} />
           <Select label={seniorName ? `You are ${seniorName}'s` : 'Your relationship'} value={form.relationship} onChange={v => update('relationship', v)} options={RELATIONSHIPS} />
           <Field label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
           <Field label="Password" type="password" autoComplete="new-password" hint="At least 6 characters." value={form.password} onChange={v => update('password', v)} />
@@ -384,7 +390,7 @@ export default function SignUpPage() {
       <div className="flex flex-col gap-4">
         <Field label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} />
         <Field label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
-        <Field label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="The daily check-in comes to you as a text." value={form.phone} onChange={v => update('phone', v)} />
+        <Field label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="You get a text if they miss a check-in." value={form.phone} onChange={v => update('phone', v)} />
         <Field label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
         <Field label="Password" type="password" autoComplete="new-password" hint="At least 6 characters." value={form.password} onChange={v => update('password', v)} />
       </div>
