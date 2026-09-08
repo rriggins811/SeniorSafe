@@ -43,12 +43,18 @@ section, then verify against production.
   `node scripts/build-ai-chat.mjs`, commit, and paste the generated file. Cached
   prefix is ~5.3K tokens; the script prints it. Caching verified 2026-09-04
   (cache_read == cache_creation == 5295 in `ai_user_budgets`).
-- **Plans:** Free (10 Maggie messages ever per family, no texts) and Paid
-  ($14.99/mo, $143.88/yr). `premium_plus` is a legacy value treated as paid;
-  nobody holds it. Store products for Premium+ still exist but nothing sells them.
+- **Plans (free door, locked 2026-09-08, see RSS-Business/SeniorSafe App/HANDOFF_to_app_session_2026-09-08.md):**
+  Free forever = check-in, push nudge, missed-check-in and I Need Help text to ONE
+  contact, history, emergency card, medication reminders, senior invite, Maggie 10
+  messages per family. Paid ($14.99/mo or $140/yr, Stripe price_1UDRZmFoeumweL6DZzvPb6w6
+  annual) behind locks = texts to everyone, siblings by code, missed-dose alerts, vault,
+  family chat + check-in note, appointments, Maggie budget. A lock tap goes to
+  /upgrade?feature=x, price, then seven free days with a card (TASTE_DAYS in
+  lib/subscription.js). Members read the plan from the OWNER via lib/family.js
+  `loadFamily`, never from their own row. `premium_plus` is legacy, treated as paid.
 - `send-invite` (v1), `invite-reminders` (v1, cron 15:00 UTC) and their
   migrations are live. `notification_log` accepts `invite` / `invite_reminder`.
-- NEXT (2026-09-06, wait for Ryan's GO): card required at signup, 14 days free, then $14.99/month on web (Stripe Checkout with trial), Apple (intro offer) and Google (base-plan free trial); paste the stripe-webhook fix first. Plan: RSS-Business/SeniorSafe App/NEXT_STEPS_for_Ryan_2026-09-04.md.
+- The card-required trial (2026-09-08 morning) lasted one morning; the free door replaced it the same day. Signup is name, email, password, mobile. No card at signup anywhere.
 - `@capacitor/text-zoom` is wired; shipped in native 1.2.0 (Android versionCode 7, iOS build 33) on 2026-09-05. App Store Connect app id is 6761343239. Next native release must be at least 1.2.1 / build 34 / versionCode 8.
 
 ### Traps (all of these cost real time)
@@ -67,7 +73,7 @@ section, then verify against production.
   exists.
 
 ### Native
-- Store: 1.1.1, Android `versionCode 6`, iOS build 31. Google Play developer
+- Store: 1.3.2, Android `versionCode 13`, iOS build 38 (2026-09-08). Next native release must be higher than both. Google Play developer
   verification due **2026-09-30**.
 - Archive checklist: `git pull`, `npm install`, `npm run build`, `npx cap sync`,
   then Xcode / Android Studio.
@@ -109,9 +115,9 @@ Shipped per-family AI budget tracking + hard caps to production. Flag-gated roll
 - `20260512_phase_a_security_hardening.sql` — REVOKE EXECUTE from anon/authenticated on all 5 budget RPCs + non-negative CHECK constraints + RPC input validation
 
 ### Budget caps (per-family, per-month)
-- Trial: $4 combined pool across both endpoints
-- Paid: $4 on `/ai-chat` (Maggie locked by tier gate)
-- Premium+: $8 on `/maggie-chat` + $4 on `/ai-chat` = $12 combined
+- Free: 10 Maggie messages ever per family (`get_family_total_usage`), no dollar budget
+- Paid and trial: $4 on `/ai-chat` (the only assistant endpoint)
+- Premium+ rows are legacy and get the paid cap
 
 ### Key lessons (don't repeat these in future Code sessions)
 
