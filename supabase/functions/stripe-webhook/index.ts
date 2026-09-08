@@ -302,6 +302,7 @@ async function updateUserTier(
   if (tier === 'trial') { update.trial_status = 'active'; update.trial_start_date = new Date().toISOString() }
   if (stripeCustomerId) update.stripe_customer_id = stripeCustomerId
   if (stripeSubscriptionId) update.stripe_subscription_id = stripeSubscriptionId
+  if (stripeCustomerId || stripeSubscriptionId) update.subscription_platform = 'stripe'
   if (periodEnd !== undefined) update.subscription_period_end = periodEnd
   if (interval !== undefined) update.subscription_interval = interval
 
@@ -392,6 +393,13 @@ serve(async (req: Request) => {
   }
 
   console.log(`Stripe event: ${event.type} (${event.id})`)
+
+  // Stripe retries and can deliver out of order; handle each event once.
+  const { error: seenErr } = await supabaseAdmin.from('stripe_processed_events').insert({ event_id: event.id, type: event.type })
+  if (seenErr) {
+    if (seenErr.code === '23505') { console.log('Already processed, skipping'); return new Response(JSON.stringify({ received: true, duplicate: true }), { status: 200 }) }
+    console.error('processed_events insert failed:', seenErr.message)
+  }
 
   switch (event.type) {
 
@@ -513,7 +521,7 @@ serve(async (req: Request) => {
         }
       } else if (status === 'past_due' || status === 'unpaid') {
         console.log(`Subscription ${subscription.id} is ${status} - keeping paid for now`)
-      } else {
+      } else if (status === 'canceled' || status === 'incomplete_expired') {
         await updateUserTier(userId, 'free', customerId, subscription.id)
 
         const { data: members } = await supabaseAdmin
@@ -623,6 +631,9 @@ serve(async (req: Request) => {
 
       const endIso = subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : undefined
       const when = fmtDate(endIso)
+      const trialPrice = subscription.items?.data?.[0]?.price
+      const amountDollars = typeof trialPrice?.unit_amount === 'number' ? trialPrice.unit_amount / 100 : 14.99
+      const amountText = `$${amountDollars.toFixed(2).replace(/\.00$/, '')} ${trialPrice?.recurring?.interval === 'year' ? 'a year' : 'a month'}`
       const fields = await lookupSubscriberFields(userId)
       const { data: adminProfile } = await supabaseAdmin
         .from('user_profile').select('phone').eq('user_id', userId).single()
@@ -631,7 +642,7 @@ serve(async (req: Request) => {
         const toPhone = normalizePhone(adminProfile.phone)
         const sent = await sendTwilioSMS(
           toPhone,
-          `Your SeniorSafe free trial ends ${when}. Your card will be charged $14.99 a month after that unless you cancel in Settings at app.seniorsafeapp.com/profile. Reply STOP to opt out`
+          `Your SeniorSafe free days end ${when}. Your card will be charged ${amountText} after that unless you cancel in Settings at app.seniorsafeapp.com/profile. Reply STOP to opt out`
         )
         await logNotification(userId, 'trial_ending', 'sms', sent, toPhone)
       }
@@ -639,7 +650,7 @@ serve(async (req: Request) => {
         const ok = await sendEmail(
           fields.email,
           `Your SeniorSafe free trial ends ${when}`,
-          `Hi ${fields.firstName || 'there'},\n\nYour 14 free days of SeniorSafe end on ${when}. After that your card is charged $14.99 a month and everything stays on: the daily check-in texts to the family, the missed check-in alert, and Maggie.\n\nIf you would rather stop, open Settings at https://app.seniorsafeapp.com/profile and tap Cancel Subscription before ${when}. You will not be charged.\n\nQuestions? Reply to this email or text Ryan at (336) 553-8933.\n\nSeniorSafe`,
+          `Hi ${fields.firstName || 'there'},\n\nYour free days of SeniorSafe end on ${when}. After that your card is charged ${amountText} and everything stays on: texts to everyone in the family, siblings by code, missed-dose alerts, family messages, the vault, appointments, and Maggie every day.\n\nIf you would rather stop, open Settings at https://app.seniorsafeapp.com/profile and tap Cancel Subscription before ${when}. You will not be charged.\n\nQuestions? Reply to this email or text Ryan at (336) 553-8933.\n\nSeniorSafe`,
         )
         await logNotification(userId, 'trial_ending', 'in_app', ok)
       }

@@ -14,7 +14,10 @@ const LONG_REPLY_PREVIEW = 900
 function foldPreview(text) {
   const head = text.slice(0, LONG_REPLY_PREVIEW)
   const at = head.lastIndexOf('\n\n')
-  return (at > 300 ? head.slice(0, at) : head.replace(/\s+\S*$/, '')) + '\n\n...'
+  let cut = at > 300 ? head.slice(0, at) : head.replace(/\s+\S*$/, '')
+  // Never leave an unmatched ** behind.
+  if ((cut.match(/\*\*/g) || []).length % 2 === 1) cut = cut.slice(0, cut.lastIndexOf('**'))
+  return cut + '\n\n...'
 }
 
 // Maggie, the one SeniorSafe assistant (2026-09-04 merge). Same page for the
@@ -305,7 +308,7 @@ export default function MaggiePage() {
     if (conversation?.id && messages.length >= 2) triggerSummarize(conversation.id)
     if (conversation?.id) setLastConvSummary({ id: conversation.id, title: conversation.title, updated_at: new Date().toISOString() })
     setConversation(null)
-    setMessages([])
+    setMessages([]); setExpanded(new Set())
     setInput('')
     setSidebarOpen(false)
     setTimeout(() => inputRef.current?.focus(), 100)
@@ -332,7 +335,7 @@ export default function MaggiePage() {
     if (!window.confirm('Delete this conversation? This cannot be undone.')) return
     await supabase.from('ai_conversations').delete().eq('id', convId)
     setConversations(prev => prev.filter(c => c.id !== convId))
-    if (conversation?.id === convId) { setConversation(null); setMessages([]) }
+    if (conversation?.id === convId) { setConversation(null); setMessages([]); setExpanded(new Set()) }
     if (lastConvSummary?.id === convId) setLastConvSummary(null)
   }
 

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2, Pill, X, Check, Lock, Calendar } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { loadFamily } from '../lib/family'
+import { localDateStr } from '../lib/time'
 import { googleCalendarUrl, addMinutes } from '../lib/calendar'
 import { openExternalLink } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
@@ -22,7 +24,7 @@ function fmt12(t) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
-function todayStr() { return new Date().toISOString().split('T')[0] }
+function todayStr() { return localDateStr() }
 
 function nowMinutes() {
   const d = new Date()
@@ -82,12 +84,13 @@ export default function MedicationsPage() {
       setUser(user)
       fetchAll()
       // Fetch user's phone + subscription tier
-      supabase.from('user_profile').select('phone, subscription_tier, family_name').eq('user_id', user.id).single()
+      supabase.from('user_profile').select('phone').eq('user_id', user.id).single()
         .then(({ data }) => {
           const phone = data?.phone || user.user_metadata?.phone || ''
           setUserPhone(phone)
-          if (data?.family_name) setFamilyName(data.family_name)
         })
+      // The family name comes from the owner, so every member writes the same one.
+      loadFamily(user.id).then(fam => { if (fam?.familyName) setFamilyName(fam.familyName) })
     })
   }, [])
 
@@ -230,13 +233,13 @@ export default function MedicationsPage() {
                     med.times?.map((time, i) => {
                       const status = getDoseStatus(time, medLogs)
                       const key = `${med.id}-${time}`
-                      const isOwner = med.user_id === user?.id
+                      // Anyone in the family can mark a dose taken (the adult child usually adds the list).
                       return (
                         <button
                           key={i}
-                          onClick={() => isOwner && toggleDose(med, time)}
-                          disabled={!isOwner || toggling === key}
-                          className={`w-full flex items-center gap-4 px-4 py-3.5 border-b last:border-b-0 border-gray-50 transition-colors ${STATUS_STYLES[status]} ${!isOwner ? 'cursor-default' : ''}`}
+                          onClick={() => toggleDose(med, time)}
+                          disabled={toggling === key}
+                          className={`w-full flex items-center gap-4 px-4 py-3.5 border-b last:border-b-0 border-gray-50 transition-colors ${STATUS_STYLES[status]}`}
                         >
                           {/* Checkbox */}
                           <div className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center flex-shrink-0 ${
@@ -268,7 +271,7 @@ export default function MedicationsPage() {
                                   `Take ${med.med_name}${med.dosage ? ` (${med.dosage})` : ''}`,
                                   `${new Date().toISOString().split('T')[0]}T${time}`,
                                   `${new Date().toISOString().split('T')[0]}T${addMinutes(time, 15)}`,
-                                  'Medication reminder — SeniorSafe'
+                                  'Medication reminder, SeniorSafe'
                                 ))
                               }}
                               className="ml-1 text-gray-300 hover:text-[#1B365D] flex-shrink-0"
@@ -362,8 +365,8 @@ export default function MedicationsPage() {
             <div className="border-t border-gray-100 pt-3">
               <div className="flex items-center justify-between py-1">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Remind me by text</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Send an SMS when it's time to take this</p>
+                  <p className="text-sm font-medium text-gray-700">Remind me on my phone</p>
+                  <p className="text-xs text-gray-400 mt-0.5">A notification on the senior's phone when it's time to take this</p>
                 </div>
                 <button
                   type="button"
@@ -378,19 +381,6 @@ export default function MedicationsPage() {
                 </button>
               </div>
 
-              {form.reminder_enabled && (
-                <div className="mt-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone number for reminders</label>
-                  <input
-                    type="tel"
-                    value={form.reminder_phone}
-                    onChange={e => setForm(f => ({ ...f, reminder_phone: e.target.value }))}
-                    placeholder="(336) 555-0100"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
-                    style={{ fontSize: '16px' }}
-                  />
-                </div>
-              )}
             </div>
 
             <button

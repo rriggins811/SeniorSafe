@@ -44,12 +44,12 @@ Your control: You can choose not to use the AI assistant. All other SeniorSafe f
     title: '4. Third-Party Service Providers',
     body: `We use the following service providers to operate SeniorSafe:
 
-• Supabase — Database hosting and user authentication. Your data is stored on Supabase's SOC 2 Type II compliant infrastructure with encryption at rest and in transit.
-• Anthropic — AI assistant (Claude). See Section 3 for details.
-• Twilio — SMS notifications. Phone numbers and message content are transmitted to Twilio for delivery.
-• Stripe — Payment processing for web subscriptions. Stripe handles all payment card data; we never store card numbers.
-• Apple — In-App Purchase processing for iOS subscriptions. Apple handles payment through your Apple ID.
-• Vercel — Web application hosting.
+• Supabase, Database hosting and user authentication. Your data is stored on Supabase's SOC 2 Type II compliant infrastructure with encryption at rest and in transit.
+• Anthropic, AI assistant (Claude). See Section 3 for details.
+• Twilio, SMS notifications. Phone numbers and message content are transmitted to Twilio for delivery.
+• Stripe, Payment processing for web subscriptions. Stripe handles all payment card data; we never store card numbers.
+• Apple, In-App Purchase processing for iOS subscriptions. Apple handles payment through your Apple ID.
+• Vercel, Web application hosting.
 
 We do not sell your personal information to any third party.`,
   },
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
 
           <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
             <p className="text-gray-600 text-sm leading-relaxed">
-              <span className="font-semibold text-[#1B365D]">Riggins Strategic Solutions, LLC</span> ("we", "us", "our") operates SeniorSafe. This Privacy Policy explains what information we collect, how we use it, who we share it with, and your rights regarding your data. SeniorSafe is a family coordination tool — not a medical device, emergency service, or healthcare provider.
+              <span className="font-semibold text-[#1B365D]">Riggins Strategic Solutions, LLC</span> ("we", "us", "our") operates SeniorSafe. This Privacy Policy explains what information we collect, how we use it, who we share it with, and your rights regarding your data. SeniorSafe is a family coordination tool, not a medical device, emergency service, or healthcare provider.
             </p>
           </div>
 

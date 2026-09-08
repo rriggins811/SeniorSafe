@@ -308,7 +308,8 @@ export default function SignUpPage() {
       )
     }
     // Free plan: one family contact. A second adult needs the paid plan.
-    const familyFull = (invite.subscription_tier || 'free') === 'free' && (invite.contact_count || 0) >= 1
+    // The senior's seat is always open; the free limit is about a second adult.
+    const familyFull = !!invite.has_senior && (invite.subscription_tier || 'free') === 'free' && (invite.contact_count || 0) >= 1
     if (familyFull) {
       return (
         <Shell onBack={() => { if (urlCode) navigate('/signup'); else setInvite(null) }}>
@@ -317,7 +318,7 @@ export default function SignUpPage() {
             sub={`The free plan covers one family contact, and ${ownerFirst || 'the person who set it up'} already has that seat. On the paid plan ($14.99 a month) everyone in the family joins and gets the texts.`}
           />
           <p className="text-[#1B365D]" style={{ fontSize: '17px', lineHeight: 1.45 }}>
-            Ask {ownerFirst || 'them'} to open SeniorSafe, tap Family, and turn on the paid plan. Then use this link again.
+            Ask {ownerFirst || 'them'} to open SeniorSafe, tap the family icon at the top of their home screen, and turn on the paid plan. Then use this link again.
           </p>
           <p className="text-center text-gray-500">
             Already have an account? <TextLink to="/signin">Sign in</TextLink>
@@ -334,7 +335,7 @@ export default function SignUpPage() {
         <div className="flex flex-col gap-4">
           <Field label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} autoFocus />
           <Field label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
-          <Field label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="You get a text if they miss a check-in." value={form.phone} onChange={v => update('phone', v)} />
+          <Field label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="10-digit mobile number" hint="You get a text if they miss a check-in." value={form.phone} onChange={v => update('phone', v)} />
           <Select label={seniorName ? `You are ${seniorName}'s` : 'Your relationship'} value={form.relationship} onChange={v => update('relationship', v)} options={RELATIONSHIPS} />
           <Field label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
           <Field label="Password" type="password" autoComplete="new-password" hint="At least 6 characters." value={form.password} onChange={v => update('password', v)} />
@@ -358,7 +359,7 @@ export default function SignUpPage() {
         <div className="flex flex-col gap-4">
           <Field large label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} autoFocus />
           <Field large label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
-          <Field large label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="Optional. Lets your family send you a text nudge." value={form.phone} onChange={v => update('phone', v)} />
+          <Field large label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="10-digit mobile number" hint="Optional. Lets your family send you a text nudge." value={form.phone} onChange={v => update('phone', v)} />
           <Field large label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
           <Field large label="Choose a password" type="password" autoComplete="new-password" hint="At least 6 characters. Tap the eye to see it." value={form.password} onChange={v => update('password', v)} />
         </div>
@@ -390,7 +391,7 @@ export default function SignUpPage() {
       <div className="flex flex-col gap-4">
         <Field label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} />
         <Field label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
-        <Field label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="You get a text if they miss a check-in." value={form.phone} onChange={v => update('phone', v)} />
+        <Field label="Mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="10-digit mobile number" hint="You get a text if they miss a check-in." value={form.phone} onChange={v => update('phone', v)} />
         <Field label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
         <Field label="Password" type="password" autoComplete="new-password" hint="At least 6 characters." value={form.password} onChange={v => update('password', v)} />
       </div>

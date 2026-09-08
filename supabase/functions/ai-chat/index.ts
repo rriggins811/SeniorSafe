@@ -217,31 +217,31 @@ One person sets up the family and manages the plan (the owner, usually an adult 
 - Does my parent have to install an app? No. The link works in the phone's web browser. If they want an icon on their home screen, the app can be installed from the App Store or Google Play, or they can add the web page to the home screen. Signing in with the same email and password works in all of them.
 - My parent does not have an email address. Any email they can get into works, and it is only used to sign in and to reset a forgotten password. If they truly have none, you can create a free Gmail address for them, or sign them in with Google or Apple on their phone. Another option: open their link on their phone while you are together and set it up with them.
 - I am holding my parent's phone right now. What do I do? During setup, tap "I'm holding their phone right now" on the invite screen. It signs you out of that phone and opens their setup. Later, sign in on your own phone with your email to see their check-ins. If you already finished setup, open the Family page, tap "Copy the link," and open it in the browser on their phone.
-- How do I add my brother, sister, or a caregiver? Tap the family icon at the top of your home screen. Type their mobile number and tap Send, and they get a text with a link. You can also share the link or the 6-character family code any way you like. Everyone who joins gets the daily check-in text and can send a nudge.
+- How do I add my brother, sister, or a caregiver? Tap the family icon at the top of your home screen. Type their mobile number and tap Send, and they get a text with a link. You can also share the link or the 6-character family code any way you like. On the paid plan everyone who joins gets the texts and can send a nudge; the free plan covers one family contact.
 - Where do I find the family code? On the Family page, under "Invite family members." It is 6 letters and numbers. A family member enters it on the sign-up screen under "Have an invite code?"
 - How do I change the check-in time, or my parent's name or number? Settings, from the gear icon at the top of your home screen. The "Person you look after" section holds their name and mobile number. The "Check-in reminder" section holds the time. Changes take effect right away.
-- How do I know it worked? Your home screen changes from "Waiting for [name] to join" to their name and check-in status. The first time they tap their button you get a text, and the screen shows "[name] is okay, checked in at [time]."
+- How do I know it worked? Your home screen changes from "Waiting for [name] to join" to their name and check-in status. The first time they tap their button the screen shows "[name] is okay, checked in at [time]." On the paid plan you also get a text for each check-in.
 
 ### When something is not working
 - My parent never got the invite text. First check the number in Settings under "Person you look after." Then tap "Text [name] the link again" on your home screen. If it still does not arrive, tap "Copy the link" and send it from your own phone, or read them the family code over the phone. Some carriers hold texts that contain links for a few minutes. If nothing shows up after a day, we send it again automatically and let you know.
 - The link says it is no longer valid. Usually the link was typed by hand with a wrong character, or the person already joined. Send the link again from your home screen. If they already have an account, they should sign in instead of signing up.
 - My parent forgot their password. On the sign-in screen, tap "Forgot password?" and a reset link goes to their email. If you set up their email, you can do this for them. Passwords are never shown to us, so we cannot look one up.
-- My parent tapped the button but I did not get a text. Check three things. Your mobile number is in Settings and correct. Your family is on the trial or Premium (check-in texts and missed check-in alerts are Premium features; the trial includes them). And you have not replied STOP to a SeniorSafe text, which turns texts off; reply START to turn them back on. The check-in still shows in the app either way.
+- My parent tapped the button but I did not get a text. Check three things. Your mobile number is in Settings and correct. The text for each check-in is a paid-plan feature (the free plan texts one contact only when a check-in is missed or I Need Help is pressed). And you have not replied STOP to a SeniorSafe text, which turns texts off; reply START to turn them back on. The check-in still shows in the app either way.
 - I got a "hasn't checked in" alert but they are fine. The alert goes out once, at the check-in time you chose, if the button has not been tapped that day. They can still tap it late and you will get the check-in text. If mornings are hard, move the check-in time later in Settings.
 - My parent tapped it twice, or tapped it by mistake. Nothing bad happens. The button only counts once a day and turns green after the first tap. Extra taps do nothing.
 - Can I look after two people? Right now one family has one person who checks in. For a second parent, create a second account with a different email and set them up the same way.
 - The app is not loading or looks stuck. Close it fully and open it again, and make sure the phone has a signal or Wi-Fi. If it still hangs, sign out from Settings and sign back in. If that fails, text Ryan at (336) 553-8933 with what you see on the screen.
 
 ### For the person who checks in
-- What am I supposed to do each day? Open SeniorSafe and tap the big blue button that says "I'm Okay Today." Once a day is all it takes. It turns green and says "You're checked in." Your family gets a text that you are okay.
+- What am I supposed to do each day? Open SeniorSafe and tap the big blue button that says "I'm Okay Today." Once a day is all it takes. It turns green and says "You're checked in." Your family sees it right away, and on the paid plan they get a text too.
 - Do I have to keep the app open? No. Tap the button, then close it or put the phone down. Nothing runs in the background.
 - I forgot to tap it this morning. Tap it as soon as you remember. Your family may have gotten a note that you had not checked in yet, and your tap sends them the good news. Nobody is in trouble.
-- What is the red "I Need Help" button? It sends an urgent text to everyone in your family asking them to check on you right away. It asks "Are you sure?" first, so a bump does not send it. It is not 911. If it is an emergency, call 911.
+- What is the red "I Need Help" button? It sends an urgent text asking your family to check on you right away: one family contact on the free plan, everyone on the paid plan. It asks "Are you sure?" first, so a bump does not send it. It is not 911. If it is an emergency, call 911.
 - I cannot find the app on my phone. Open the text message your family sent and tap the link again. If you want an icon on your home screen, ask your family to help you add it, or install SeniorSafe from the App Store or Google Play and sign in with the same email and password.
 - The writing is too small. If you use the SeniorSafe app from the App Store or Google Play, make the text bigger in your phone's Settings under Display or Accessibility, and the app follows it. If you open SeniorSafe in Safari or Chrome, use the browser's own text size button (the aA at the top of the screen in Safari). Your family can help with this over the phone.
 - It is asking me to sign in and I do not remember how. Use the email and password you chose when you first opened the link. If you do not remember the password, tap "Forgot password?" and follow the email. Your family can help with this.
 - Who sees that I checked in? Only the family members who joined your family in SeniorSafe. Nobody else.
-- Can I add a note, like "going to the store"? Yes. After you tap "I'm Okay Today," a box appears where you can type a short note. It shows up on your family's screen and in the family messages. If you do not want to, just skip it.
+- Can I add a note, like "going to the store"? Yes. After you tap "I'm Okay Today," a box appears where you can type a short note. On the paid plan it shows up in the family messages. If you do not want to, just skip it.
 - What is "Ask a question"? A helper for everyday things: a recipe, the weather, help writing a card, how to do something on your phone. It is not a doctor or a lawyer. For anything medical, legal, or about money, ask your family or a professional.
 
 ### Your plan and billing
@@ -529,7 +529,12 @@ serve(async (req) => {
 
     const { data: newCount } = await supabaseAdmin.rpc('increment_family_usage', { p_family_code: familyCode, p_month_year: month })
     const limit = tierKey ? PAID_LIMIT : FREE_LIMIT
-    const count = newCount || usageCount + 1
+    let count = newCount || usageCount + 1
+    if (!tierKey) {
+      // Free is 10 messages ever, so report the all-time total, not this month's row.
+      const { data: totalNow } = await supabaseAdmin.rpc('get_family_total_usage', { p_family_code: familyCode })
+      if (typeof totalNow === 'number') count = totalNow
+    }
 
     // ---- Context ---------------------------------------------------------
     const { data: medsData } = await supabase.from('medications').select('med_name').eq('active', true).limit(10)

@@ -12,6 +12,10 @@ export const TIME_OPTIONS = (() => {
   return out
 })()
 
+export function localDateStr(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function formatTime12(hhmm) {
   if (!hhmm) return ''
   const [h, m] = hhmm.split(':').map(Number)

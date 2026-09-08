@@ -15,7 +15,12 @@ const supabaseAdmin = createClient(
   { auth: { persistSession: false, autoRefreshToken: false } },
 )
 
-serve(async (_req) => {
+serve(async (req) => {
+  // Cron endpoint: only the service role may call it.
+  const authHeader = req.headers.get('Authorization') || ''
+  if (authHeader !== `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  }
   try {
     const now = new Date()
 

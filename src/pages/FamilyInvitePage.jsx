@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Users, Copy, CheckCircle, UserMinus, Share2, MessageSquare, Clock, Heart } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { logFunnel } from '../lib/funnel'
-import { generateFamilyCode } from '../lib/familyCode'
+import { phoneProblem } from '../lib/phone'
 import { copyToClipboard } from '../lib/platform'
 import {
   loadFamily, seniorInviteLink, seniorInviteText, memberInviteLink, memberInviteText, smsHref, sendInvite,
@@ -39,7 +39,8 @@ export default function FamilyInvitePage() {
 
   async function textMember() {
     if (memberSending) return
-    if (memberPhone.replace(/\D/g, '').length < 10) { setMemberError('Enter a 10-digit mobile number.'); return }
+    const memberProblem = phoneProblem(memberPhone)
+    if (memberProblem) { setMemberError(memberProblem); return }
     setMemberSending(true)
     setMemberError('')
     setMemberSentTo('')
@@ -55,8 +56,7 @@ export default function FamilyInvitePage() {
     let fam = await loadFamily(user.id)
     // Pre-feature owners may have no code yet; mint one.
     if (fam && fam.isOwner && !fam.familyCode) {
-      const code = await generateFamilyCode()
-      await supabase.from('user_profile').update({ family_code: code }).eq('user_id', user.id)
+      await supabase.rpc('mint_family_code')
       fam = await loadFamily(user.id)
     }
     setFamily(fam)
@@ -68,11 +68,16 @@ export default function FamilyInvitePage() {
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || cancelled) return
-      let fam = await loadFamily(user.id)
-      if (fam && fam.isOwner && !fam.familyCode) {
-        const code = await generateFamilyCode()
-        await supabase.from('user_profile').update({ family_code: code }).eq('user_id', user.id)
+      let fam = null
+      try {
         fam = await loadFamily(user.id)
+        if (fam && fam.isOwner && !fam.familyCode) {
+          // Pre-feature owners may have no code yet; the database mints one (the column is protected).
+          await supabase.rpc('mint_family_code')
+          fam = await loadFamily(user.id)
+        }
+      } catch (e) {
+        console.error('family load failed', e)
       }
       if (cancelled) return
       setFamily(fam)
@@ -83,7 +88,9 @@ export default function FamilyInvitePage() {
 
   async function removeMember(memberId) {
     if (!window.confirm('Remove this family member? They keep their account but will no longer see this family.')) return
-    await supabase.from('user_profile').update({ invited_by: null, role: 'admin' }).eq('user_id', memberId)
+    // The columns are protected; the database does the unlink for the owner.
+    const { error } = await supabase.rpc('remove_family_member', { p_member: memberId })
+    if (error) { alert('Could not remove them: ' + error.message); return }
     reload()
   }
 
@@ -178,12 +185,12 @@ export default function FamilyInvitePage() {
                 )}
               </div>
 
-              {/* Invite family members */}
-              {isOwner && (
+              {/* Invite family members (the free plan has one seat, so the lock below takes its place) */}
+              {isOwner && !atFreeLimit && (
                 <div className="bg-white rounded-2xl p-5 shadow-sm">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3">Invite family members</p>
                   <p className="text-gray-600 text-base leading-relaxed mb-4">
-                    Siblings, a spouse, a caregiver. Everyone who joins gets the daily check-in text and can send a nudge.
+                    Siblings, a spouse, a caregiver. On the paid plan everyone who joins gets the texts and can send a nudge.
                   </p>
                   <div className="flex flex-col gap-2 mb-4">
                     <label className="text-gray-700 font-medium text-base">Text an invite to</label>
@@ -193,7 +200,7 @@ export default function FamilyInvitePage() {
                         inputMode="tel"
                         value={memberPhone}
                         onChange={e => { setMemberPhone(e.target.value); setMemberError('') }}
-                        placeholder="(336) 555-0100"
+                        placeholder="10-digit mobile number"
                         className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-[#2D2A24]"
                         style={{ fontSize: '17px' }}
                       />

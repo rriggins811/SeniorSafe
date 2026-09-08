@@ -231,7 +231,7 @@ export default function DashboardPage() {
         }
 
         if (fam.isSenior) {
-          supabase.from('quick_dial_contacts').select('*').eq('user_id', u.id).order('sort_order', { ascending: true }).limit(4)
+          supabase.from('quick_dial_contacts').select('*').in('user_id', fam.all.map(r => r.user_id)).order('sort_order', { ascending: true }).limit(6)
             .then(({ data }) => setQuickDialContacts(data || []))
 
           const now = new Date()
@@ -255,7 +255,7 @@ export default function DashboardPage() {
             if (anyHasPhone) {
               const oneDayAgo = new Date(Date.now() - 86400000).toISOString()
               const { data: failed } = await supabase.from('notification_log')
-                .select('created_at').eq('status', 'failed').gte('created_at', oneDayAgo)
+                .select('created_at').eq('status', 'failed').eq('channel', 'sms').gte('created_at', oneDayAgo)
                 .order('created_at', { ascending: false }).limit(1)
               if (failed?.length && !cancelled) setFailedNotification(failed[0])
             }
@@ -337,7 +337,7 @@ export default function DashboardPage() {
       user_id: user.id,
       family_name: family.familyName,
       author_name: family.me.first_name || 'Family',
-      message_text: `✅ Checked in: "${checkinNote.trim()}"`,
+      message_text: `Checked in: "${checkinNote.trim()}"`,
     })
     setNoteSaving(false)
     setNoteSaved(true)
@@ -425,8 +425,9 @@ export default function DashboardPage() {
       type: 'nudge',
       sms: null,
     })
-    if (!pushed && !nudgeTexted) await sendSMS(phone, nudgeText)
-    await supabase.from('nudge_logs').insert({ admin_id: family.senior.user_id, sent_by: user.id })
+    // The text fallback is a paid-plan extra; free covers the push nudge.
+    if (!pushed && !nudgeTexted && isPremium(family.tier)) await sendSMS(phone, nudgeText)
+    await supabase.from('nudge_logs').insert({ admin_id: family.senior.user_id, sent_by: user.id, date: localDateStr() })
     const n = nudgeCount + 1
     setNudgeCount(n)
     if (n === 2) {
@@ -567,7 +568,6 @@ export default function DashboardPage() {
       onDismissTrial={() => setTrialBannerDismissed(true)}
       planEnded={planEnded(family.owner)}
       contactName={primaryContact(family)?.first_name || ''}
-      isOwner={isOwner}
       smsToast={smsToast}
       onDismissToast={() => setSmsToast('')}
     />

@@ -15,6 +15,17 @@ function normalizePhone(raw: string): string {
   return digits.startsWith('1') ? `+${digits}` : `+1${digits}`
 }
 
+// The UTC instant when the wall clock in tz reads dateStr 00:00 (two passes cover DST days).
+function localMidnightUtc(dateStr: string, tz: string): string {
+  let guess = new Date(`${dateStr}T00:00:00Z`)
+  for (let i = 0; i < 2; i++) {
+    const wall = new Date(guess.toLocaleString('en-US', { timeZone: tz }))
+    const offsetMs = wall.getTime() - guess.getTime()
+    guess = new Date(new Date(`${dateStr}T00:00:00Z`).getTime() - offsetMs)
+  }
+  return guess.toISOString()
+}
+
 function getLocalDate(tz: string): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: tz }) // YYYY-MM-DD
 }
@@ -72,7 +83,12 @@ type ProfileRow = {
   family_name: string | null
 }
 
-serve(async (_req) => {
+serve(async (req) => {
+  // Cron endpoint: only the service role may call it.
+  const authHeader = req.headers.get('Authorization') || ''
+  if (authHeader !== `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  }
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
   const ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID')!
@@ -133,10 +149,7 @@ serve(async (_req) => {
       if (alreadySent?.length) { skipped++; continue }
 
       // Has the senior checked in today (their local day)?
-      const dayStartUtc = new Date(new Date().toLocaleString('en-US', { timeZone: tz }))
-      dayStartUtc.setHours(0, 0, 0, 0)
-      const offsetMs = new Date().getTime() - new Date(new Date().toLocaleString('en-US', { timeZone: tz })).getTime()
-      const dayStartIso = new Date(dayStartUtc.getTime() + offsetMs).toISOString()
+      const dayStartIso = localMidnightUtc(todayLocal, tz)
       const { data: checkins } = await supabase
         .from('checkins').select('id').eq('user_id', senior.user_id).gte('checked_in_at', dayStartIso).limit(1)
       if (checkins?.length) { skipped++; continue }
@@ -149,8 +162,11 @@ serve(async (_req) => {
       let recipients = (familyRows || []).filter(r => r.user_id !== senior.user_id)
       if (!paidFamily) {
         // The one contact: the owner when they are not the senior, else the first member to join.
-        const contact = recipients.find(r => r.user_id === ownerId)
-          || [...recipients].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())[0]
+        // Prefer someone with a mobile number, since the text is the point.
+        const withPhone = recipients.filter(r => r.phone && r.phone.trim())
+        const pool = withPhone.length ? withPhone : recipients
+        const contact = pool.find(r => r.user_id === ownerId)
+          || [...pool].sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())[0]
         recipients = contact ? [contact] : []
       }
       if (recipients.length === 0) { skipped++; continue }
@@ -158,6 +174,10 @@ serve(async (_req) => {
       const seniorName = senior.first_name || owner.senior_name || 'Your loved one'
       const familyLabel = owner.family_name || senior.family_name || seniorName
       const message = `${seniorName} hasn't checked in today. SeniorSafe. Reply STOP to opt out`
+
+      // Log the alert before sending so a run that dies mid-way does not text everyone again in 30 minutes.
+      const { error: logErr } = await supabase.from('checkin_alert_logs').insert({ admin_id: senior.user_id, date: todayLocal })
+      if (logErr) { console.error(`Could not log alert for senior ${senior.user_id}:`, logErr.message); skipped++; continue }
 
       for (const member of recipients) {
         if (!member.device_token) continue
@@ -203,8 +223,7 @@ serve(async (_req) => {
         }
       }
 
-      await supabase.from('checkin_alert_logs').insert({ admin_id: senior.user_id, date: todayLocal })
-      console.log(`Logged alert for senior ${senior.user_id} on ${todayLocal}`)
+      console.log(`Alert sent for senior ${senior.user_id} on ${todayLocal}`)
     } catch (err) {
       console.error(`Error processing senior ${senior.user_id}:`, err)
     }

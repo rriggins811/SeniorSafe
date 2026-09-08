@@ -4,6 +4,8 @@ import { ArrowLeft, Settings, Clock, Lock, Trash2, AlertTriangle, Phone, Plus, X
 import { supabase } from '../lib/supabase'
 import { isIOS, isAndroid } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
+import { loadFamily } from '../lib/family'
+import { isPremium, tasteDaysRemaining } from '../lib/subscription'
 
 const SUPABASE_FN_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1'
 
@@ -50,11 +52,14 @@ export default function ProfilePage() {
   const [qdLoading, setQdLoading] = useState(true)
   const [editingContact, setEditingContact] = useState(null) // null or { id?, label, name, phone }
   const [qdSaving, setQdSaving] = useState(false)
+  // The plan belongs to the family owner; members and the senior read it from the family.
+  const [familyTier, setFamilyTier] = useState(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       setUser(user)
+      loadFamily(user.id).then(fam => setFamilyTier(fam?.tier || 'free')).catch(() => setFamilyTier('free'))
       supabase.from('user_profile').select('*').eq('user_id', user.id).single()
         .then(({ data }) => {
           setProfile(data)
@@ -75,7 +80,7 @@ export default function ProfilePage() {
         .select('*')
         .eq('user_id', user.id)
         .order('sort_order', { ascending: true })
-        .limit(4)
+        .limit(6)
         .then(({ data }) => { setQuickDialContacts(data || []); setQdLoading(false) })
     })
   }, [])
@@ -263,7 +268,7 @@ export default function ProfilePage() {
       .select('*')
       .eq('user_id', user.id)
       .order('sort_order', { ascending: true })
-      .limit(4)
+      .limit(6)
     setQuickDialContacts(data || [])
   }
 
@@ -296,7 +301,7 @@ export default function ProfilePage() {
   const isAdmin = profile?.role === 'admin'
   const isMember = profile?.role === 'member'
   const looksAfterSomeone = isAdmin && profile && !profile.is_senior
-  const isPaid = profile?.subscription_tier === 'paid' || profile?.subscription_tier === 'trial'
+  const isPaid = isPremium(familyTier)
   const hasStripeSubscription = !!profile?.stripe_subscription_id
 
   // Billing display
@@ -381,7 +386,7 @@ export default function ProfilePage() {
                       type="tel"
                       value={form.phone}
                       onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                      placeholder="(336) 555-0100"
+                      placeholder="10-digit mobile number"
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
                       style={{ fontSize: '16px' }}
                     />
@@ -438,7 +443,7 @@ export default function ProfilePage() {
                         type="tel"
                         value={form.senior_phone}
                         onChange={e => setForm(f => ({ ...f, senior_phone: e.target.value }))}
-                        placeholder="(336) 555-0100"
+                        placeholder="10-digit mobile number"
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
                         style={{ fontSize: '16px' }}
                       />
@@ -483,20 +488,7 @@ export default function ProfilePage() {
                   <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Speed Dial Contacts</p>
                 </div>
 
-                {!isPaid ? (
-                  <div className="flex items-center gap-3 py-2">
-                    <Lock size={18} color="#9CA3AF" />
-                    <div>
-                      <p className="text-gray-500 text-sm">Speed dial is a Premium feature.</p>
-                      <button
-                        onClick={() => navigate('/upgrade')}
-                        className="text-[#D4A843] text-xs font-semibold mt-1 inline-block cursor-pointer bg-transparent border-none p-0"
-                      >
-                        Upgrade to add speed dial contacts →
-                      </button>
-                    </div>
-                  </div>
-                ) : qdLoading ? (
+                {qdLoading ? (
                   <p className="text-gray-400 text-sm py-4 text-center">Loading...</p>
                 ) : (
                   <div className="flex flex-col gap-3">
@@ -530,14 +522,14 @@ export default function ProfilePage() {
                       </div>
                     ))}
 
-                    {quickDialContacts.length < 4 && (
+                    {quickDialContacts.length < 6 && (
                       <button
                         type="button"
                         onClick={() => setEditingContact({ label: '', name: '', phone: '' })}
                         className="w-full py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 font-semibold text-sm flex items-center justify-center gap-2 hover:border-[#1B365D] hover:text-[#1B365D]"
                       >
                         <Plus size={16} />
-                        Add Contact ({quickDialContacts.length}/4)
+                        Add Contact ({quickDialContacts.length}/6)
                       </button>
                     )}
                   </div>
@@ -554,8 +546,8 @@ export default function ProfilePage() {
                   <span className="text-gray-500">Plan: </span>
                   <span className={isPaid ? 'text-green-600 font-medium' : 'text-gray-600'}>
                     {profile?.subscription_tier === 'trial' && profile?.trial_status === 'active'
-                      ? `Premium Trial (${Math.max(0, Math.ceil((new Date(new Date(profile.trial_start_date).getTime() + 14 * 24 * 60 * 60 * 1000) - new Date()) / (1000 * 60 * 60 * 24)))} days left)`
-                      : isPaid ? `Premium (${billingInterval})` : 'Free'}
+                      ? (tasteDaysRemaining(profile) != null ? `Paid plan, ${tasteDaysRemaining(profile)} free days left` : 'Paid plan, free trial')
+                      : isPaid ? `Paid plan (${billingInterval})` : 'Free'}
                   </span>
                 </p>
                 {isPaid && periodEnd && (
@@ -663,7 +655,7 @@ export default function ProfilePage() {
                 {periodEnd && (
                   <p className="text-xs text-gray-500 mb-3">
                     {cancelledAt
-                      ? `Your plan will end on ${periodEnd}. You'll keep Premium access until then.`
+                      ? `Your plan will end on ${periodEnd}. You'll keep the paid plan until then.`
                       : profile?.subscription_tier === 'trial'
                       ? `Your free trial ends ${periodEnd}. Your first charge of $14.99 is that day unless you cancel before then.`
                       : `Next billing date: ${periodEnd}`
@@ -932,7 +924,7 @@ export default function ProfilePage() {
                 type="tel"
                 value={editingContact.phone}
                 onChange={e => setEditingContact(c => ({ ...c, phone: e.target.value }))}
-                placeholder="(336) 555-0100"
+                placeholder="10-digit mobile number"
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
                 style={{ fontSize: '16px' }}
               />

@@ -100,6 +100,7 @@ const FREE_FEATURES = [
   { text: 'A text to one family contact when a check-in is missed or I Need Help is pressed' },
   { text: 'Check-in history, the emergency card, and medication reminders on the senior\'s screen' },
   { text: 'The senior\'s invite by text or link' },
+  { text: 'Six one-tap call contacts on the senior\'s screen' },
   { text: '10 messages with Maggie, total' },
 ]
 
@@ -176,7 +177,6 @@ export default function UpgradePage() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       console.log('DEBUG session:', session?.access_token ? 'JWT present' : 'JWT MISSING')
-      console.log('DEBUG user:', session?.user?.email, 'tier:', tier, 'plan:', plan)
 
       if (!session) throw new Error('Not logged in')
 
@@ -355,7 +355,8 @@ export default function UpgradePage() {
   const featureLabel = FEATURE_LABELS[feature] || ''
 
   // Already on the paid plan.
-  if (tier === 'paid' || tier === 'premium_plus') {
+  // Paid, or inside a store or Stripe trial that already exists (a legacy no-card trial can still buy).
+  if (tier === 'paid' || tier === 'premium_plus' || (tier === 'trial' && (profile?.stripe_subscription_id || profile?.subscription_platform))) {
     return (
       <>
       <DoubleBillingModal
@@ -539,7 +540,7 @@ export default function UpgradePage() {
                 disabled={loading || tier === null}
                 className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
               >
-                {tier === null ? 'Loading...' : loading ? 'Redirecting to checkout...' : tasteEligible ? `Start ${TASTE_DAYS} free days` : `Subscribe, ${plan === 'monthly' ? monthlyPrice + ' a month' : annualMonthly + ' a month'}`}
+                {tier === null ? 'Loading...' : loading ? 'Redirecting to checkout...' : tasteEligible ? `Start ${TASTE_DAYS} free days` : `Subscribe, ${plan === 'monthly' ? monthlyPrice + ' a month' : annualPrice + ' a year'}`}
               </button>
 
             </>

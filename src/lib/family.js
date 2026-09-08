@@ -46,7 +46,7 @@ export async function loadFamily(userId) {
     // The senior's first name if they have joined, else what the owner typed at setup.
     seniorName: senior?.first_name || owner?.senior_name || me.senior_name || '',
     seniorPhone: senior?.phone || owner?.senior_phone || '',
-    checkinAlertTime: owner?.checkin_alert_time || '09:00',
+    checkinAlertTime: owner?.checkin_alert_time || '12:00',
   }
 }
 

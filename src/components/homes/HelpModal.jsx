@@ -52,7 +52,7 @@ export default function HelpModal({
               onClick={onClose}
               className="w-full py-4 rounded-xl bg-gray-200 text-gray-600 font-semibold text-base"
             >
-              I don't need 911 — go back home
+              I don't need 911, go back home
             </button>
           </div>
         ) : (
@@ -63,7 +63,7 @@ export default function HelpModal({
               </div>
               <h2 className="text-[#1B365D] font-bold text-xl">Are you sure?</h2>
               <p className="text-gray-500 text-base leading-relaxed">
-                This will send an urgent alert to your entire family.
+                This sends an urgent text to your family asking someone to check on you.
               </p>
             </div>
             <div className="flex flex-col gap-3">

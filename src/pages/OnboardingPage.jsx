@@ -145,7 +145,7 @@ export default function OnboardingPage() {
     // The one free text goes to the owner's number, so it has to be real.
     const ownerProblem = phoneProblem(ownerPhone)
     if (path === 'family' && isOauthNew && ownerProblem) { setError(ownerProblem + ' The text when they miss a check-in goes to your number.'); return }
-    if (ownerPhone.trim() && ownerProblem) { setError('Your number: ' + ownerProblem); return }
+    if (isOauthNew && ownerPhone.trim() && ownerProblem) { setError('Your number: ' + ownerProblem); return }
     if (seniorPhone.trim() && phoneProblem(seniorPhone)) { setError('Their number: ' + phoneProblem(seniorPhone)); return }
     if (isOauthNew && !ownerFirst.trim()) { setError('Please enter your first name.'); return }
     setSaving(true)
@@ -249,11 +249,11 @@ export default function OnboardingPage() {
             {isOauthNew && (
               <>
                 <Field label="Your first name" value={ownerFirst} onChange={setOwnerFirst} autoFocus />
-                <Field label="Your mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="You get a text if they miss a check-in." value={ownerPhone} onChange={setOwnerPhone} />
+                <Field label="Your mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="10-digit mobile number" hint="You get a text if they miss a check-in." value={ownerPhone} onChange={setOwnerPhone} />
               </>
             )}
             <Field label="Their first name" placeholder="e.g. Mom, Margaret" value={seniorFirst} onChange={v => { setSeniorFirst(v); setError('') }} autoFocus={!isOauthNew} />
-            <Field label="Their mobile number" type="tel" inputMode="tel" placeholder="(336) 555-0100" hint="We'll text them a link that opens straight to their button. You can add this later." value={seniorPhone} onChange={setSeniorPhone} />
+            <Field label="Their mobile number" type="tel" inputMode="tel" placeholder="10-digit mobile number" hint="We'll text them a link that opens straight to their button. You can add this later." value={seniorPhone} onChange={setSeniorPhone} />
             <Select
               label="Check-in time"
               value={alertTime}
@@ -355,7 +355,7 @@ export default function OnboardingPage() {
           {isOauthNew && (
             <>
               <Field large label="Your first name" value={ownerFirst} onChange={setOwnerFirst} autoFocus />
-              <Field large label="Your mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="(336) 555-0100" hint="Optional. Lets your family send you a text nudge." value={ownerPhone} onChange={setOwnerPhone} />
+              <Field large label="Your mobile number" type="tel" inputMode="tel" autoComplete="tel" placeholder="10-digit mobile number" hint="Optional. Lets your family send you a text nudge." value={ownerPhone} onChange={setOwnerPhone} />
             </>
           )}
           <Select large label="Check in by" value={alertTime} onChange={setAlertTime} options={TIME_OPTIONS} hint={`If you haven't tapped "I'm Okay" by ${timeLabel}, your family gets an alert.`} />

@@ -18,7 +18,7 @@ SeniorSafe is not responsible for notification delivery failures including but n
   },
   {
     title: '3. Not Medical or Legal Advice',
-    body: `Nothing in SeniorSafe — including the AI assistant, medication tracker, or any content — constitutes medical advice, legal advice, or financial advice. The AI assistant is powered by Anthropic's Claude and may produce inaccurate information. Always consult qualified professionals for medical, legal, and financial decisions.
+    body: `Nothing in SeniorSafe, including the AI assistant, medication tracker, or any content, constitutes medical advice, legal advice, or financial advice. The AI assistant is powered by Anthropic's Claude and may produce inaccurate information. Always consult qualified professionals for medical, legal, and financial decisions.
 
 The medication tracking feature is a personal reminder tool only. It does not replace professional pharmaceutical guidance. Always follow your healthcare provider's instructions regarding medications.`,
   },

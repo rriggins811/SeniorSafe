@@ -38,7 +38,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'How do I add my brother, sister, or a caregiver?',
-        a: 'Tap the family icon at the top of your home screen. Type their mobile number and tap Send, and they get a text with a link. You can also share the link or the 6-character family code any way you like. Everyone who joins gets the daily check-in text and can send a nudge.',
+        a: 'Tap the family icon at the top of your home screen. Type their mobile number and tap Send, and they get a text with a link. You can also share the link or the 6-character family code any way you like. On the paid plan everyone who joins gets the texts and can send a nudge; the free plan covers one family contact.',
       },
       {
         q: 'Where do I find the family code?',
@@ -50,7 +50,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'How do I know it worked?',
-        a: 'Your home screen changes from "Waiting for [name] to join" to their name and check-in status. The first time they tap their button you get a text, and the screen shows "[name] is okay, checked in at [time]."',
+        a: 'Your home screen changes from "Waiting for [name] to join" to their name and check-in status. The first time they tap their button the screen shows "[name] is okay, checked in at [time]." On the paid plan you also get a text for each check-in.',
       },
     ],
   },
@@ -72,7 +72,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'My parent tapped the button but I did not get a text.',
-        a: 'Check three things. Your mobile number is in Settings and correct. Your family is on the trial or Premium (check-in texts and missed check-in alerts are Premium features; the trial includes them). And you have not replied STOP to a SeniorSafe text, which turns texts off; reply START to turn them back on. The check-in still shows in the app either way.',
+        a: 'Check three things. Your mobile number is in Settings and correct. The text for each check-in is a paid-plan feature (the free plan texts one contact only when a check-in is missed or I Need Help is pressed). And you have not replied STOP to a SeniorSafe text, which turns texts off; reply START to turn them back on. The check-in still shows in the app either way.',
       },
       {
         q: 'I got a "hasn\'t checked in" alert but they are fine.',
@@ -98,7 +98,7 @@ export const SETUP_FAQ = [
     items: [
       {
         q: 'What am I supposed to do each day?',
-        a: 'Open SeniorSafe and tap the big blue button that says "I\'m Okay Today." Once a day is all it takes. It turns green and says "You\'re checked in." Your family gets a text that you are okay.',
+        a: 'Open SeniorSafe and tap the big blue button that says "I\'m Okay Today." Once a day is all it takes. It turns green and says "You\'re checked in." Your family sees it right away, and on the paid plan they get a text too.',
       },
       {
         q: 'Do I have to keep the app open?',
@@ -110,7 +110,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'What is the red "I Need Help" button?',
-        a: 'It sends an urgent text to everyone in your family asking them to check on you right away. It asks "Are you sure?" first, so a bump does not send it. It is not 911. If it is an emergency, call 911.',
+        a: 'It sends an urgent text asking your family to check on you right away: one family contact on the free plan, everyone on the paid plan. It asks "Are you sure?" first, so a bump does not send it. It is not 911. If it is an emergency, call 911.',
       },
       {
         q: 'I cannot find the app on my phone.',
@@ -130,7 +130,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'Can I add a note, like "going to the store"?',
-        a: 'Yes. After you tap "I\'m Okay Today," a box appears where you can type a short note. It shows up on your family\'s screen and in the family messages. If you do not want to, just skip it.',
+        a: 'Yes. After you tap "I\'m Okay Today," a box appears where you can type a short note. On the paid plan it shows up in the family messages. If you do not want to, just skip it.',
       },
       {
         q: 'What is "Ask a question"?',

@@ -70,3 +70,10 @@ export function tasteDaysRemaining(p) {
   const ms = new Date(p.subscription_period_end) - new Date()
   return Math.max(0, Math.ceil(ms / 86400000))
 }
+
+// Moved from LockedFeature.jsx (react-refresh wants component files to export only components).
+export function priceLine() {
+  if (isIOS()) return `${MONTHLY_PRICE} a month through the App Store, with a free trial first.`
+  if (isAndroid()) return `${MONTHLY_PRICE} a month through Google Play, with a free trial first.`
+  return `${MONTHLY_PRICE} a month. Try it free for ${TASTE_DAYS} days.`
+}

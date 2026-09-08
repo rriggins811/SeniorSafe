@@ -264,7 +264,7 @@ export default function FamilyHome({
                 {trialDays === 1 ? 'Your free trial ends tomorrow' : `Your free trial ends in ${trialDays} days`}
               </p>
               <p className="text-amber-700 text-base mt-0.5 leading-relaxed">
-                After that, the missed check-in alert and check-in texts stop. Subscribe to keep them.
+                After that, the texts to everyone and the family features stop; one contact still gets the missed check-in text. Subscribe to keep the rest.
               </p>
               <button
                 onClick={() => onNavigate('/upgrade')}
@@ -332,8 +332,7 @@ export default function FamilyHome({
 
           {seniorJoined && !checkedIn && adminCheckInLoaded && (
             <div className="mt-4 flex flex-col gap-2">
-              {true ? (
-                nudgeCount >= 2 ? (
+              {nudgeCount >= 2 ? (
                   <p className="text-base leading-relaxed text-[#7A2E28]">
                     Two nudges already sent today. If you are worried, call {name} or someone nearby.
                   </p>
@@ -350,15 +349,7 @@ export default function FamilyHome({
                       <p className="text-sm mt-1 leading-relaxed text-[#6B645A]">{nudgeWarning}</p>
                     )}
                   </>
-                )
-              ) : (
-                <button
-                  onClick={() => onNavigate('/upgrade')}
-                  className="w-full py-3 rounded-xl bg-white border border-[#E7E2D8] text-[#1B365D] font-semibold text-base"
-                >
-                  Nudge is a Premium feature
-                </button>
-              )}
+                )}
               {callHref && (
                 <a
                   href={callHref}

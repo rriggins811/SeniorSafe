@@ -332,7 +332,12 @@ serve(async (req) => {
 
     const { data: newCount } = await supabaseAdmin.rpc('increment_family_usage', { p_family_code: familyCode, p_month_year: month })
     const limit = tierKey ? PAID_LIMIT : FREE_LIMIT
-    const count = newCount || usageCount + 1
+    let count = newCount || usageCount + 1
+    if (!tierKey) {
+      // Free is 10 messages ever, so report the all-time total, not this month's row.
+      const { data: totalNow } = await supabaseAdmin.rpc('get_family_total_usage', { p_family_code: familyCode })
+      if (typeof totalNow === 'number') count = totalNow
+    }
 
     // ---- Context ---------------------------------------------------------
     const { data: medsData } = await supabase.from('medications').select('med_name').eq('active', true).limit(10)

@@ -72,6 +72,12 @@ serve(async (req) => {
       .single()
     const familyRoot: string = posterProfile?.invited_by || posterId
 
+    // Family messages are on the paid plan; a free family gets no push for them.
+    const { data: ownerRow } = await supabaseAdmin.from('user_profile').select('subscription_tier').eq('user_id', familyRoot).single()
+    if (!['paid', 'trial', 'premium_plus'].includes(ownerRow?.subscription_tier || '')) {
+      return new Response(JSON.stringify({ skipped: true, reason: 'free plan' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+
     // 3) Look up all OTHER family members
     const { data: familyRows } = await supabaseAdmin
       .from('user_profile')

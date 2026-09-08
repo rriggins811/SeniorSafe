@@ -74,7 +74,8 @@ serve(async (req: Request) => {
     })
 
     // Store the end date so the UI can show it
-    const periodEnd = new Date(subscription.current_period_end * 1000).toISOString()
+    const periodEndTs = subscription.current_period_end ?? (subscription as any).items?.data?.[0]?.current_period_end
+    const periodEnd = typeof periodEndTs === 'number' ? new Date(periodEndTs * 1000).toISOString() : null
     await supabase
       .from('user_profile')
       .update({ subscription_period_end: periodEnd })

@@ -80,7 +80,7 @@ export default function EmergencyPage() {
           setInfo(prev => ({ ...prev, current_meds_summary: prev.current_meds_summary || summary }))
           setDraft(prev => ({ ...prev, current_meds_summary: prev.current_meds_summary || summary }))
         }
-      })
+      }).catch(() => { setEditMode(true); setLoading(false) })
     })
   }, [])
 
@@ -90,9 +90,21 @@ export default function EmergencyPage() {
     if (!user) return
     setSaving(true)
     const { id: _id, user_id: _owner, ...fields } = draft
-    const { error } = hasRecord && recordId
-      ? await supabase.from('emergency_info').update({ ...fields, family_name: familyName, updated_at: new Date().toISOString() }).eq('id', recordId)
-      : await supabase.from('emergency_info').insert({ ...fields, user_id: user.id, family_name: familyName })
+    let error = null
+    let wrote = false
+    if (hasRecord && recordId) {
+      const { data: updated, error: updErr } = await supabase.from('emergency_info')
+        .update({ ...fields, family_name: familyName, updated_at: new Date().toISOString() }).eq('id', recordId).select('id')
+      error = updErr
+      wrote = !!updated?.length
+    }
+    if (!error && !wrote) {
+      // No row of ours to update (or the update touched nothing): write a fresh card for the family.
+      const { data: ins, error: insErr } = await supabase.from('emergency_info')
+        .insert({ ...fields, user_id: user.id, family_name: familyName }).select('id').single()
+      error = insErr
+      if (ins?.id) setRecordId(ins.id)
+    }
     setSaving(false)
     if (error) { alert('Error saving: ' + error.message); return }
     setInfo(draft)

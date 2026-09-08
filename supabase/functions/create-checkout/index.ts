@@ -150,16 +150,25 @@ serve(async (req: Request) => {
     // Store" modal instead of the regular error toast.
     const { data: targetPlatform } = await supabaseAdmin
       .from('user_profile')
-      .select('subscription_platform, apple_original_transaction_id, google_original_transaction_id, subscription_tier')
+      .select('subscription_platform, apple_original_transaction_id, google_original_transaction_id, subscription_tier, stripe_subscription_id')
       .eq('user_id', targetUserId)
       .single()
 
-    const hasActiveAppleIAP =
+    const stillPaying = (targetPlatform?.subscription_tier || 'free') !== 'free'
+    const hasActiveAppleIAP = stillPaying &&
       targetPlatform?.subscription_platform === 'apple' &&
       !!targetPlatform?.apple_original_transaction_id
-    const hasActiveGoogleIAP =
+    const hasActiveGoogleIAP = stillPaying &&
       targetPlatform?.subscription_platform === 'google' &&
       !!targetPlatform?.google_original_transaction_id
+
+    // A family that already pays on the web must not get a second Stripe subscription.
+    if (stillPaying && targetPlatform?.stripe_subscription_id) {
+      return new Response(JSON.stringify({
+        error: 'existing_subscription', platform: 'stripe',
+        message: 'You already have a SeniorSafe subscription on the web. Manage it in Settings under Subscription.',
+      }), { status: 409, headers: { ...cors, 'Content-Type': 'application/json' } })
+    }
 
     if (hasActiveAppleIAP || hasActiveGoogleIAP) {
       const platform = hasActiveAppleIAP ? 'apple' : 'google'
@@ -173,10 +182,8 @@ serve(async (req: Request) => {
     }
 
     // ---- Trial days ----
-    // A brand-new owner at the card step gets the full 14 days. An older
-    // no-card trial that upgrades keeps whatever days it has left. Anyone
-    // whose trial already ended, or who ever had a Stripe subscription, pays
-    // from day one. One trial per family, ever.
+    // A family that never had a Stripe subscription gets the seven-day taste;
+    // anyone who ever had one pays from day one. One taste per family, ever.
     const { data: targetProfile } = await supabaseAdmin
       .from('user_profile')
       .select('trial_status, trial_start_date, stripe_subscription_id, stripe_customer_id')
@@ -187,7 +194,8 @@ serve(async (req: Request) => {
     const trialDays = wantsTrial && !hadStripeBefore ? TASTE_DAYS : 0
 
     // ---- Determine return URL (use origin of request) ----
-    const origin = req.headers.get('Origin') || 'https://app.seniorsafeapp.com'
+    const requestOrigin = req.headers.get('Origin') || ''
+    const origin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : 'https://app.seniorsafeapp.com'
     const successUrl = `${origin}/dashboard?upgraded=true`
     const cancelUrl = `${origin}/upgrade`
 

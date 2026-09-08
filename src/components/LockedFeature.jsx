@@ -4,17 +4,12 @@ import { supabase } from '../lib/supabase'
 import { loadFamily } from '../lib/family'
 import { Lock, ArrowLeft } from 'lucide-react'
 import { isIOS, isAndroid } from '../lib/platform'
-import { MONTHLY_PRICE, TASTE_DAYS } from '../lib/subscription'
+import { MONTHLY_PRICE, TASTE_DAYS, priceLine } from '../lib/subscription'
 import { logFunnel } from '../lib/funnel'
 
 // The one lock screen. Every paid feature shows this when the family is on
 // the free plan: what it is, the price, one tap to the plan page. A senior
 // sees a softer version that points at their family instead of a card.
-export function priceLine() {
-  if (isIOS()) return `${MONTHLY_PRICE} a month through the App Store, with a free trial first.`
-  if (isAndroid()) return `${MONTHLY_PRICE} a month through Google Play, with a free trial first.`
-  return `${MONTHLY_PRICE} a month. Try it free for ${TASTE_DAYS} days.`
-}
 
 export default function LockedFeature({ feature, title, description, Icon = Lock, back = '/dashboard' }) {
   const navigate = useNavigate()

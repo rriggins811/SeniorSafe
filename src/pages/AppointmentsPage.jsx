@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Trash2, Calendar, X, ChevronDown, ChevronUp, Download,
 import { supabase } from '../lib/supabase'
 import LockedFeature from '../components/LockedFeature'
 import { loadFamily } from '../lib/family'
+import { localDateStr } from '../lib/time'
 import { googleCalendarUrl } from '../lib/calendar'
 import { openExternalLink } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
@@ -31,7 +32,7 @@ function formatTime(timeStr) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
-function todayStr() { return new Date().toISOString().split('T')[0] }
+function todayStr() { return localDateStr() }
 
 function downloadIcs(appt) {
   const dateBase = appt.appointment_date

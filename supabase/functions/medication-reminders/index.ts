@@ -13,6 +13,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 // have been the most expensive feature in the app.
 
 // Convert UTC "now" to a user's local clock
+function dayBefore(dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
+}
+
 function getLocalTime(tz: string): { hour: number; min: number; date: string } {
   const now = new Date()
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -37,7 +43,12 @@ function fmt12(hhmm: string): string {
 const MISSED_AFTER_MINUTES = 60
 const MISSED_WINDOW_MINUTES = 180 // stop alerting 3 hours after the dose time
 
-serve(async (_req) => {
+serve(async (req) => {
+  // Cron endpoint: only the service role may call it.
+  const authHeader = req.headers.get('Authorization') || ''
+  if (authHeader !== `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  }
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -117,13 +128,22 @@ serve(async (_req) => {
       for (const scheduledTime of (med.times || [])) {
         const [sh, sm] = scheduledTime.split(':').map(Number)
         const scheduledMins = sh * 60 + sm
-        const sinceDue = nowMins - scheduledMins
+        // Minutes since the dose was due. A dose due late last night is still
+        // inside its window after midnight, so measure it across the day line
+        // instead of letting the clock wrap to a negative number.
+        let sinceDue = nowMins - scheduledMins
+        let doseDate = todayLocal
+        const acrossMidnight = nowMins + 1440 - scheduledMins
+        if (sinceDue < -60 && acrossMidnight <= MISSED_WINDOW_MINUTES) {
+          sinceDue = acrossMidnight
+          doseDate = dayBefore(todayLocal)
+        }
 
-        // Already taken today? (med_logs date is what the client wrote; it
-        // matches the local date the senior sees.)
+        // Already taken? (med_logs date is what the client wrote; it matches
+        // the local date the senior sees.)
         const { data: taken } = await supabase
           .from('med_logs').select('id')
-          .eq('medication_id', med.id).eq('date', todayLocal).eq('scheduled_time', scheduledTime).limit(1)
+          .eq('medication_id', med.id).eq('date', doseDate).eq('scheduled_time', scheduledTime).limit(1)
         if (taken?.length) continue
 
         // 1. Dose time: nudge the senior's phone (once).
@@ -143,15 +163,14 @@ serve(async (_req) => {
         // 2. Missed dose: tell the rest of the family (once per dose per day). Paid plan only.
         const paidFamily = ['paid', 'trial', 'premium_plus'].includes(owner?.subscription_tier || '')
         if (paidFamily && sinceDue >= MISSED_AFTER_MINUTES && sinceDue <= MISSED_WINDOW_MINUTES) {
-          const { data: alerted } = await supabase
-            .from('dose_alerts').select('id')
-            .eq('medication_id', med.id).eq('date', todayLocal).eq('scheduled_time', scheduledTime).limit(1)
-          if (alerted?.length) continue
+          // Claim the slot first (unique on medication, date, time) so an overlapping run cannot double-send.
           const others = fam.filter(r => !r.is_senior).map(r => r.user_id)
+          const { data: claimed, error: claimErr } = await supabase.from('dose_alerts').insert({
+            medication_id: med.id, family_root: root, date: doseDate, scheduled_time: scheduledTime, notified: others.length, delivered: 0,
+          }).select('id').single()
+          if (claimErr || !claimed) continue
           const n = await push(others, `${seniorName} may have missed a dose`, `${medDisplay} was due at ${fmt12(scheduledTime)} and is not marked as taken.`, 'missed_dose', '/medications')
-          await supabase.from('dose_alerts').insert({
-            medication_id: med.id, family_root: root, date: todayLocal, scheduled_time: scheduledTime, notified: others.length, delivered: n,
-          })
+          await supabase.from('dose_alerts').update({ delivered: n }).eq('id', claimed.id)
           missedAlerts += n
         }
       }

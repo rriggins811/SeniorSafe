@@ -27,7 +27,7 @@ function normalizePhone(raw: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Full account deletion — cancels Stripe, notifies family, deletes all data
+// Full account deletion, cancels Stripe, notifies family, deletes all data
 // ---------------------------------------------------------------------------
 serve(async (req: Request) => {
   const cors = getCorsHeaders(req)
@@ -105,7 +105,7 @@ serve(async (req: Request) => {
                 const body = new URLSearchParams({
                   To: toPhone,
                   From: FROM_NUMBER,
-                  Body: `${seniorName}'s SeniorSafe account has been closed. You can still sign in but family features will be unavailable. — SeniorSafe. Reply STOP to opt out`,
+                  Body: `${seniorName}'s SeniorSafe account has been closed. You can still sign in but family features will be unavailable., SeniorSafe. Reply STOP to opt out`,
                 })
                 await fetch(
                   `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`,
@@ -178,7 +178,7 @@ serve(async (req: Request) => {
     await supabase.from('quick_dial_contacts').delete().eq('user_id', user.id)
     await supabase.from('checkin_alert_logs').delete().eq('admin_id', user.id)
 
-    // Maggie chat (Premium+) — messages FK to conversations, so delete
+    // Maggie chat (Premium+), messages FK to conversations, so delete
     // messages first via the same parent-ID-fetch pattern used for meds.
     const { data: maggieConvs } = await supabase
       .from('maggie_conversations')
@@ -192,7 +192,7 @@ serve(async (req: Request) => {
     await supabase.from('maggie_consent').delete().eq('user_id', user.id)
     await supabase.from('maggie_usage').delete().eq('user_id', user.id)
 
-    // SeniorSafe AI (daily-buddy /ai) — same pattern.
+    // SeniorSafe AI (daily-buddy /ai), same pattern.
     const { data: aiConvs } = await supabase
       .from('ai_conversations')
       .select('id')
@@ -203,7 +203,7 @@ serve(async (req: Request) => {
     }
     await supabase.from('ai_conversations').delete().eq('user_id', user.id)
 
-    // Nudge logs (may not exist — safe to try)
+    // Nudge logs (may not exist, safe to try)
     try { await supabase.from('nudge_logs').delete().eq('admin_id', user.id) } catch { /* ignore */ }
     try { await supabase.from('nudge_logs').delete().eq('member_id', user.id) } catch { /* ignore */ }
 
@@ -224,11 +224,11 @@ serve(async (req: Request) => {
       console.error('Storage cleanup error (continuing):', storageErr)
     }
 
-    // ---- 5/6. Remove the account — but PRESERVE a paid Blueprint purchase ----
+    // ---- 5/6. Remove the account, but PRESERVE a paid Blueprint purchase ----
     // blueprint-site (the $47/$297 course) and SeniorSafe share this one
     // user_profile row + auth user. A paid course lives in course_access.tier
     // (core|premium). Hard-deleting the row + auth user also destroys that paid
-    // course access — this caused a real customer incident (a SeniorSafe opt-out
+    // course access, this caused a real customer incident (a SeniorSafe opt-out
     // silently wiped a Blueprint purchase). So when the user has paid Blueprint
     // access, keep the auth user + the row + course_access and only reset the
     // SeniorSafe-operational state. Otherwise delete fully as before.

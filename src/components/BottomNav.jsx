@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Home, FolderLock, Users, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { loadFamily } from '../lib/family'
 import AIMark from './AIMark'
 
 const MAGGIE_TAB = {
@@ -23,29 +24,19 @@ export default function BottomNav({ inline = false }) {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user || cancelled) return
 
+      // One source of truth for the family: the owner's tier and family name.
+      const fam = await loadFamily(user.id).catch(() => null)
       const { data: profile } = await supabase
         .from('user_profile')
-        .select('subscription_tier, last_family_read_at, family_name, family_code, role, invited_by, is_senior')
+        .select('last_family_read_at')
         .eq('user_id', user.id)
         .single()
 
       if (cancelled) return
-      setIsSenior(profile ? !!profile.is_senior : true)
+      setIsSenior(fam ? !!fam.isSenior : true)
+      setTier(fam?.tier || 'free')
 
-      // Members inherit their admin's tier (where the family subscription lives).
-      let effectiveTier = profile?.subscription_tier || 'free'
-      if (profile?.role === 'member' && profile?.invited_by) {
-        const { data: admin } = await supabase
-          .from('user_profile')
-          .select('subscription_tier')
-          .eq('user_id', profile.invited_by)
-          .single()
-        if (admin?.subscription_tier) effectiveTier = admin.subscription_tier
-      }
-      if (cancelled) return
-      setTier(effectiveTier)
-
-      const familyName = profile?.family_name
+      const familyName = fam?.familyName
       const lastRead = profile?.last_family_read_at || new Date(0).toISOString()
 
       if (!familyName) return
@@ -95,7 +86,7 @@ export default function BottomNav({ inline = false }) {
           // and unread state already convey via the visible icons; we keep
           // the aria-label clean here and let aria-current handle active
           // state.
-          const ariaLabel = label === 'AI' ? 'SeniorSafe AI' : label
+          const ariaLabel = label
           return (
             <button
               key={path}

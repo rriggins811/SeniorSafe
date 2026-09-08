@@ -59,7 +59,13 @@ export default function FamilyPage() {
     supabase.auth.getUser().then(async ({ data: { user: u } }) => {
       if (!u) return
       const fam = await loadFamily(u.id)
-      if (!cancelled) setFamilyTier(fam?.tier || 'free')
+      if (cancelled) return
+      setFamilyTier(fam?.tier || 'free')
+      if (fam?.familyName) setFamilyName(fam.familyName)
+      // Mark the thread read only when the person can actually see it.
+      if (isPremium(fam?.tier)) {
+        supabase.from('user_profile').update({ last_family_read_at: new Date().toISOString() }).eq('user_id', u.id).then(() => {})
+      }
     })
     return () => { cancelled = true }
   }, [])
@@ -115,17 +121,10 @@ export default function FamilyPage() {
       setUser(user)
       fetchMessages()
       fetchPhotos()
-      supabase.from('user_profile').select('family_name, first_name, last_name').eq('user_id', user.id).single()
+      supabase.from('user_profile').select('first_name, last_name').eq('user_id', user.id).single()
         .then(({ data }) => {
-          if (data?.family_name) setFamilyName(data.family_name)
           if (data?.first_name) setProfileName([data.first_name, data.last_name].filter(Boolean).join(' '))
         })
-
-      // Mark family messages as read — update last_family_read_at to now
-      supabase.from('user_profile')
-        .update({ last_family_read_at: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .then(() => {}) // fire and forget
     })
   }, [])
 

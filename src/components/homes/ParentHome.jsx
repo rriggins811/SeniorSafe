@@ -106,7 +106,7 @@ export default function ParentHome({
             <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4" role="status">
               <p className="text-red-800 font-bold" style={{ fontSize: '19px', lineHeight: 1.2 }}>Your family's plan has ended</p>
               <p className="text-red-700 mt-1" style={{ fontSize: '17px', lineHeight: 1.4 }}>
-                You can still tap the button, but your family no longer gets a text. Ask them to turn the plan back on.
+                You can still tap the button, and one family contact still gets a text if you miss a day or press I Need Help. Ask your family to turn the plan back on for the rest.
               </p>
             </div>
           )}
@@ -240,7 +240,7 @@ export default function ParentHome({
             </div>
           )}
 
-          {alreadyCheckedIn && isPremiumUser && dailyQuote && (
+          {alreadyCheckedIn && dailyQuote && (
             <div className="bg-[#F5E1E6]/40 border border-[#E7E2D8] rounded-2xl p-5">
               <p className="text-[#D4A843] font-semibold text-center mb-3" style={{ fontSize: '11px', letterSpacing: '0.16em' }}>
                 {dailyQuote.type === 'quote' ? 'DAILY INSPIRATION' : 'DAILY LAUGH'}

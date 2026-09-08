@@ -15,7 +15,7 @@ const sections = [
     items: [
       {
         q: 'What is the daily check-in?',
-        a: 'The daily check-in is the "I\'m Okay Today" button on your dashboard. Tap it once each day to let your family know you\'re doing well. Premium subscribers get automatic SMS notifications sent to all family members. If you haven\'t checked in by your set time, family members will see a reminder on their dashboard.'
+        a: 'The daily check-in is the "I\'m Okay Today" button on the senior\'s screen. Tap it once each day. The family sees it in the app right away. If it has not been tapped by the family\'s chosen time, one family contact gets a text on the free plan, and everyone in the family on the paid plan.'
       },
       {
         q: 'How do I set up medication reminders?',
@@ -49,7 +49,7 @@ const sections = [
       },
       {
         q: 'What does the "I Need Help" button do?',
-        a: 'The "I Need Help" button on the dashboard sends an urgent SMS alert to every family member who has a phone number on file. Use it when you need immediate assistance. A confirmation prompt prevents accidental alerts. This feature is available to Premium subscribers.'
+        a: 'The "I Need Help" button on the senior\'s screen sends an urgent text asking someone to check on them: to one family contact on the free plan, to everyone in the family on the paid plan. A confirmation prompt prevents accidental alerts. It is not 911.'
       }
     ]
   },
@@ -71,7 +71,7 @@ const sections = [
       },
       {
         q: 'How do I cancel my subscription?',
-        a: 'Go to your Profile page, scroll to the Subscription section, and tap "Manage Subscription." You can cancel at any time and you\'ll retain Premium access until the end of your current billing period. No cancellation fees — you can resubscribe whenever you\'d like.'
+        a: 'Go to your Profile page, scroll to the Subscription section, and tap "Manage Subscription." You can cancel at any time and you\'ll retain Premium access until the end of your current billing period. No cancellation fees, you can resubscribe whenever you\'d like.'
       }
     ]
   },
@@ -93,7 +93,7 @@ const sections = [
       },
       {
         q: 'Does the app work on iPhone and Android?',
-        a: 'Yes! SeniorSafe is a web app that works on any device with a modern browser. You can install it as an app on your home screen for quick access — you\'ll be prompted to install when you first visit. It works on iPhones (Safari), Android phones (Chrome), tablets, and desktop computers.'
+        a: 'Yes! SeniorSafe is a web app that works on any device with a modern browser. You can install it as an app on your home screen for quick access, you\'ll be prompted to install when you first visit. It works on iPhones (Safari), Android phones (Chrome), tablets, and desktop computers.'
       },
       {
         q: 'Can I use the app for more than one senior?',
@@ -189,7 +189,7 @@ export default function SupportPage() {
           />
         ))}
 
-        {/* Contact Us — always visible */}
+        {/* Contact Us, always visible */}
         <div className="bg-white rounded-2xl shadow-sm px-4 py-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-8 h-8 rounded-lg bg-[#D4A843]/20 flex items-center justify-center">
