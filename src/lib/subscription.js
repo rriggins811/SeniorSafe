@@ -1,3 +1,4 @@
+import { isIOS, isAndroid } from './platform'
 /**
  * Check if a subscription tier has premium access.
  * 'paid' and 'trial' grant the paid plan. 'premium_plus' is legacy, treated as paid.
