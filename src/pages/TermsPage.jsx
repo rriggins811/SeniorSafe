@@ -50,11 +50,15 @@ The medication tracking feature is a personal reminder tool only. It does not re
   },
   {
     title: '9. Subscriptions & Billing',
-    body: `SeniorSafe offers free and premium subscription tiers.
+    body: `SeniorSafe is a monthly subscription of $14.99 (or $143.88 a year on the web) that starts with a 14-day free trial. A payment method is collected when the family is set up. Nothing is charged during the free trial. Unless you cancel before the trial ends, the subscription begins automatically and renews each period until cancelled. We send a reminder by text and email three days before the first charge. One free trial per family.
 
-For iOS app subscribers: Payment is charged to your Apple ID account. Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period. You can manage and cancel subscriptions in your device Settings > Apple ID > Subscriptions.
+For iPhone and iPad subscribers: payment is charged to your Apple ID account. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Settings > your name > Subscriptions.
 
-For web subscribers: Payment is processed through Stripe. Subscriptions renew automatically. You can cancel at any time through your account settings.
+For Android subscribers: payment is charged through Google Play. Manage or cancel in the Play Store under Subscriptions.
+
+For web subscribers: payment is processed through Stripe. Cancel at any time in Settings under Subscription; access continues to the end of the period already paid for, and no further charges are made.
+
+If a payment fails, we retry for several days and notify you before any feature is turned off. When a subscription ends for any reason, the family keeps the free plan (daily check-in in the app without texts or the missed check-in alert, limited assistant use).
 
 No refunds are provided for partial billing periods. Prices may change with notice.`,
   },
