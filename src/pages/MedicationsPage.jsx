@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2, Pill, X, Check, Lock, Calendar } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { loadFamily } from '../lib/family'
 import { googleCalendarUrl, addMinutes } from '../lib/calendar'
 import { openExternalLink } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
@@ -87,9 +88,10 @@ export default function MedicationsPage() {
         .then(({ data }) => {
           const phone = data?.phone || user.user_metadata?.phone || ''
           setUserPhone(phone)
-          setSubscriptionTier(data?.subscription_tier || 'free')
           if (data?.family_name) setFamilyName(data.family_name)
         })
+      // The plan belongs to the family owner, so members and the senior read it from the family.
+      loadFamily(user.id).then(fam => setSubscriptionTier(fam?.tier || 'free'))
     })
   }, [])
 

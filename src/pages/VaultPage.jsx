@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Upload, Camera, Trash2, FileText, X, FolderLock, Lock, Eye, EyeOff, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import LockedFeature from '../components/LockedFeature'
+import { loadFamily } from '../lib/family'
 import BottomNav from '../components/BottomNav'
 import { openExternalLink } from '../lib/platform'
 import EmptyVault from '../components/illustrations/EmptyVault'
@@ -112,7 +113,9 @@ export default function VaultPage() {
 
       if (!profile) return
 
-      setSubscriptionTier(profile.subscription_tier || 'free')
+      // The plan belongs to the family owner, so members and the senior read it from the family.
+      const fam = await loadFamily(authUser.id)
+      setSubscriptionTier(fam?.tier || 'free')
       setRole(profile.role || 'admin')
       setVaultShared(profile.vault_shared || false)
       if (profile.family_name) setFamilyName(profile.family_name)

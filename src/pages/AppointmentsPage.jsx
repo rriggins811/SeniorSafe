@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2, Calendar, X, ChevronDown, ChevronUp, Download, Lock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import LockedFeature from '../components/LockedFeature'
+import { loadFamily } from '../lib/family'
 import { googleCalendarUrl } from '../lib/calendar'
 import { openExternalLink } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
@@ -102,11 +103,11 @@ export default function AppointmentsPage() {
       if (!user) return
       setUser(user)
       fetchAppointments()
-      supabase.from('user_profile').select('subscription_tier, family_name').eq('user_id', user.id).single()
-        .then(({ data }) => {
-          setSubscriptionTier(data?.subscription_tier || 'free')
-          if (data?.family_name) setFamilyName(data.family_name)
-        })
+      // The plan belongs to the family owner, so members and the senior read it from the family.
+      loadFamily(user.id).then(fam => {
+        setSubscriptionTier(fam?.tier || 'free')
+        if (fam?.familyName) setFamilyName(fam.familyName)
+      })
     })
   }, [])
 
