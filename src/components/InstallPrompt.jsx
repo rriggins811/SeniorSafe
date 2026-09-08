@@ -1,27 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Download, X, Share } from 'lucide-react'
+import { SENIOR_EVENT, isSeniorScreen } from '../lib/seniorScreen'
 
 // The "add to home screen" nudge for the web app. Rules (2026-09-08):
 // only on the family's home screen, never on the senior's screen, and once
 // dismissed it stays dismissed on that device.
 
 const DISMISS_KEY = 'pwa-install-dismissed'
-const SENIOR_KEY = 'ss-senior-screen'
-const SENIOR_EVENT = 'ss-senior-screen'
-
-// ParentHome calls this so the banner knows the senior is looking.
-export function setSeniorScreen(on) {
-  try {
-    if (on) sessionStorage.setItem(SENIOR_KEY, '1')
-    else sessionStorage.removeItem(SENIOR_KEY)
-  } catch { /* storage blocked; the banner just stays quiet */ }
-  window.dispatchEvent(new CustomEvent(SENIOR_EVENT, { detail: !!on }))
-}
-
-function isSeniorScreen() {
-  try { return sessionStorage.getItem(SENIOR_KEY) === '1' } catch { return false }
-}
 
 function wasDismissed() {
   try { return !!localStorage.getItem(DISMISS_KEY) } catch { return false }

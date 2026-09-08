@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { setSeniorScreen } from '../InstallPrompt'
+import { setSeniorScreen } from '../../lib/seniorScreen'
 import {
   Shield, CheckCircle, Phone, Settings, LogOut, Pill, Menu, ChevronRight, MessageCircle,
   Users, Calendar, Heart, FolderLock, Lock, X,
