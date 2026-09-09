@@ -86,6 +86,9 @@ async function getApnsJwt(): Promise<string> {
 // ---------------------------------------------------------------------------
 // Send push to a single device
 // ---------------------------------------------------------------------------
+// Why the last push failed, for notification_log (2026-09-09: 'failed' alone hid a config error for months).
+let lastPushError = ''
+
 async function sendApnsPush(
   deviceToken: string,
   title: string,
@@ -123,12 +126,14 @@ async function sendApnsPush(
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      console.error(`APNs error for ${deviceToken}:`, res.status, err)
+      console.error(`APNs error for ${deviceToken.slice(0, 12)}...:`, res.status, err)
+      lastPushError = `APNs ${res.status} ${(err as { reason?: string })?.reason || ''}`.trim()
       return false
     }
     return true
   } catch (err) {
     console.error('APNs send error:', (err as Error).message)
+    lastPushError = `APNs error: ${(err as Error).message}`
     return false
   }
 }
@@ -212,6 +217,7 @@ async function sendFcmPush(
     if (!res.ok) {
       const err = await res.text().catch(() => '')
       console.error(`FCM v1 error for ${deviceToken.slice(0, 12)}...:`, res.status, err.slice(0, 300))
+      lastPushError = `FCM ${res.status} ${err.slice(0, 120)}`
       return false
     }
     return true
@@ -294,7 +300,7 @@ serve(async (req) => {
       })
     }
 
-    const results: Array<{ user_id: string; push: boolean; sms: boolean }> = []
+    const results: Array<{ user_id: string; push: boolean; sms: boolean; error?: string }> = []
 
     for (const userId of user_ids) {
       const { data: profile } = await supabaseAdmin
@@ -305,12 +311,13 @@ serve(async (req) => {
 
       // A regular caller may only notify members of their OWN family (#8).
       if (!isInternal && (profile?.invited_by || userId) !== callerRoot) {
-        results.push({ user_id: userId, push: false, sms: false })
+        results.push({ user_id: userId, push: false, sms: false, error: profile ? 'not in caller family' : 'profile not found' })
         continue
       }
 
       let pushSent = false
       let smsSent = false
+      lastPushError = ''
 
       if (profile?.device_token) {
         if (profile.device_platform === 'ios') {
@@ -328,7 +335,7 @@ serve(async (req) => {
         channel: 'push',
         status: pushSent ? 'sent' : 'failed',
         recipient_device_token: profile?.device_token || null,
-        error_message: pushSent ? null : 'Push delivery failed or no device token',
+        error_message: pushSent ? null : (lastPushError || (profile?.device_token ? 'Push delivery failed' : 'No device token')),
       })
 
       // SMS fallback if push failed and phone available
@@ -346,7 +353,7 @@ serve(async (req) => {
         })
       }
 
-      results.push({ user_id: userId, push: pushSent, sms: smsSent })
+      results.push({ user_id: userId, push: pushSent, sms: smsSent, ...(pushSent ? {} : { error: lastPushError || (profile?.device_token ? 'push failed' : 'no device token') }) })
     }
 
     return new Response(JSON.stringify({ results }), {
