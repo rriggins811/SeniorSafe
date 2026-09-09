@@ -2,7 +2,7 @@ import { Capacitor } from '@capacitor/core'
 import { PushNotifications } from '@capacitor/push-notifications'
 import { supabase } from './supabase'
 
-let registered = false
+let registeredFor = null
 
 /**
  * Request push notification permissions and register the device token.
@@ -10,7 +10,9 @@ let registered = false
  * No-op on web.
  */
 export async function registerPushNotifications(userId) {
-  if (registered) return
+  // Once per signed-in user, not once per app launch: signing out and back in
+  // as someone else on the same phone must save the token to the new row.
+  if (registeredFor === userId) return
   if (!Capacitor.isNativePlatform()) return
 
   try {
@@ -38,21 +40,23 @@ export async function registerPushNotifications(userId) {
       }
     }
 
-    await PushNotifications.register()
-
+    // Listeners go on BEFORE register(): the registration event can fire
+    // before an await returns, and a missed event means no token is saved.
+    await PushNotifications.removeAllListeners()
     PushNotifications.addListener('registration', async (token) => {
-      console.log('Push token:', token.value)
-      registered = true
+      console.log('Push token received')
+      registeredFor = userId
 
       const platform = Capacitor.getPlatform() // 'ios' or 'android'
-      await supabase
+      const { error } = await supabase
         .from('user_profile')
         .update({ device_token: token.value, device_platform: platform })
         .eq('user_id', userId)
+      if (error) console.error('Push token save failed:', error.message)
     })
 
     PushNotifications.addListener('registrationError', (error) => {
-      console.error('Push registration error:', error)
+      console.error('Push registration error:', JSON.stringify(error))
     })
 
     // Handle incoming notifications while app is in foreground
@@ -68,6 +72,8 @@ export async function registerPushNotifications(userId) {
         window.location.href = data.route
       }
     })
+
+    await PushNotifications.register()
   } catch (err) {
     console.error('Push setup error:', err)
   }
