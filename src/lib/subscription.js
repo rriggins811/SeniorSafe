@@ -55,7 +55,15 @@ export function primaryContact(family) {
 export function planEnded(owner) {
   if (!owner) return false
   if (owner.subscription_tier !== 'free') return false
-  return owner.trial_status === 'expired' || owner.trial_status === 'converted' || Boolean(owner.stripe_subscription_id)
+  const lapsed = owner.trial_status === 'expired' || owner.trial_status === 'converted' || Boolean(owner.stripe_subscription_id)
+  if (!lapsed) return false
+  // Only a recent lapse deserves the banner (a card that failed, a taste that
+  // just ended). Rows with no period end are trials from before the free door;
+  // free is their normal state now, so they stay quiet.
+  const end = owner.subscription_period_end ? new Date(owner.subscription_period_end).getTime() : NaN
+  if (!Number.isFinite(end)) return false
+  const daysSince = (Date.now() - end) / 86400000
+  return daysSince >= 0 && daysSince <= 30
 }
 
 // First charge date for a card-on-file taste, as a readable string.
