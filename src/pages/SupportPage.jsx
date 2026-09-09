@@ -179,6 +179,25 @@ export default function SupportPage() {
       </div>
 
       <div className="px-4 mt-4 space-y-3">
+        {/* How-to videos */}
+        <button
+          type="button"
+          onClick={() => openExternalLink('https://seniorsafeapp.com/how-to')}
+          className="w-full text-left bg-white rounded-2xl border border-[#1B365D]/15 p-4 mb-4 shadow-sm active:scale-[0.99]"
+        >
+          <div className="flex items-start gap-3">
+            <div className="bg-[#1B365D] rounded-xl p-2 flex-shrink-0">
+              <BookOpen size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="font-bold text-[#1B365D]">Watch the how-to videos</p>
+              <p className="text-sm text-gray-600 mt-1">
+                Five videos under thirty seconds: the invite link, medications, appointments, the emergency card, and the family page.
+              </p>
+            </div>
+          </div>
+        </button>
+
         {/* Accordion sections */}
         {sections.map((section, i) => (
           <AccordionSection
