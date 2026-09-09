@@ -22,6 +22,7 @@ import TermsPage from './pages/TermsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import UpgradePage from './pages/UpgradePage'
 import SupportPage from './pages/SupportPage'
+import HowToPage from './pages/HowToPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import InstallPrompt from './components/InstallPrompt'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -185,6 +186,7 @@ export default function App() {
         <Route path="/settings"      element={<Navigate to="/profile" replace />} />
         <Route path="/upgrade"       element={<P><UpgradePage /></P>} />
         <Route path="/support"       element={<P><SupportPage /></P>} />
+        <Route path="/how-to"        element={<P><HowToPage /></P>} />
         <Route path="/reset-password"  element={<ResetPasswordPage />} />
         <Route path="/terms"         element={<TermsPage />} />
         <Route path="/privacy"       element={<PrivacyPage />} />

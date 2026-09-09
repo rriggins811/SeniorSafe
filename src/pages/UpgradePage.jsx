@@ -349,7 +349,7 @@ export default function UpgradePage() {
   // Seven free days with a card, once per family (never had a Stripe subscription).
   const tasteEligible = !!profile && !profile.stripe_subscription_id
   const FEATURE_LABELS = {
-    vault: 'The document vault', appointments: 'Appointments', chat: 'Family chat', family: 'More family members',
+    vault: 'The document vault', appointments: 'Appointments', chat: 'Family chat', family: 'Texts to everyone in the family',
     missed_dose: 'Missed-dose alerts', texts: 'Texts to everyone', maggie: 'Maggie every day', note: 'Check-in notes',
   }
   const featureLabel = FEATURE_LABELS[feature] || ''

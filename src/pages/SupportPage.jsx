@@ -59,11 +59,11 @@ const sections = [
     items: [
       {
         q: 'What\'s included in the free plan?',
-        a: 'Free forever: the daily "I\'m Okay" check-in with a push nudge, a text to one family contact when a check-in is missed or I Need Help is pressed, check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite, and 10 messages with Maggie, total. Nothing to enter, no card, no clock.'
+        a: 'Free forever: the daily "I\'m Okay" check-in with a push nudge, a text to one family contact when a check-in is missed or I Need Help is pressed, check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite, siblings and caregivers joining by code to see the same board, and 10 messages with Maggie, total. Nothing to enter, no card, no clock.'
       },
       {
         q: 'How much does the paid plan cost?',
-        a: 'One paid plan: $14.99 a month, or $140 a year. It turns on texts to everyone in the family, siblings joining by code, missed-dose alerts to the family, the document vault, family messages and photos, appointments, and Maggie every day. Paid features show a lock in the free app; tap one to see the price.'
+        a: 'One paid plan: $14.99 a month, or $140 a year. It turns on texts to everyone in the family, missed-dose alerts to the family, the document vault, family messages and photos, appointments, and Maggie every day. Paid features show a lock in the free app; tap one to see the price.'
       },
       {
         q: 'How do I start the paid plan?',
@@ -182,7 +182,7 @@ export default function SupportPage() {
         {/* How-to videos */}
         <button
           type="button"
-          onClick={() => openExternalLink('https://seniorsafeapp.com/how-to')}
+          onClick={() => navigate('/how-to')}
           className="w-full text-left bg-white rounded-2xl border border-[#1B365D]/15 p-4 mb-4 shadow-sm active:scale-[0.99]"
         >
           <div className="flex items-start gap-3">
