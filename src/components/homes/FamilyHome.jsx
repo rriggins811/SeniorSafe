@@ -391,7 +391,7 @@ export default function FamilyHome({
 
         {showAddFamily && (
           <button
-            onClick={() => { if (!premium) logFunnel('lock_tap', 'family'); onNavigate(premium ? '/family-invite' : '/upgrade?feature=family') }}
+            onClick={() => onNavigate('/family-invite')}
             className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm text-left"
           >
             <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
@@ -399,9 +399,9 @@ export default function FamilyHome({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>Add the rest of the family</p>
-              <p className="text-[#6B645A] text-sm">{premium ? 'Siblings and caregivers get the same check-in text.' : `Paid plan, ${MONTHLY_PRICE} a month. Siblings and caregivers get the texts too.`}</p>
+              <p className="text-[#6B645A] text-sm">{premium ? 'Siblings and caregivers get the same check-in text.' : 'Siblings and caregivers join free and see the board. Texts to everyone is on the paid plan.'}</p>
             </div>
-            {premium ? <ChevronRight size={18} color="#C4BDB3" /> : <Lock size={18} color="#D4A843" />}
+            <ChevronRight size={18} color="#C4BDB3" />
           </button>
         )}
 

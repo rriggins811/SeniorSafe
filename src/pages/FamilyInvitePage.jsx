@@ -119,10 +119,8 @@ export default function FamilyInvitePage() {
   const seniorJoined = !!family?.senior
   const tier = family?.tier || 'free'
   const members = (family?.all || []).filter(r => r.user_id !== family?.ownerId && !r.is_senior)
-  // Free plan: one family contact. The owner counts when they are not the senior.
-  const contactCount = members.length + (family?.owner && !family.owner.is_senior ? 1 : 0)
-  const FREE_MEMBER_LIMIT = 1
-  const atFreeLimit = tier === 'free' && contactCount >= FREE_MEMBER_LIMIT
+  // 2026-09-09: siblings and caregivers join on every plan and see the same
+  // board (the Life360 circle model). The paid plan is the texts to everyone.
 
   const memberText = memberInviteText({ seniorName, code })
   const seniorText = seniorInviteText({ seniorName, ownerFirstName: family?.me?.first_name, code })
@@ -181,16 +179,17 @@ export default function FamilyInvitePage() {
                     <button onClick={() => copy(seniorInviteLink(code), 'senior')} className="w-full py-3.5 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-base flex items-center justify-center gap-2">
                       {copied === 'senior' ? <><CheckCircle size={18} /> Copied</> : <><Copy size={18} /> Copy {seniorName ? `${seniorName}'s` : 'their'} link</>}
                     </button>
+                    <button onClick={() => navigate('/how-to#invite-link')} className="w-full py-2 text-[#1B365D] text-base underline underline-offset-2">Watch what {seniorName || 'they'} will see</button>
                   </div>
                 )}
               </div>
 
-              {/* Invite family members (the free plan has one seat, so the lock below takes its place) */}
-              {isOwner && !atFreeLimit && (
+              {/* Invite family members (every plan) */}
+              {isOwner && (
                 <div className="bg-white rounded-2xl p-5 shadow-sm">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3">Invite family members</p>
                   <p className="text-gray-600 text-base leading-relaxed mb-4">
-                    Siblings, a spouse, a caregiver. On the paid plan everyone who joins gets the texts and can send a nudge.
+                    Siblings, a spouse, a caregiver. Everyone joins free and sees the same board. On the paid plan everyone who joins also gets the texts and can send a nudge.
                   </p>
                   <div className="flex flex-col gap-2 mb-4">
                     <label className="text-gray-700 font-medium text-base">Text an invite to</label>
@@ -227,18 +226,18 @@ export default function FamilyInvitePage() {
                 </div>
               )}
 
-              {atFreeLimit && isOwner && (
+              {tier === 'free' && isOwner && members.length > 0 && (
                 <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-4 text-center">
-                  <p className="text-yellow-800 font-semibold text-base mb-1">The free plan covers one family contact</p>
-                  <p className="text-yellow-700 text-base mb-3 leading-relaxed">On the paid plan, siblings and caregivers join by code and get the texts too. $14.99 a month.</p>
-                  <button onClick={() => { logFunnel('lock_tap', 'family'); navigate('/upgrade?feature=family') }} className="px-6 py-2.5 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-base">See the paid plan</button>
+                  <p className="text-yellow-800 font-semibold text-base mb-1">On the free plan, the texts go to one contact</p>
+                  <p className="text-yellow-700 text-base mb-3 leading-relaxed">Everyone here sees the check-in. The paid plan texts every member for the daily check-in, a missed check-in, and I Need Help. $14.99 a month.</p>
+                  <button onClick={() => { logFunnel('lock_tap', 'texts'); navigate('/upgrade?feature=texts') }} className="px-6 py-2.5 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-base">See the paid plan</button>
                 </div>
               )}
 
               {/* Member list */}
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3 px-1">
-                  Family members ({members.length}{tier === 'free' ? ', free plan: one contact' : ''})
+                  Family members ({members.length}{tier === 'free' ? ', texts go to one contact on the free plan' : ''})
                 </p>
                 {members.length === 0 ? (
                   <div className="bg-white rounded-2xl p-6 shadow-sm text-center">

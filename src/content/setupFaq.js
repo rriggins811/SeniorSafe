@@ -144,11 +144,11 @@ export const SETUP_FAQ = [
     items: [
       {
         q: 'Is SeniorSafe free?',
-        a: 'Yes. The free plan is free forever, no card: the daily check-in button, a text to one family contact when the check-in is missed or I Need Help is pressed, a push nudge, the check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite by text or link, and 10 messages with Maggie.',
+        a: 'Yes. The free plan is free forever, no card: the daily check-in button, a text to one family contact when the check-in is missed or I Need Help is pressed, a push nudge, the check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite by text or link, siblings and caregivers joining by code to see the same board, and 10 messages with Maggie.',
       },
       {
         q: 'What does the paid plan add, and what does it cost?',
-        a: '$14.99 a month. Texts to everyone in the family (the daily check-in, a missed check-in, I Need Help), siblings and caregivers joining by code, a notification to the family when a dose is not marked taken within an hour, the document vault, family chat with photos and the note on each check-in, appointments, and Maggie every day. Paid features show a lock in the app; tap one to see the price.',
+        a: '$14.99 a month. Texts to everyone in the family (the daily check-in, a missed check-in, I Need Help), a notification to the family when a dose is not marked taken within an hour, the document vault, family chat with photos and the note on each check-in, appointments, and Maggie every day. Paid features show a lock in the app; tap one to see the price.',
       },
       {
         q: 'Is there a trial?',

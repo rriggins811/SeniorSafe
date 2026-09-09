@@ -45,9 +45,9 @@ section, then verify against production.
   (cache_read == cache_creation == 5295 in `ai_user_budgets`).
 - **Plans (free door, locked 2026-09-08, see RSS-Business/SeniorSafe App/HANDOFF_to_app_session_2026-09-08.md):**
   Free forever = check-in, push nudge, missed-check-in and I Need Help text to ONE
-  contact, history, emergency card, medication reminders, senior invite, Maggie 10
-  messages per family. Paid ($14.99/mo or $140/yr, Stripe price_1UDRZmFoeumweL6DZzvPb6w6
-  annual) behind locks = texts to everyone, siblings by code, missed-dose alerts, vault,
+  contact, history, emergency card, medication reminders, senior invite, siblings and
+  caregivers joining by code (every plan since 2026-09-09), Maggie 10 messages per family. Paid ($14.99/mo or $140/yr, Stripe price_1UDRZmFoeumweL6DZzvPb6w6
+  annual) behind locks = texts to everyone, missed-dose alerts, vault,
   family chat + check-in note, appointments, Maggie budget. A lock tap goes to
   /upgrade?feature=x, price, then seven free days with a card (TASTE_DAYS in
   lib/subscription.js). Members read the plan from the OWNER via lib/family.js
