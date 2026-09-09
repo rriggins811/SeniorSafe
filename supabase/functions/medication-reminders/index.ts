@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { isServiceBearer } from '../_shared/cronAuth.ts'
 
 // Medication reminders. Runs every 5 minutes (pg_cron).
 //
@@ -46,7 +47,7 @@ const MISSED_WINDOW_MINUTES = 180 // stop alerting 3 hours after the dose time
 serve(async (req) => {
   // Cron endpoint: only the service role may call it.
   const authHeader = req.headers.get('Authorization') || ''
-  if (authHeader !== `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`) {
+  if (!(await isServiceBearer(req))) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
   }
   const supabase = createClient(

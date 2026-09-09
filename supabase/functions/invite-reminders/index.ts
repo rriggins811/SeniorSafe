@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { isServiceBearer } from '../_shared/cronAuth.ts'
 
 // Invite reminders. Runs once a day (cron, see 20260904_invite_delivery.sql).
 //
@@ -37,7 +38,7 @@ async function sendTwilio(to: string, body: string) {
 serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const auth = req.headers.get('Authorization') || ''
-  if (auth !== `Bearer ${serviceKey}`) {
+  if (!(await isServiceBearer(req))) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
   }
 
