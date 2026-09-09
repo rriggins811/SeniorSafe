@@ -13,10 +13,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 //  2. Optional server-side RevenueCat entitlement verification. When
 //     REVENUECAT_SECRET_KEY is set, the claimed entitlement is verified
 //     against RevenueCat's API for this app_user_id (= Supabase user id)
-//     before any tier change. Until that secret is configured the function
-//     keeps its prior trust-the-client behaviour so live purchases are not
-//     interrupted; configure the secret to enforce. This is the full fix
-//     for the free-upgrade bypass and needs NO app rebuild.
+//     before any tier change. Since 2026-09-09 the secret is set and the
+//     function FAILS CLOSED without it: no verification, no tier change.
+//     This is the full fix for the free-upgrade bypass and needs NO rebuild.
 //
 // NOTE (2026-06-10 repo sync): this file was re-synced FROM the deployed
 // function (version 21). The repo previously held the OLD pre-hardening code
@@ -68,9 +67,10 @@ async function verifyRevenueCat(
 ): Promise<{ ok: boolean; reason?: string; periodType?: string; expires?: string | null }> {
   const rcKey = Deno.env.get('REVENUECAT_SECRET_KEY')
   if (!rcKey) {
-    // Not configured yet  -  preserve prior behaviour, do not block purchases.
-    console.warn('[mark-iap-paid] REVENUECAT_SECRET_KEY not set  -  skipping server-side verification')
-    return { ok: true }
+    // 2026-09-09: fail closed. The secret is set in production; if it is ever
+    // missing, refuse rather than trust the phone.
+    console.error('[mark-iap-paid] REVENUECAT_SECRET_KEY not set  -  refusing to mark paid')
+    return { ok: false, reason: 'server verification not configured' }
   }
   try {
     const res = await fetch(
