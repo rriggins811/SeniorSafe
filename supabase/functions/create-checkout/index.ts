@@ -166,15 +166,15 @@ serve(async (req: Request) => {
     if (stillPaying && targetPlatform?.stripe_subscription_id) {
       return new Response(JSON.stringify({
         error: 'existing_subscription', platform: 'stripe',
-        message: 'You already have a SeniorSafe subscription on the web. Manage it in Settings under Subscription.',
+        message: 'You already have a SeniorSafeApp subscription on the web. Manage it in Settings under Subscription.',
       }), { status: 409, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
     if (hasActiveAppleIAP || hasActiveGoogleIAP) {
       const platform = hasActiveAppleIAP ? 'apple' : 'google'
       const message = platform === 'apple'
-        ? 'You already have an active SeniorSafe subscription via the App Store. To change tiers or cancel, manage it in your iPhone Settings > Apple ID > Subscriptions.'
-        : 'You already have an active SeniorSafe subscription via Google Play. To change tiers or cancel, manage it in Play Store > Account > Subscriptions.'
+        ? 'You already have an active SeniorSafeApp subscription via the App Store. To change tiers or cancel, manage it in your iPhone Settings > Apple ID > Subscriptions.'
+        : 'You already have an active SeniorSafeApp subscription via Google Play. To change tiers or cancel, manage it in Play Store > Account > Subscriptions.'
       return new Response(JSON.stringify({ error: 'existing_subscription', platform, message }), {
         status: 409,
         headers: { ...cors, 'Content-Type': 'application/json' },

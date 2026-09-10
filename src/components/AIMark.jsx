@@ -1,4 +1,4 @@
-// SeniorSafe AI mark: gold disc with a small navy shield monogram inside.
+// SeniorSafeApp AI mark: gold disc with a small navy shield monogram inside.
 // Inline SVG so we can update without re-uploading assets. Compass AI
 // (Build 26+) will get its own sibling component, not a refactor of this.
 export default function AIMark({ size = 36 }) {

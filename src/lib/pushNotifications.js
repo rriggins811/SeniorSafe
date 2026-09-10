@@ -28,7 +28,7 @@ export async function registerPushNotifications(userId) {
       try {
         await PushNotifications.createChannel({
           id: 'seniorsafe',
-          name: 'SeniorSafe alerts',
+          name: 'SeniorSafeApp alerts',
           description: 'Check-ins, missed check-ins, medication and family messages',
           importance: 5,
           visibility: 1,

@@ -123,7 +123,7 @@ serve(async (req) => {
     }
 
     const textBody = [
-      `SeniorSafe Feedback`,
+      `SeniorSafeApp Feedback`,
       ``,
       `From: ${fullName} <${userEmail}>`,
       `User ID: ${user.id}`,
@@ -139,7 +139,7 @@ serve(async (req) => {
 
     const htmlBody = `
       <div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;font-size:14px;color:#1B365D">
-        <h2 style="margin:0 0 12px 0;color:#1B365D">SeniorSafe Feedback</h2>
+        <h2 style="margin:0 0 12px 0;color:#1B365D">SeniorSafeApp Feedback</h2>
         <table style="border-collapse:collapse;font-size:13px;color:#374151">
           <tr><td style="padding:2px 12px 2px 0;color:#6B7280">From</td><td>${escapeHtml(fullName)} &lt;${escapeHtml(userEmail)}&gt;</td></tr>
           <tr><td style="padding:2px 12px 2px 0;color:#6B7280">User ID</td><td><code>${escapeHtml(user.id)}</code></td></tr>
@@ -161,10 +161,10 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: `SeniorSafe Feedback <${FROM_ADDRESS}>`,
+        from: `SeniorSafeApp Feedback <${FROM_ADDRESS}>`,
         to: ['support@seniorsafeapp.com'],
         reply_to: userEmail,
-        subject: `SeniorSafe Feedback from ${userEmail}`,
+        subject: `SeniorSafeApp Feedback from ${userEmail}`,
         text: textBody,
         html: htmlBody,
       }),

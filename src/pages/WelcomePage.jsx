@@ -14,7 +14,7 @@ export default function WelcomePage() {
             <Shield size={48} color="#D4A843" strokeWidth={1.5} />
           </div>
           <h1 className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '40px', fontWeight: 700, letterSpacing: '-0.01em' }}>
-            SeniorSafe
+            SeniorSafeApp
           </h1>
         </div>
 

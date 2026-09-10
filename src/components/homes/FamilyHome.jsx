@@ -119,7 +119,7 @@ export default function FamilyHome({
       tone: 'join',
       icon: Clock,
       title: `Waiting for ${name} to join`,
-      body: `${name} needs SeniorSafe on their phone. Once they open the link, their check-ins show up here.`,
+      body: `${name} needs SeniorSafeApp on their phone. Once they open the link, their check-ins show up here.`,
       wrap: 'bg-white border-[#D4A843]',
       iconColor: '#8A6A1E',
       titleClass: 'text-[#1B365D]',

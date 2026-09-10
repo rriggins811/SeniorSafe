@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 // ---------------------------------------------------------------------------
 // meta-capi-trial
-// Fires a Meta 'StartTrial' Conversions API event when a SeniorSafe trial goes
+// Fires a Meta 'StartTrial' Conversions API event when a SeniorSafeApp trial goes
 // active, so the ad campaign can attribute + optimize for actual signups.
 // Invoked server-side by a Postgres trigger (pg_net) on user_profile; never by
 // the browser. Gated by x-proxy-secret == SOCIAL_PROXY_SECRET. Idempotent: it

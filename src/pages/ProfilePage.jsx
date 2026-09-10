@@ -704,7 +704,7 @@ export default function ProfilePage() {
                 ) : null}
 
                 <a
-                  href="sms:+13365538933?body=Hi%20Ryan%2C%20I%27d%20like%20to%20manage%20my%20SeniorSafe%20subscription."
+                  href="sms:+13365538933?body=Hi%20Ryan%2C%20I%27d%20like%20to%20manage%20my%20SeniorSafeApp%20subscription."
                   className="block w-full text-center py-3 rounded-xl border border-[#1B365D] text-[#1B365D] font-semibold text-sm"
                 >
                   Text Ryan at (336) 553-8933
@@ -735,7 +735,7 @@ export default function ProfilePage() {
                 </div>
               </button>
               <a
-                href="mailto:support@seniorsafeapp.com?subject=SeniorSafe%20Support%20Request"
+                href="mailto:support@seniorsafeapp.com?subject=SeniorSafeApp%20Support%20Request"
                 className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
               >
                 <Mail size={18} className="text-[#1B365D] flex-shrink-0" />
@@ -745,7 +745,7 @@ export default function ProfilePage() {
                 </div>
               </a>
               <a
-                href="sms:+13365538933?body=Hi%20Ryan%2C%20I%20need%20help%20with%20SeniorSafe."
+                href="sms:+13365538933?body=Hi%20Ryan%2C%20I%20need%20help%20with%20SeniorSafeApp."
                 className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors mt-2"
               >
                 <Phone size={18} className="text-[#1B365D] flex-shrink-0" />
@@ -756,20 +756,20 @@ export default function ProfilePage() {
               </a>
             </div>
 
-            {/* ───────── About SeniorSafe / Medical Disclaimer ───────── */}
+            {/* ───────── About SeniorSafeApp / Medical Disclaimer ───────── */}
             <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <AlertTriangle size={14} className="text-gray-400" />
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-400">About SeniorSafe</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-400">About SeniorSafeApp</p>
               </div>
               <p className="text-gray-600 text-sm leading-relaxed">
-                SeniorSafe is a family coordination tool. It is <strong>not</strong> a medical device, does not provide medical advice, and is not intended to diagnose, treat, cure, or prevent any medical condition.
+                SeniorSafeApp is a family coordination tool. It is <strong>not</strong> a medical device, does not provide medical advice, and is not intended to diagnose, treat, cure, or prevent any medical condition.
               </p>
               <p className="text-gray-600 text-sm leading-relaxed mt-2">
                 Always consult a qualified healthcare provider for medical concerns.
               </p>
               <p className="text-gray-600 text-sm leading-relaxed mt-2">
-                SeniorSafe is <strong>not</strong> an emergency monitoring service. Do not rely solely on automated check-ins for the safety of any individual. If someone is in danger, call 911 immediately.
+                SeniorSafeApp is <strong>not</strong> an emergency monitoring service. Do not rely solely on automated check-ins for the safety of any individual. If someone is in danger, call 911 immediately.
               </p>
             </div>
 

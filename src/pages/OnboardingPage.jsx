@@ -227,7 +227,7 @@ export default function OnboardingPage() {
 
   async function share(text) {
     if (navigator.share) {
-      try { await navigator.share({ title: 'SeniorSafe', text }) } catch { /* cancelled */ }
+      try { await navigator.share({ title: 'SeniorSafeApp', text }) } catch { /* cancelled */ }
     } else {
       await copy(text, 'share')
     }
@@ -280,7 +280,7 @@ export default function OnboardingPage() {
 
     return (
       <Shell step={2} total={2} onBack={() => setStep(0)}>
-        <Heading title={`Invite ${name}`} sub={`${name} needs SeniorSafe on their phone. The link opens straight to their button with their name on it.`} />
+        <Heading title={`Invite ${name}`} sub={`${name} needs SeniorSafeApp on their phone. The link opens straight to their button with their name on it.`} />
         <div className="flex flex-col gap-3">
           {hasPhone ? (
             <>

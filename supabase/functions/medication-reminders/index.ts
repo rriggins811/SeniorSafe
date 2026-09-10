@@ -6,7 +6,7 @@ import { isServiceBearer } from '../_shared/cronAuth.ts'
 //
 // 2026-09-08: notifications only, no texts. Two things happen here:
 //   1. At dose time (within 5 minutes) the senior's phone gets a notification
-//      if the SeniorSafe app is installed. On the web the due-medicine card on
+//      if the SeniorSafeApp app is installed. On the web the due-medicine card on
 //      the senior's home screen is the reminder.
 //   2. If a dose is still not marked taken 60 minutes after its time, the
 //      rest of the family gets a notification, once per dose per day.
