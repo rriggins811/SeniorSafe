@@ -17,7 +17,7 @@ export function Shell({ step, total, onBack, children, wide }) {
             </button>
           ) : <div className="w-11" />}
           <span className="text-[#D4A843] text-sm font-semibold">
-            {step && total ? `Step ${step} of ${total}` : 'SeniorSafe'}
+            {step && total ? `Step ${step} of ${total}` : 'SeniorSafeApp'}
           </span>
           <div className="w-11" />
         </div>
@@ -103,7 +103,7 @@ export function ErrorText({ children }) {
 export function Disclosure() {
   return (
     <p className="text-[#6B645A] text-center leading-relaxed" style={{ fontSize: '13px' }}>
-      SeniorSafe helps families stay in touch. It is not a medical device or an emergency service; if someone is in danger, call 911.
+      SeniorSafeApp helps families stay in touch. It is not a medical device or an emergency service; if someone is in danger, call 911.
       By continuing you agree to the{' '}
       <Link to="/terms" className="underline">Terms</Link> and <Link to="/privacy" className="underline">Privacy Policy</Link>.
     </p>

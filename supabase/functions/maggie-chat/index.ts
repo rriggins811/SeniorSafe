@@ -26,7 +26,7 @@ serve((req) => {
   console.warn('[MAGGIE-CHAT-RETIRED]', { ua: req.headers.get('User-Agent') || 'unknown', ts: new Date().toISOString() })
   return new Response(JSON.stringify({
     error: 'moved',
-    message: 'Maggie moved. Please update the SeniorSafe app, then try again.',
+    message: 'Maggie moved. Please update the SeniorSafeApp app, then try again.',
     endpoint: '/functions/v1/ai-chat',
   }), { status: 410, headers })
 })

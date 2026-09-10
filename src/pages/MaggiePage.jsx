@@ -20,7 +20,7 @@ function foldPreview(text) {
   return cut + '\n\n...'
 }
 
-// Maggie, the one SeniorSafe assistant (2026-09-04 merge). Same page for the
+// Maggie, the one SeniorSafeApp assistant (2026-09-04 merge). Same page for the
 // senior and the family; the server knows who is typing and adjusts. Seniors
 // get voice on by default and everyday starter prompts. Conversations live in
 // ai_conversations / ai_messages for everyone.

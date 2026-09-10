@@ -96,7 +96,7 @@ export default function InstallPrompt() {
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Download size={20} className="text-[#D4A843] shrink-0" />
           <p className="text-sm truncate">
-            Install SeniorSafe for quick access
+            Install SeniorSafeApp for quick access
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -121,7 +121,7 @@ export default function InstallPrompt() {
         <div className="flex items-start gap-3">
           <Share size={20} className="text-[#D4A843] shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold">Put SeniorSafe on your home screen</p>
+            <p className="text-sm font-semibold">Put SeniorSafeApp on your home screen</p>
             <p className="text-xs text-white/80 mt-1 leading-relaxed">
               Tap <strong>Share</strong> <span className="inline-flex items-center"><Share size={11} className="mx-0.5" /></span> at the bottom of Safari, then tap <strong>Add to Home Screen</strong>. You only need to do this once.
             </p>

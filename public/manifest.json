@@ -1,6 +1,6 @@
 {
-  "name": "SeniorSafe",
-  "short_name": "SeniorSafe",
+  "name": "SeniorSafeApp",
+  "short_name": "SeniorSafeApp",
   "description": "Family coordination app for senior transitions",
   "start_url": "/",
   "display": "standalone",

@@ -4,7 +4,7 @@ import { ArrowLeft, Shield } from 'lucide-react'
 const SECTIONS = [
   {
     title: '1. Information We Collect',
-    body: `When you create a SeniorSafe account, we collect:
+    body: `When you create a SeniorSafeApp account, we collect:
 
 • Account information: name, email address, phone number, and password
 • Family information: family member names, phone numbers, and relationships
@@ -19,7 +19,7 @@ const SECTIONS = [
     title: '2. How We Use Your Information',
     body: `We use your information to:
 
-• Provide SeniorSafe services to you and your family members
+• Provide SeniorSafeApp services to you and your family members
 • Send SMS notifications you have enabled (check-in alerts, medication reminders, family messages)
 • Power the AI assistant with context about your family's needs
 • Process subscription payments
@@ -30,7 +30,7 @@ We do NOT use your information for advertising, marketing to third parties, or p
   },
   {
     title: '3. AI Assistant & Third-Party Services',
-    body: `SeniorSafe uses Anthropic's Claude AI to power the in-app AI assistant.
+    body: `SeniorSafeApp uses Anthropic's Claude AI to power the in-app AI assistant.
 
 What is sent to Anthropic: Your text messages to the AI assistant are sent to Anthropic's servers to generate responses. Your first name and general family context (e.g., "helping Mom with a senior transition") are included to personalize responses.
 
@@ -38,11 +38,11 @@ What is NOT sent to Anthropic: Your medication data, document vault contents, ch
 
 Data retention by Anthropic: Anthropic processes your messages to generate responses and does not retain your conversations for training purposes under our API agreement.
 
-Your control: You can choose not to use the AI assistant. All other SeniorSafe features work without it. You are shown a disclosure and must consent before first use of the AI assistant.`,
+Your control: You can choose not to use the AI assistant. All other SeniorSafeApp features work without it. You are shown a disclosure and must consent before first use of the AI assistant.`,
   },
   {
     title: '4. Third-Party Service Providers',
-    body: `We use the following service providers to operate SeniorSafe:
+    body: `We use the following service providers to operate SeniorSafeApp:
 
 • Supabase, Database hosting and user authentication. Your data is stored on Supabase's SOC 2 Type II compliant infrastructure with encryption at rest and in transit.
 • Anthropic, AI assistant (Claude). See Section 3 for details.
@@ -66,7 +66,7 @@ Security measures include:
   },
   {
     title: '6. Family Data Sharing',
-    body: `When you invite family members to your SeniorSafe account, the following data is shared within your family group:
+    body: `When you invite family members to your SeniorSafeApp account, the following data is shared within your family group:
 
 • Check-in status and history
 • Family messages and photos
@@ -95,7 +95,7 @@ To request account deletion or data export, contact us at ryan@rigginsstrategics
   },
   {
     title: '9. Children\'s Privacy',
-    body: `SeniorSafe is designed for adults coordinating senior care. We do not knowingly collect information from anyone under 13 years of age. Users must be at least 13 to create an account. If we learn we have collected data from a child under 13, we will delete it promptly.`,
+    body: `SeniorSafeApp is designed for adults coordinating senior care. We do not knowingly collect information from anyone under 13 years of age. Users must be at least 13 to create an account. If we learn we have collected data from a child under 13, we will delete it promptly.`,
   },
   {
     title: '10. Data Retention',
@@ -103,7 +103,7 @@ To request account deletion or data export, contact us at ryan@rigginsstrategics
   },
   {
     title: '11. Changes to This Policy',
-    body: `We may update this privacy policy from time to time. We will notify you of material changes through the app or via email. Continued use of SeniorSafe after changes constitutes acceptance of the updated policy.`,
+    body: `We may update this privacy policy from time to time. We will notify you of material changes through the app or via email. Continued use of SeniorSafeApp after changes constitutes acceptance of the updated policy.`,
   },
   {
     title: '12. Contact Us',
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
 
           <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
             <p className="text-gray-600 text-sm leading-relaxed">
-              <span className="font-semibold text-[#1B365D]">Riggins Strategic Solutions, LLC</span> ("we", "us", "our") operates SeniorSafe. This Privacy Policy explains what information we collect, how we use it, who we share it with, and your rights regarding your data. SeniorSafe is a family coordination tool, not a medical device, emergency service, or healthcare provider.
+              <span className="font-semibold text-[#1B365D]">Riggins Strategic Solutions, LLC</span> ("we", "us", "our") operates SeniorSafeApp. This Privacy Policy explains what information we collect, how we use it, who we share it with, and your rights regarding your data. SeniorSafeApp is a family coordination tool, not a medical device, emergency service, or healthcare provider.
             </p>
           </div>
 

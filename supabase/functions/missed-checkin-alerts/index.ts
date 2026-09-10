@@ -55,7 +55,7 @@ async function sendFailureAlertEmail(familyName: string, phone: string, seniorNa
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: `SeniorSafe Alerts <${FROM_ADDRESS}>`, to: ['support@seniorsafeapp.com'], subject: 'ALERT: Missed check-in SMS failed', text: body }),
+      body: JSON.stringify({ from: `SeniorSafeApp Alerts <${FROM_ADDRESS}>`, to: ['support@seniorsafeapp.com'], subject: 'ALERT: Missed check-in SMS failed', text: body }),
     })
     if (res.ok) return true
     console.error(`Resend email failed (${res.status}):`, await res.text())
@@ -174,7 +174,7 @@ serve(async (req) => {
 
       const seniorName = senior.first_name || owner.senior_name || 'Your loved one'
       const familyLabel = owner.family_name || senior.family_name || seniorName
-      const message = `${seniorName} hasn't checked in today. SeniorSafe. Reply STOP to opt out`
+      const message = `${seniorName} hasn't checked in today. SeniorSafeApp. Reply STOP to opt out`
 
       // Log the alert before sending so a run that dies mid-way does not text everyone again in 30 minutes.
       const { error: logErr } = await supabase.from('checkin_alert_logs').insert({ admin_id: senior.user_id, date: todayLocal })

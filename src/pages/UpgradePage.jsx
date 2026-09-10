@@ -31,7 +31,7 @@ function DoubleBillingModal({ open, platform, onClose }) {
   const copy = {
     apple: {
       title: 'Existing App Store subscription',
-      body: 'You already have an active SeniorSafe subscription on this Apple ID. To change tiers or cancel, manage it in your iPhone Settings.',
+      body: 'You already have an active SeniorSafeApp subscription on this Apple ID. To change tiers or cancel, manage it in your iPhone Settings.',
       ctaLabel: 'Open Settings',
       ctaUrl: 'app-settings:',
       ctaTarget: undefined, // app-settings: is a same-app deep link, not a web URL
@@ -39,7 +39,7 @@ function DoubleBillingModal({ open, platform, onClose }) {
     },
     google: {
       title: 'Existing Google Play subscription',
-      body: 'You already have an active SeniorSafe subscription on this Google account. To change tiers or cancel, manage it in the Play Store.',
+      body: 'You already have an active SeniorSafeApp subscription on this Google account. To change tiers or cancel, manage it in the Play Store.',
       ctaLabel: 'Open Play Store',
       ctaUrl: 'https://play.google.com/store/account/subscriptions',
       ctaTarget: '_blank',
@@ -47,7 +47,7 @@ function DoubleBillingModal({ open, platform, onClose }) {
     },
     stripe: {
       title: 'Existing web subscription',
-      body: 'You already have an active SeniorSafe subscription managed on the web. Sign in there to change or cancel it.',
+      body: 'You already have an active SeniorSafeApp subscription managed on the web. Sign in there to change or cancel it.',
       ctaLabel: 'Open in browser',
       ctaUrl: 'https://app.seniorsafeapp.com/upgrade',
       ctaTarget: '_blank',

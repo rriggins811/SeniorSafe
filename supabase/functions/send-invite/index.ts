@@ -47,12 +47,12 @@ function normalizePhone(raw: string): string | null {
 
 function seniorInviteText(seniorName: string, ownerFirst: string, code: string): string {
   const who = ownerFirst || 'Your family'
-  return `Hi ${seniorName || 'there'}, it's ${who}. I set up SeniorSafe so you can let me know you're okay each morning with one tap. Open this link on your phone and follow the steps: ${APP_URL}/signup?code=${code}&who=senior`
+  return `Hi ${seniorName || 'there'}, it's ${who}. I set up SeniorSafeApp so you can let me know you're okay each morning with one tap. Open this link on your phone and follow the steps: ${APP_URL}/signup?code=${code}&who=senior`
 }
 
 function memberInviteText(seniorName: string, code: string): string {
   const whom = seniorName ? `${seniorName}'s` : "our family's"
-  return `Join ${whom} SeniorSafe family so you get the daily "I'm okay" check-in too. Tap this link and sign up: ${APP_URL}/signup?code=${code}`
+  return `Join ${whom} SeniorSafeApp family so you get the daily "I'm okay" check-in too. Tap this link and sign up: ${APP_URL}/signup?code=${code}`
 }
 
 const admin = createClient(

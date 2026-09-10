@@ -88,7 +88,7 @@ serve(async (req: Request) => {
     const memberName = profile.first_name || 'A family member'
     await supabase.from('family_messages').insert({
       user_id: adminId,
-      author_name: 'SeniorSafe',
+      author_name: 'SeniorSafeApp',
       message_text: `${memberName} has left the family group.`,
       family_name: adminProfile?.family_name || null,
     })

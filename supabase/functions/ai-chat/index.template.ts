@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-// Maggie, the one SeniorSafe assistant (2026-09-04 merge of ai-chat and
+// Maggie, the one SeniorSafeApp assistant (2026-09-04 merge of ai-chat and
 // maggie-chat). GENERATED FILE: edit the parts, then run
 //   node scripts/build-ai-chat.mjs
 // Parts: supabase/prompts/maggie-system-prompt-v2.md (voice, rules, facts),
@@ -193,7 +193,7 @@ function buildContext(opts: {
   const who = opts.isSenior
     ? 'the person who checks in each day (the senior)'
     : opts.isOwner
-    ? 'the family member who set up SeniorSafe for someone they look after (usually the adult child)'
+    ? 'the family member who set up SeniorSafeApp for someone they look after (usually the adult child)'
     : 'a family member who joined the family (a sibling, spouse, or caregiver)'
   lines.push(`You are talking with ${p.first_name || 'someone'}, ${who}.`)
   if (!opts.isSenior && opts.seniorName) lines.push(`The person they look after is ${opts.seniorName}.`)

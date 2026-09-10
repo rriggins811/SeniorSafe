@@ -1,4 +1,4 @@
-// Ad attribution for the SeniorSafe web/PWA path.
+// Ad attribution for the SeniorSafeApp web/PWA path.
 // Captures the Meta click id (fbclid) + UTM params from the landing URL on first
 // load and stores them (first-touch) in localStorage, then writes them onto
 // user_profile.signup_source at signup. Answers "did this signup come from our

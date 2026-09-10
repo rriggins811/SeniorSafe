@@ -57,7 +57,7 @@ export default function BottomNav({ inline = false }) {
   const isFree = tier === 'free'
 
   // The senior's home is a kiosk with no tab bar. Everyone else in the family
-  // gets Home / Vault / Family / Maggie. SeniorSafe AI lives on the senior's
+  // gets Home / Vault / Family / Maggie. SeniorSafeApp AI lives on the senior's
   // phone. Until the profile loads, render nothing rather than flash tabs.
   if (isSenior !== false) return null
 
@@ -82,7 +82,7 @@ export default function BottomNav({ inline = false }) {
           const locked = isFree && premium
           const showBadge = label === 'Family' && unreadCount > 0
           // Screen-reader label. "AI" alone is ambiguous, so we expand it to
-          // "SeniorSafe AI"; other tabs use their visible label as-is. Locked
+          // "SeniorSafeApp AI"; other tabs use their visible label as-is. Locked
           // and unread state already convey via the visible icons; we keep
           // the aria-label clean here and let aria-current handle active
           // state.

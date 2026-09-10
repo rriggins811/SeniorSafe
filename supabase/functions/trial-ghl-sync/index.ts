@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-// trial-ghl-sync (scheduled every 15 min via pg_cron). Wires SeniorSafe app
+// trial-ghl-sync (scheduled every 15 min via pg_cron). Wires SeniorSafeApp app
 // trial signups (Supabase user_profile) -> GHL contact + the workflow-trigger
 // tag. Invoked by cron with the Vault service_role_key as Bearer
 // (verify_jwt=true). Reuses GHL_PIT_TOKEN + GHL_LOCATION_ID directly (bypasses
@@ -104,7 +104,7 @@ serve(async (req: Request) => {
         firstName: u.first_name || undefined,
         lastName: u.last_name || undefined,
         phone: u.phone || undefined,
-        source: "SeniorSafe app trial",
+        source: "SeniorSafeApp app trial",
       })
       if (up.status < 200 || up.status >= 300) {
         console.error("trial-ghl-sync upsert fail", email, up.status, JSON.stringify(up.body))

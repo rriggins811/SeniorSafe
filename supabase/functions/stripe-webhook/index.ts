@@ -58,7 +58,7 @@ async function sendEmail(to: string, subject: string, text: string): Promise<boo
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: `SeniorSafe <${fromAddress}>`, to: [to], subject, text }),
+      body: JSON.stringify({ from: `SeniorSafeApp <${fromAddress}>`, to: [to], subject, text }),
       signal: AbortSignal.timeout(8000),
     })
     return res.ok
@@ -158,7 +158,7 @@ async function ghlProxyUpsertAndTag(
 }
 
 // ---------------------------------------------------------------------------
-// Meta Conversions API (CAPI) - SeniorSafe Purchase fire
+// Meta Conversions API (CAPI) - SeniorSafeApp Purchase fire
 // ---------------------------------------------------------------------------
 const META_PIXEL_ID = Deno.env.get('META_PIXEL_ID') ?? '1237498758330884'
 const META_GRAPH_API_VERSION = Deno.env.get('META_GRAPH_API_VERSION') ?? 'v20.0'
@@ -610,7 +610,7 @@ serve(async (req: Request) => {
         const toPhone = normalizePhone(adminProfile.phone)
         const sent = await sendTwilioSMS(
           toPhone,
-          `SeniorSafe could not charge your card. We will try again for a few days. Update your card at app.seniorsafeapp.com/profile so the family texts keep going. Reply STOP to opt out`
+          `SeniorSafeApp could not charge your card. We will try again for a few days. Update your card at app.seniorsafeapp.com/profile so the family texts keep going. Reply STOP to opt out`
         )
         await logNotification(userId, 'payment_failed', 'sms', sent, toPhone)
         if (sent) console.log(`Payment failure SMS sent to ${toPhone}`)
@@ -642,15 +642,15 @@ serve(async (req: Request) => {
         const toPhone = normalizePhone(adminProfile.phone)
         const sent = await sendTwilioSMS(
           toPhone,
-          `Your SeniorSafe free days end ${when}. Your card will be charged ${amountText} after that unless you cancel in Settings at app.seniorsafeapp.com/profile. Reply STOP to opt out`
+          `Your SeniorSafeApp free days end ${when}. Your card will be charged ${amountText} after that unless you cancel in Settings at app.seniorsafeapp.com/profile. Reply STOP to opt out`
         )
         await logNotification(userId, 'trial_ending', 'sms', sent, toPhone)
       }
       if (fields.email) {
         const ok = await sendEmail(
           fields.email,
-          `Your SeniorSafe free trial ends ${when}`,
-          `Hi ${fields.firstName || 'there'},\n\nYour free days of SeniorSafe end on ${when}. After that your card is charged ${amountText} and everything stays on: texts to everyone in the family, siblings by code, missed-dose alerts, family messages, the vault, appointments, and Maggie every day.\n\nIf you would rather stop, open Settings at https://app.seniorsafeapp.com/profile and tap Cancel Subscription before ${when}. You will not be charged.\n\nQuestions? Reply to this email or text Ryan at (336) 553-8933.\n\nSeniorSafe`,
+          `Your SeniorSafeApp free trial ends ${when}`,
+          `Hi ${fields.firstName || 'there'},\n\nYour free days of SeniorSafeApp end on ${when}. After that your card is charged ${amountText} and everything stays on: texts to everyone in the family, siblings by code, missed-dose alerts, family messages, the vault, appointments, and Maggie every day.\n\nIf you would rather stop, open Settings at https://app.seniorsafeapp.com/profile and tap Cancel Subscription before ${when}. You will not be charged.\n\nQuestions? Reply to this email or text Ryan at (336) 553-8933.\n\nSeniorSafeApp`,
         )
         await logNotification(userId, 'trial_ending', 'in_app', ok)
       }

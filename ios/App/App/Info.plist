@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>SeniorSafe App</string>
+	<string>SeniorSafeApp</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -38,11 +38,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>SeniorSafe uses your camera to capture documents for your secure vault.</string>
+	<string>SeniorSafeApp uses your camera to capture documents for your secure vault.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>SeniorSafe uses the microphone for voice messages to your care team.</string>
+	<string>SeniorSafeApp uses the microphone for voice messages to your care team.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SeniorSafe accesses your photos to upload documents to your secure vault.</string>
+	<string>SeniorSafeApp accesses your photos to upload documents to your secure vault.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
