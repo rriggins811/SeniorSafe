@@ -34,11 +34,11 @@ export const getAppUrl = () => {
   try {
     const origin = window.location.origin
     if (origin.includes('capacitor://') || origin.includes('localhost')) {
-      return 'https://app.seniorsafeapp.com'
+      return 'https://app.hammock365.com'
     }
     return origin
   } catch {
-    return 'https://app.seniorsafeapp.com'
+    return 'https://app.hammock365.com'
   }
 }
 

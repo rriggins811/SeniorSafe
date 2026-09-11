@@ -6,7 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 // old client goes away. Delete the function after 2026-10-04.
 
 const ALLOWED_ORIGINS = [
-  'https://app.seniorsafeapp.com',
+  'https://app.hammock365.com',
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
   'http://localhost',
@@ -26,7 +26,7 @@ serve((req) => {
   console.warn('[MAGGIE-CHAT-RETIRED]', { ua: req.headers.get('User-Agent') || 'unknown', ts: new Date().toISOString() })
   return new Response(JSON.stringify({
     error: 'moved',
-    message: 'Maggie moved. Please update the SeniorSafeApp app, then try again.',
+    message: 'Maggie moved. Please update the Hammock365 app, then try again.',
     endpoint: '/functions/v1/ai-chat',
   }), { status: 410, headers })
 })

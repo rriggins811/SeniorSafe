@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
           <p className="text-sm text-gray-500 text-center">
             {success
               ? "You're all set! Redirecting to your dashboard..."
-              : 'Choose a new password for your SeniorSafeApp account.'}
+              : 'Choose a new password for your Hammock365 account.'}
           </p>
         </div>
 

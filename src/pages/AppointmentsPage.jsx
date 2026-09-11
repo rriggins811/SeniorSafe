@@ -49,7 +49,7 @@ function downloadIcs(appt) {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//SeniorSafeApp//EN',
+    'PRODID:-//Hammock365//EN',
     'BEGIN:VEVENT',
     `UID:${appt.id}@seniorsafe`,
     `DTSTART:${toIcsDate(dateBase, startTime)}`,

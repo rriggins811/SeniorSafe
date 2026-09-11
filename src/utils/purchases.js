@@ -9,7 +9,7 @@ const ANDROID_API_KEY = 'goog_FpPwzuruOoVoRGRxFWbkKMudxgq'
 // Premium+ users only have PREMIUM_PLUS_ENTITLEMENT_ID — they do NOT also
 // have PREMIUM_ENTITLEMENT_ID. So any "is the user paid?" check has to be
 // EITHER-OR across both entitlements (see checkEntitlement below).
-const PREMIUM_ENTITLEMENT_ID = 'SeniorSafeApp Pro'
+const PREMIUM_ENTITLEMENT_ID = 'Hammock365 Pro'
 const PREMIUM_PLUS_ENTITLEMENT_ID = 'premium_plus'
 
 // Package identifier in the RevenueCat default offering for Premium+ monthly.

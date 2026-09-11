@@ -33,7 +33,7 @@ function tierForProductId(_productId: string | null): StoreTier {
 }
 
 const ALLOWED_ORIGINS = [
-  'https://app.seniorsafeapp.com',
+  'https://app.hammock365.com',
   'https://senior-safe-hazel.vercel.app',
   'capacitor://localhost',
   'http://localhost',

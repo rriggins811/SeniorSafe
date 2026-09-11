@@ -1,6 +1,6 @@
 -- 2026-09-04 setup rebuild, step 1.
 --
--- The adult child now sets up SeniorSafe first, on their own phone, and the
+-- The adult child now sets up Hammock365 first, on their own phone, and the
 -- senior joins by a link. That splits two things the schema used to treat as
 -- one: the family OWNER (role='admin', holds family_code + subscription) and
 -- the person who CHECKS IN. This migration adds an explicit is_senior flag,

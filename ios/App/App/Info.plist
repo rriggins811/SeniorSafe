@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>SeniorSafeApp</string>
+	<string>Hammock365</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -38,11 +38,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>SeniorSafeApp uses your camera to capture documents for your secure vault.</string>
+	<string>Hammock365 uses your camera to capture documents for your secure vault.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>SeniorSafeApp uses the microphone for voice messages to your care team.</string>
+	<string>Hammock365 uses the microphone for voice messages to your care team.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SeniorSafeApp accesses your photos to upload documents to your secure vault.</string>
+	<string>Hammock365 accesses your photos to upload documents to your secure vault.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

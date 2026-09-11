@@ -62,11 +62,11 @@ export function memberInviteLink(code) {
 
 export function seniorInviteText({ seniorName, ownerFirstName, code }) {
   const who = ownerFirstName || 'Your family'
-  return `Hi ${seniorName || 'there'}, it's ${who}. I set up SeniorSafeApp so you can let me know you're okay each morning with one tap. Open this link on your phone and follow the steps: ${seniorInviteLink(code)}`
+  return `Hi ${seniorName || 'there'}, it's ${who}. I set up Hammock365 so you can let me know you're okay each morning with one tap. Open this link on your phone and follow the steps: ${seniorInviteLink(code)}`
 }
 export function memberInviteText({ seniorName, code }) {
   const whom = seniorName ? `${seniorName}'s` : 'our family’s'
-  return `Join ${whom} SeniorSafeApp family so you get the daily "I'm okay" check-in too. Tap this link and sign up: ${memberInviteLink(code)}`
+  return `Join ${whom} Hammock365 family so you get the daily "I'm okay" check-in too. Tap this link and sign up: ${memberInviteLink(code)}`
 }
 
 // Ask the server to text an invite. kind 'senior' texts the number the owner

@@ -117,7 +117,7 @@ export default function SignInPage() {
     }
     setResetLoading(true)
     const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
-      redirectTo: 'https://app.seniorsafeapp.com/reset-password',
+      redirectTo: 'https://app.hammock365.com/reset-password',
     })
     setResetLoading(false)
     if (error) {
@@ -171,7 +171,7 @@ export default function SignInPage() {
           ) : (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
               <p className="text-green-700 text-sm font-medium">Reset link sent!</p>
-              <p className="text-green-600 text-xs mt-1">Check your inbox (and spam folder) for an email from SeniorSafeApp.</p>
+              <p className="text-green-600 text-xs mt-1">Check your inbox (and spam folder) for an email from Hammock365.</p>
             </div>
           )}
 
@@ -197,7 +197,7 @@ export default function SignInPage() {
             <Shield size={32} color="#D4A843" strokeWidth={1.5} />
           </div>
           <h1 className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 700 }}>Welcome back</h1>
-          <p className="text-[#6B645A] italic text-center" style={{ fontSize: '15px' }}>Sign in to your SeniorSafeApp account.</p>
+          <p className="text-[#6B645A] italic text-center" style={{ fontSize: '15px' }}>Sign in to your Hammock365 account.</p>
         </div>
 
         {/* Form */}

@@ -318,7 +318,7 @@ export default function DashboardPage() {
       title: 'Check-In',
       body: `${senderName} just checked in!`,
       type: 'check_in',
-      sms: paid ? `${senderName} just checked in on SeniorSafeApp and is doing well today. Reply STOP to opt out` : null,
+      sms: paid ? `${senderName} just checked in on Hammock365 and is doing well today. Reply STOP to opt out` : null,
     })
     if (!paid) return
     if (texted === 0) {
@@ -351,7 +351,7 @@ export default function DashboardPage() {
     try {
       const time = fmtTime(new Date())
       const name = family.me.first_name || 'Your loved one'
-      const message = `URGENT: ${name} pressed "I Need Help" at ${time}. Please check on them immediately. SeniorSafeApp Alert. Reply STOP to opt out`
+      const message = `URGENT: ${name} pressed "I Need Help" at ${time}. Please check on them immediately. Hammock365 Alert. Reply STOP to opt out`
       if (family.others.length === 0) {
         alert('No family members found yet. Ask your family to join through your invite link.')
         setHelpSending(false)
@@ -416,7 +416,7 @@ export default function DashboardPage() {
       return
     }
     const senderName = family.me.first_name || 'Your family'
-    const nudgeText = `${senderName} is thinking of you. Just tap I'm Okay when you get a chance! SeniorSafeApp. Reply STOP to opt out`
+    const nudgeText = `${senderName} is thinking of you. Just tap I'm Okay when you get a chance! Hammock365. Reply STOP to opt out`
     // Notification when the senior has the app; the text is the fallback for a
     // senior on the web with no app installed.
     const { texted: nudgeTexted, pushed } = await notifyFamily([family.senior], {

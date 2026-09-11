@@ -259,7 +259,7 @@ export default function SignUpPage() {
         <Heading
           large
           title={seniorName ? `Hi ${seniorName}.` : 'Hello.'}
-          sub={`${ownerFirst || 'Your family'} set up SeniorSafeApp so you can let them know you're okay each morning with one tap.`}
+          sub={`${ownerFirst || 'Your family'} set up Hammock365 so you can let them know you're okay each morning with one tap.`}
         />
         <p className="text-[#2D2A24]" style={{ fontSize: '18px', lineHeight: 1.5 }}>
           To finish, choose an email and a password for your account. {ownerFirst || 'Your family'} can help with this part.
@@ -285,7 +285,7 @@ export default function SignUpPage() {
     if (!invite) {
       return (
         <Shell onBack={() => { setMode('family'); setError('') }}>
-          <Heading title="Enter your invite code" sub="Ask the person who set up SeniorSafeApp for their 6-character family code." />
+          <Heading title="Enter your invite code" sub="Ask the person who set up Hammock365 for their 6-character family code." />
           <input
             type="text"
             value={code}
@@ -318,7 +318,7 @@ export default function SignUpPage() {
             sub={`The free plan covers one family contact, and ${ownerFirst || 'the person who set it up'} already has that seat. On the paid plan ($14.99 a month) everyone in the family joins and gets the texts.`}
           />
           <p className="text-[#1B365D]" style={{ fontSize: '17px', lineHeight: 1.45 }}>
-            Ask {ownerFirst || 'them'} to open SeniorSafeApp, tap the family icon at the top of their home screen, and turn on the paid plan. Then use this link again.
+            Ask {ownerFirst || 'them'} to open Hammock365, tap the family icon at the top of their home screen, and turn on the paid plan. Then use this link again.
           </p>
           <p className="text-center text-gray-500">
             Already have an account? <TextLink to="/signin">Sign in</TextLink>
@@ -355,7 +355,7 @@ export default function SignUpPage() {
   if (mode === 'self') {
     return (
       <Shell onBack={() => { setMode('family'); setError('') }}>
-        <Heading title="Set up SeniorSafeApp for yourself" sub="Free, no card. You'll pick your check-in time and invite one family member on the next screens." />
+        <Heading title="Set up Hammock365 for yourself" sub="Free, no card. You'll pick your check-in time and invite one family member on the next screens." />
         <div className="flex flex-col gap-4">
           <Field large label="Your first name" value={form.firstName} onChange={v => update('firstName', v)} autoFocus />
           <Field large label="Last name" value={form.lastName} onChange={v => update('lastName', v)} />
@@ -381,7 +381,7 @@ export default function SignUpPage() {
         <div className="bg-[#1B365D] rounded-2xl p-2.5">
           <Shield size={26} color="#D4A843" strokeWidth={1.5} />
         </div>
-        <Heading title="Set up SeniorSafeApp" />
+        <Heading title="Set up Hammock365" />
       </div>
       <p className="text-[#6B645A]" style={{ fontSize: '17px', lineHeight: 1.45 }}>
         Free, no card, about two minutes. You'll add the person you look after on the next screen, and they get a link that opens straight to their button.

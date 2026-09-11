@@ -81,7 +81,7 @@ const sections = [
     items: [
       {
         q: 'Is my data secure?',
-        a: 'Yes. SeniorSafeApp uses Supabase with row-level security, meaning each family\'s data is completely isolated. Documents are stored in encrypted private storage with signed URLs that expire after one hour. We never share your data with third parties. All connections use HTTPS encryption.'
+        a: 'Yes. Hammock365 uses Supabase with row-level security, meaning each family\'s data is completely isolated. Documents are stored in encrypted private storage with signed URLs that expire after one hour. We never share your data with third parties. All connections use HTTPS encryption.'
       },
       {
         q: 'Can multiple family members use the app?',
@@ -93,15 +93,15 @@ const sections = [
       },
       {
         q: 'Does the app work on iPhone and Android?',
-        a: 'Yes! SeniorSafeApp is a web app that works on any device with a modern browser. You can install it as an app on your home screen for quick access, you\'ll be prompted to install when you first visit. It works on iPhones (Safari), Android phones (Chrome), tablets, and desktop computers.'
+        a: 'Yes! Hammock365 is a web app that works on any device with a modern browser. You can install it as an app on your home screen for quick access, you\'ll be prompted to install when you first visit. It works on iPhones (Safari), Android phones (Chrome), tablets, and desktop computers.'
       },
       {
         q: 'Can I use the app for more than one senior?',
         a: 'Currently, each family group is centered around one senior. If you\'re helping multiple seniors (for example, both parents), you would create separate accounts for each. We\'re exploring multi-senior support for a future update.'
       },
       {
-        q: 'Who built SeniorSafeApp?',
-        a: 'SeniorSafeApp was built by Ryan Riggins of Riggins Strategic Solutions. Ryan is a licensed NC Realtor who switched from real estate investing to helping families navigate senior transitions. The app is a companion to the Senior Transition Blueprint, a comprehensive guide covering all aspects of senior housing decisions.'
+        q: 'Who built Hammock365?',
+        a: 'Hammock365 was built by Ryan Riggins of Riggins Strategic Solutions. Ryan is a licensed NC Realtor who switched from real estate investing to helping families navigate senior transitions. The app is a companion to the Senior Transition Blueprint, a comprehensive guide covering all aspects of senior housing decisions.'
       }
     ]
   }
@@ -220,7 +220,7 @@ export default function SupportPage() {
           <div className="space-y-2">
             {/* Phone */}
             <a
-              href="sms:+13365538933?body=Hi%20Ryan%2C%20I%20need%20help%20with%20SeniorSafeApp."
+              href="sms:+13365538933?body=Hi%20Ryan%2C%20I%20need%20help%20with%20Hammock365."
               className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
               <Phone size={18} className="text-[#1B365D] shrink-0" />
@@ -232,13 +232,13 @@ export default function SupportPage() {
 
             {/* Email */}
             <a
-              href="mailto:support@seniorsafeapp.com?subject=SeniorSafeApp%20Support%20Request"
+              href="mailto:support@hammock365.com?subject=Hammock365%20Support%20Request"
               className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
               <Mail size={18} className="text-[#1B365D] shrink-0" />
               <div>
                 <p className="text-[#1B365D] font-semibold text-sm">Email Support</p>
-                <p className="text-gray-400 text-xs">support@seniorsafeapp.com</p>
+                <p className="text-gray-400 text-xs">support@hammock365.com</p>
               </div>
             </a>
 

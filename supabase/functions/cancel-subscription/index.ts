@@ -6,7 +6,7 @@ import Stripe from "https://esm.sh/stripe@14.14.0?target=deno"
 // CORS
 // ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = [
-  'https://app.seniorsafeapp.com',
+  'https://app.hammock365.com',
   'https://senior-safe-hazel.vercel.app',
   'capacitor://localhost',
   'http://localhost',

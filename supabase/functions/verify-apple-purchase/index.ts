@@ -8,7 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 // ---------------------------------------------------------------------------
 
 const ALLOWED_ORIGINS = [
-  'https://app.seniorsafeapp.com',
+  'https://app.hammock365.com',
   'https://senior-safe-hazel.vercel.app',
   'capacitor://localhost',
   'http://localhost',

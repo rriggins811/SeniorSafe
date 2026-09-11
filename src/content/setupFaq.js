@@ -13,7 +13,7 @@ export const SETUP_FAQ = [
     audience: 'adult child',
     items: [
       {
-        q: 'How do I set SeniorSafeApp up for my mom or dad?',
+        q: 'How do I set Hammock365 up for my mom or dad?',
         a: 'On your own phone, tap "Get Started" and create your account with your name, mobile number, email, and a password. Next, type the first name of the person you look after, their mobile number, and the time they should check in by. Then tap "Text them the link." That is it on your side. The app shows "Waiting for [name] to join" until they open the link.',
       },
       {
@@ -22,7 +22,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'What does my parent see when they open the link?',
-        a: 'A screen that says "Hi [their name]. [Your name] set up SeniorSafeApp so you can let them know you are okay each morning with one tap." They type an email and a password, tap Continue, and land on their big "I\'m Okay Today" button. No questions, no settings.',
+        a: 'A screen that says "Hi [their name]. [Your name] set up Hammock365 so you can let them know you are okay each morning with one tap." They type an email and a password, tap Continue, and land on their big "I\'m Okay Today" button. No questions, no settings.',
       },
       {
         q: 'Does my parent have to install an app?',
@@ -72,7 +72,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'My parent tapped the button but I did not get a text.',
-        a: 'Check three things. Your mobile number is in Settings and correct. The text for each check-in is a paid-plan feature (the free plan texts one contact only when a check-in is missed or I Need Help is pressed). And you have not replied STOP to a SeniorSafeApp text, which turns texts off; reply START to turn them back on. The check-in still shows in the app either way.',
+        a: 'Check three things. Your mobile number is in Settings and correct. The text for each check-in is a paid-plan feature (the free plan texts one contact only when a check-in is missed or I Need Help is pressed). And you have not replied STOP to a Hammock365 text, which turns texts off; reply START to turn them back on. The check-in still shows in the app either way.',
       },
       {
         q: 'I got a "hasn\'t checked in" alert but they are fine.',
@@ -98,7 +98,7 @@ export const SETUP_FAQ = [
     items: [
       {
         q: 'What am I supposed to do each day?',
-        a: 'Open SeniorSafeApp and tap the big blue button that says "I\'m Okay Today." Once a day is all it takes. It turns green and says "You\'re checked in." Your family sees it right away, and on the paid plan they get a text too.',
+        a: 'Open Hammock365 and tap the big blue button that says "I\'m Okay Today." Once a day is all it takes. It turns green and says "You\'re checked in." Your family sees it right away, and on the paid plan they get a text too.',
       },
       {
         q: 'Do I have to keep the app open?',
@@ -114,11 +114,11 @@ export const SETUP_FAQ = [
       },
       {
         q: 'I cannot find the app on my phone.',
-        a: 'Open the text message your family sent and tap the link again. If you want an icon on your home screen, ask your family to help you add it, or install SeniorSafeApp from the App Store or Google Play and sign in with the same email and password.',
+        a: 'Open the text message your family sent and tap the link again. If you want an icon on your home screen, ask your family to help you add it, or install Hammock365 from the App Store or Google Play and sign in with the same email and password.',
       },
       {
         q: 'The writing is too small.',
-        a: 'If you use the SeniorSafeApp app from the App Store or Google Play, make the text bigger in your phone\'s Settings under Display or Accessibility, and the app follows it. If you open SeniorSafeApp in Safari or Chrome, use the browser\'s own text size button (the aA at the top of the screen in Safari). Your family can help with this over the phone.',
+        a: 'If you use the Hammock365 app from the App Store or Google Play, make the text bigger in your phone\'s Settings under Display or Accessibility, and the app follows it. If you open Hammock365 in Safari or Chrome, use the browser\'s own text size button (the aA at the top of the screen in Safari). Your family can help with this over the phone.',
       },
       {
         q: 'It is asking me to sign in and I do not remember how.',
@@ -126,7 +126,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'Who sees that I checked in?',
-        a: 'Only the family members who joined your family in SeniorSafeApp. Nobody else.',
+        a: 'Only the family members who joined your family in Hammock365. Nobody else.',
       },
       {
         q: 'Can I add a note, like "going to the store"?',
@@ -143,7 +143,7 @@ export const SETUP_FAQ = [
     audience: 'adult child',
     items: [
       {
-        q: 'Is SeniorSafeApp free?',
+        q: 'Is Hammock365 free?',
         a: 'Yes. The free plan is free forever, no card: the daily check-in button, a text to one family contact when the check-in is missed or I Need Help is pressed, a push nudge, the check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite by text or link, siblings and caregivers joining by code to see the same board, and 10 messages with Maggie.',
       },
       {

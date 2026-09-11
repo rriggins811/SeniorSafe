@@ -15,11 +15,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 // memberInviteText); the app shows the same text in the "text it yourself"
 // fallback.
 
-const APP_URL = 'https://app.seniorsafeapp.com'
+const APP_URL = 'https://app.hammock365.com'
 const DAILY_LIMIT = 6
 
 const ALLOWED_ORIGINS = [
-  'https://app.seniorsafeapp.com',
+  'https://app.hammock365.com',
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
   'http://localhost',
@@ -47,12 +47,12 @@ function normalizePhone(raw: string): string | null {
 
 function seniorInviteText(seniorName: string, ownerFirst: string, code: string): string {
   const who = ownerFirst || 'Your family'
-  return `Hi ${seniorName || 'there'}, it's ${who}. I set up SeniorSafeApp so you can let me know you're okay each morning with one tap. Open this link on your phone and follow the steps: ${APP_URL}/signup?code=${code}&who=senior`
+  return `Hi ${seniorName || 'there'}, it's ${who}. I set up Hammock365 so you can let me know you're okay each morning with one tap. Open this link on your phone and follow the steps: ${APP_URL}/signup?code=${code}&who=senior`
 }
 
 function memberInviteText(seniorName: string, code: string): string {
   const whom = seniorName ? `${seniorName}'s` : "our family's"
-  return `Join ${whom} SeniorSafeApp family so you get the daily "I'm okay" check-in too. Tap this link and sign up: ${APP_URL}/signup?code=${code}`
+  return `Join ${whom} Hammock365 family so you get the daily "I'm okay" check-in too. Tap this link and sign up: ${APP_URL}/signup?code=${code}`
 }
 
 const admin = createClient(

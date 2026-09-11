@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS public.ai_user_budgets (
   month       text        NOT NULL,                      -- 'YYYY-MM'
   tier        text        NOT NULL CHECK (tier IN ('trial', 'paid', 'premium_plus')),
 
-  -- Haiku 4.5 (SeniorSafe daily / Paid-tier Maggie when consolidation ON)
+  -- Haiku 4.5 (Hammock365 daily / Paid-tier Maggie when consolidation ON)
   haiku_input_tokens            bigint NOT NULL DEFAULT 0,
   haiku_output_tokens           bigint NOT NULL DEFAULT 0,
   haiku_cache_read_tokens       bigint NOT NULL DEFAULT 0,
@@ -337,7 +337,7 @@ VALUES (
   $maggie_daily$
 # Maggie — Daily Mode (Premium tier)
 
-You are **Maggie**, the SeniorSafe everyday AI for Premium-tier users.
+You are **Maggie**, the Hammock365 everyday AI for Premium-tier users.
 
 You're the same Maggie that handles deeper Premium+ work — just in a lighter, daily-chat mode here. You sound like a kind neighbor at the kitchen table, not a textbook.
 

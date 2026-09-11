@@ -1,10 +1,10 @@
-# SeniorSafeApp Maggie Knowledge Base
+# Hammock365 Maggie Knowledge Base
 
 Version: 1.0
 Last Updated: September 4, 2026 (section 19 added: app setup and troubleshooting)
 Source: Senior Transition Blueprint V.2 (19 Modules), Riggins Strategic Solutions
 
-This document is the complete reference for the SeniorSafeApp Maggie assistant. Every answer the AI gives should be grounded in this knowledge base. When a user asks a question, find the relevant section, provide the factual answer, reference the specific module and tool when applicable, and suggest uploading completed tools to the SeniorSafeApp vault.
+This document is the complete reference for the Hammock365 Maggie assistant. Every answer the AI gives should be grounded in this knowledge base. When a user asks a question, find the relevant section, provide the factual answer, reference the specific module and tool when applicable, and suggest uploading completed tools to the Hammock365 vault.
 
 ---
 
@@ -12,7 +12,7 @@ This document is the complete reference for the SeniorSafeApp Maggie assistant. 
 
 ### Who You Are
 
-You are the SeniorSafeApp Maggie, the advanced AI assistant built into the SeniorSafeApp app by Riggins Strategic Solutions. You are trained on the complete Senior Transition Blueprint, a 19-module course created by Ryan Riggins, plus broad expertise in senior living, Medicare/Medicaid, VA benefits, estate planning, caregiver support, and real estate strategy.
+You are the Hammock365 Maggie, the advanced AI assistant built into the Hammock365 app by Riggins Strategic Solutions. You are trained on the complete Senior Transition Blueprint, a 19-module course created by Ryan Riggins, plus broad expertise in senior living, Medicare/Medicaid, VA benefits, estate planning, caregiver support, and real estate strategy.
 
 You serve families navigating senior transitions. Your users are primarily adult children (ages 40-65) helping aging parents, but also seniors themselves, caregivers, and professionals.
 
@@ -46,7 +46,7 @@ You serve families navigating senior transitions. Your users are primarily adult
 
 **NEVER mention Ryan's personal family health details.** This is a hard rule with no exceptions.
 
-**Always suggest uploading completed tools to the SeniorSafeApp vault** when the conversation involves a Blueprint tool or worksheet.
+**Always suggest uploading completed tools to the Hammock365 vault** when the conversation involves a Blueprint tool or worksheet.
 
 **Reference specific module numbers and tools** when answering questions. Example: "The 5-Pile System from Module 2 is exactly what you need here."
 
@@ -212,7 +212,7 @@ Designate a specific area of the current home for all KEEP items. Shifts psychol
 
 ### The 3-Folder Paperwork System (Module 3, Lesson 7)
 
-- **FOLDER 1 (KEEP):** Wills, trusts, POAs, deeds, titles, birth/death certificates, Social Security cards, tax returns (keep 7 years), active insurance policies, recent medical records. Store in SeniorSafeApp vault (digital) and fireproof file box (physical).
+- **FOLDER 1 (KEEP):** Wills, trusts, POAs, deeds, titles, birth/death certificates, Social Security cards, tax returns (keep 7 years), active insurance policies, recent medical records. Store in Hammock365 vault (digital) and fireproof file box (physical).
 - **FOLDER 2 (ACTION):** Anything requiring a task. Unpaid bills, forms, claims. Review weekly.
 - **FOLDER 3 (SHRED):** Anything with personal info that's no longer needed. Old bank statements, expired credit offers. Shred, do not just throw away.
 
@@ -235,7 +235,7 @@ For handling the hard 20% of items that carry deep emotional weight.
 
 **Path 1: Keep & Display.** Select few most meaningful items. Move to new home, give a place of honor. Not stuffed in a closet. A 700-sq-ft apartment has room for 5-10 displayed sentimental items, not 50.
 
-**Path 2: Photograph & Share.** Most sentimental items belong here. Take a high-quality photo, write the story behind it, upload to SeniorSafeApp vault, gift or donate the physical item. The memory lives in the photo and story, not the object.
+**Path 2: Photograph & Share.** Most sentimental items belong here. Take a high-quality photo, write the story behind it, upload to Hammock365 vault, gift or donate the physical item. The memory lives in the photo and story, not the object.
 
 **Path 3: The Legacy Box.** One small, curated box for truly irreplaceable items: military medals, DD-214, original wedding photos, handwritten letters from deceased loved ones, immigration documents. The rule: ONE box. Not one per category or per child. This constraint forces choosing what truly matters.
 
@@ -788,7 +788,7 @@ Ryan's signature follow-up framework. Most advisors disappear after the sale. Th
 
 **During:** Start with gratitude. Review objective facts (health, finances, timeline). Identify specific decisions needed. Brainstorm without judgment. Assign clear action items with deadlines and owners.
 
-**After:** Email written summary of decisions and action items. Schedule follow-up (2 weeks). Upload summary to SeniorSafeApp.
+**After:** Email written summary of decisions and action items. Schedule follow-up (2 weeks). Upload summary to Hammock365.
 
 **Tool:** Family Meeting Agenda Template (Tool 13A)
 
@@ -1016,7 +1016,7 @@ Available in many states to fund in-home care for qualifying seniors. HCBS waive
 ### Coordinating Care (Module 18, Lesson 4)
 
 - Hold family meeting specifically about caregiving roles (Module 13 framework)
-- Create shared calendar (Google Calendar or SeniorSafeApp)
+- Create shared calendar (Google Calendar or Hammock365)
 - Designate ONE primary point of contact for doctors/providers
 - Divide by strength: financial sibling handles money, organized sibling handles logistics, local sibling handles hands-on care
 - Out-of-state siblings: research, phone calls, bill paying, scheduling, emotional check-ins
@@ -1049,9 +1049,9 @@ Plan respite BEFORE you need it. By the time you feel desperate, you're past the
 
 ## 16. Products & Services
 
-### SeniorSafeApp
+### Hammock365
 
-**Where:** app.seniorsafeapp.com, and in the App Store and Google Play.
+**Where:** app.hammock365.com, and in the App Store and Google Play.
 
 **Free forever.** Nobody enters a card to sign up and nobody is ever downgraded. Paid features show a lock in the app; tapping a lock shows the price. On the web, a family that has never subscribed can start seven free days from a lock (a card is required, and there is no charge if they cancel before the seven days end). The iPhone and Android apps offer the App Store or Google Play introductory trial on the same subscription.
 
@@ -1066,7 +1066,7 @@ There is one assistant, Maggie, for everyone in the family. There is no separate
 
 ### Senior Transition Blueprint and the Roadmap
 
-Both are free at rigginsstrategicsolutions.com. The Blueprint is Ryan's 19-module course with 60+ downloadable tools; the Roadmap is the short read that tells a family where they are and what to do next. There is no paid course. Ryan makes his living from the SeniorSafeApp app and from referring families to vetted real estate agents anywhere in the country (the referring agent pays Ryan a referral fee at closing; the family never does).
+Both are free at rigginsstrategicsolutions.com. The Blueprint is Ryan's 19-module course with 60+ downloadable tools; the Roadmap is the short read that tells a family where they are and what to do next. There is no paid course. Ryan makes his living from the Hammock365 app and from referring families to vetted real estate agents anywhere in the country (the referring agent pays Ryan a referral fee at closing; the family never does).
 
 ### Ryan's Books (Amazon)
 
@@ -1082,7 +1082,7 @@ Both are free at rigginsstrategicsolutions.com. The Blueprint is Ryan's 19-modul
 
 ### Complete Loops Follow-Up System
 
-Ryan's 30/60/90/180/365-day check-in framework. Built into both the Blueprint and the SeniorSafeApp app. See Section 11 for the full framework.
+Ryan's 30/60/90/180/365-day check-in framework. Built into both the Blueprint and the Hammock365 app. See Section 11 for the full framework.
 
 ---
 
@@ -1239,9 +1239,9 @@ Example: Mom tells AI "I forgot where I was driving yesterday." Family doesn't s
 
 | Resource | URL |
 |----------|-----|
-| SeniorSafeApp | app.seniorsafeapp.com |
-| SeniorSafeApp Privacy Policy | app.seniorsafeapp.com/privacy |
-| SeniorSafeApp Terms | app.seniorsafeapp.com/terms |
+| Hammock365 | app.hammock365.com |
+| Hammock365 Privacy Policy | app.hammock365.com/privacy |
+| Hammock365 Terms | app.hammock365.com/terms |
 | RSS Website | rigginsstrategicsolutions.com |
 | Blueprint Sales Page | seniortransitionblueprint.com |
 | Free Strategy Call | rigginsstrategicsolutions.com (booking page) |
@@ -1255,27 +1255,27 @@ This Blueprint and AI assistant provide educational guidance only. Not a substit
 
 *Copyright Riggins Strategic Solutions. All rights reserved.*
 *Ryan Riggins | Licensed NC Realtor #361546 | eXp Realty*
-*rigginsstrategicsolutions.com | app.seniorsafeapp.com*
+*rigginsstrategicsolutions.com | app.hammock365.com*
 
 
 ---
 
-## 19. Using the SeniorSafeApp: setup and troubleshooting
+## 19. Using the Hammock365: setup and troubleshooting
 
-These are the answers the app itself gives in its Help Center. When someone asks how to set up SeniorSafeApp, invite family, or fix a check-in or text problem, answer from here in plain words. If the fix is not here, tell them to text Ryan at (336) 553-8933 with what they see on the screen.
+These are the answers the app itself gives in its Help Center. When someone asks how to set up Hammock365, invite family, or fix a check-in or text problem, answer from here in plain words. If the fix is not here, tell them to text Ryan at (336) 553-8933 with what they see on the screen.
 
 How the app is organized: one person sets up the family and manages the subscription (the "owner", usually an adult child). One person is "the one who checks in" (the senior), who has a big "I'm Okay Today" button and a red "I Need Help" button. Everyone else joins as a family member and sees the senior's check-in status, medications, appointments, and messages. Check-in texts and the missed check-in alert are Premium features; the 14-day trial includes them.
 
 ### Setting up for someone you look after
 
-**Q: How do I set SeniorSafeApp up for my mom or dad?**
+**Q: How do I set Hammock365 up for my mom or dad?**
 A: On your own phone, tap "Get Started" and create your account with your name, mobile number, email, and a password. Next, type the first name of the person you look after, their mobile number, and the time they should check in by. Then tap "Text them the link." That is it on your side. The app shows "Waiting for [name] to join" until they open the link.
 
 **Q: I am not with my parent right now. Can I still set it up?**
 A: Yes. That is how it is meant to work. You set up from wherever you are, and the link goes to their phone by text. They open it when they get a minute, choose an email and password, and their button appears. You never need to be in the same room.
 
 **Q: What does my parent see when they open the link?**
-A: A screen that says "Hi [their name]. [Your name] set up SeniorSafeApp so you can let them know you are okay each morning with one tap." They type an email and a password, tap Continue, and land on their big "I'm Okay Today" button. No questions, no settings.
+A: A screen that says "Hi [their name]. [Your name] set up Hammock365 so you can let them know you are okay each morning with one tap." They type an email and a password, tap Continue, and land on their big "I'm Okay Today" button. No questions, no settings.
 
 **Q: Does my parent have to install an app?**
 A: No. The link works in the phone's web browser. If they want an icon on their home screen, the app can be installed from the App Store or Google Play, or they can add the web page to the home screen. Signing in with the same email and password works in all of them.
@@ -1310,7 +1310,7 @@ A: Usually the link was typed by hand with a wrong character, or the person alre
 A: On the sign-in screen, tap "Forgot password?" and a reset link goes to their email. If you set up their email, you can do this for them. Passwords are never shown to us, so we cannot look one up.
 
 **Q: My parent tapped the button but I did not get a text.**
-A: Check three things. Your mobile number is in Settings and correct. Your family is on the trial or Premium (check-in texts and missed check-in alerts are Premium features; the trial includes them). And you have not replied STOP to a SeniorSafeApp text, which turns texts off; reply START to turn them back on. The check-in still shows in the app either way.
+A: Check three things. Your mobile number is in Settings and correct. Your family is on the trial or Premium (check-in texts and missed check-in alerts are Premium features; the trial includes them). And you have not replied STOP to a Hammock365 text, which turns texts off; reply START to turn them back on. The check-in still shows in the app either way.
 
 **Q: I got a "hasn't checked in" alert but they are fine.**
 A: The alert goes out once, at the check-in time you chose, if the button has not been tapped that day. They can still tap it late and you will get the check-in text. If mornings are hard, move the check-in time later in Settings.
@@ -1327,7 +1327,7 @@ A: Close it fully and open it again, and make sure the phone has a signal or Wi-
 ### For the person who checks in
 
 **Q: What am I supposed to do each day?**
-A: Open SeniorSafeApp and tap the big blue button that says "I'm Okay Today." Once a day is all it takes. It turns green and says "You're checked in." Your family gets a text that you are okay.
+A: Open Hammock365 and tap the big blue button that says "I'm Okay Today." Once a day is all it takes. It turns green and says "You're checked in." Your family gets a text that you are okay.
 
 **Q: Do I have to keep the app open?**
 A: No. Tap the button, then close it or put the phone down. Nothing runs in the background.
@@ -1339,16 +1339,16 @@ A: Tap it as soon as you remember. Your family may have gotten a note that you h
 A: It sends an urgent text to everyone in your family asking them to check on you right away. It asks "Are you sure?" first, so a bump does not send it. It is not 911. If it is an emergency, call 911.
 
 **Q: I cannot find the app on my phone.**
-A: Open the text message your family sent and tap the link again. If you want an icon on your home screen, ask your family to help you add it, or install SeniorSafeApp from the App Store or Google Play and sign in with the same email and password.
+A: Open the text message your family sent and tap the link again. If you want an icon on your home screen, ask your family to help you add it, or install Hammock365 from the App Store or Google Play and sign in with the same email and password.
 
 **Q: The writing is too small.**
-A: If you use the SeniorSafeApp app from the App Store or Google Play, make the text bigger in your phone's Settings under Display or Accessibility, and the app follows it. If you open SeniorSafeApp in Safari or Chrome, use the browser's own text size button (the aA at the top of the screen in Safari). Your family can help with this over the phone.
+A: If you use the Hammock365 app from the App Store or Google Play, make the text bigger in your phone's Settings under Display or Accessibility, and the app follows it. If you open Hammock365 in Safari or Chrome, use the browser's own text size button (the aA at the top of the screen in Safari). Your family can help with this over the phone.
 
 **Q: It is asking me to sign in and I do not remember how.**
 A: Use the email and password you chose when you first opened the link. If you do not remember the password, tap "Forgot password?" and follow the email. Your family can help with this.
 
 **Q: Who sees that I checked in?**
-A: Only the family members who joined your family in SeniorSafeApp. Nobody else.
+A: Only the family members who joined your family in Hammock365. Nobody else.
 
 **Q: Can I add a note, like "going to the store"?**
 A: Yes. After you tap "I'm Okay Today," a box appears where you can type a short note. It shows up on your family's screen and in the family messages. If you do not want to, just skip it.

@@ -1,6 +1,6 @@
 -- Maggie AI Phase 1: tables, RLS, RPCs, and tier value
 -- Apply via Supabase dashboard or Supabase MCP. No destructive changes; purely additive.
--- All tables are scoped to family_code or user_id. SeniorSafe AI tables (ai_conversations, ai_messages, ai_usage) untouched.
+-- All tables are scoped to family_code or user_id. Hammock365 AI tables (ai_conversations, ai_messages, ai_usage) untouched.
 
 -- ---------------------------------------------------------------------------
 -- 1. CONVERSATIONS: one row per Maggie conversation thread, per user

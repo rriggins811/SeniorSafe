@@ -12,13 +12,13 @@
 // Idempotent: each conversation is summarized at most once (summarized_at
 // stamp). Safe to call repeatedly.
 //
-// Handles both Maggie and SeniorSafeApp AI conversations via the `source` param.
+// Handles both Maggie and Hammock365 AI conversations via the `source` param.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const ALLOWED_ORIGINS = [
-  'https://app.seniorsafeapp.com',
+  'https://app.hammock365.com',
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
   'http://localhost',
@@ -52,7 +52,7 @@ function jsonResponse(body: unknown, status: number, headers: HeadersInit) {
   })
 }
 
-const SUMMARIZER_SYSTEM_PROMPT = `You are a memory compactor for SeniorSafeApp families. Your job: given a finished conversation (transcript below) and the family's current running summary, produce an UPDATED running summary that captures what genuinely matters for future sessions.
+const SUMMARIZER_SYSTEM_PROMPT = `You are a memory compactor for Hammock365 families. Your job: given a finished conversation (transcript below) and the family's current running summary, produce an UPDATED running summary that captures what genuinely matters for future sessions.
 
 What to capture (and update if already known):
 - The senior's profile (age, current living situation, transition stage, readiness signals). NOT specific medical details, medication names, or mental-health specifics.
@@ -71,7 +71,7 @@ What to NEVER capture (HIPAA-honest):
 - Financial account numbers, SSNs, passwords, addresses.
 - Verbatim quotes from private conversations.
 
-Format: Markdown bullet list under bold-headed sections. Compact, no fluff. The summary is loaded into every future Maggie/SeniorSafeApp AI session, so brevity matters. **Hard cap 2,800 tokens (~11,000 characters).** If you would exceed, drop oldest/least-relevant items first; preserve recent decisions, current stage, persona, and upcoming milestones.
+Format: Markdown bullet list under bold-headed sections. Compact, no fluff. The summary is loaded into every future Maggie/Hammock365 AI session, so brevity matters. **Hard cap 2,800 tokens (~11,000 characters).** If you would exceed, drop oldest/least-relevant items first; preserve recent decisions, current stage, persona, and upcoming milestones.
 
 Return ONLY the updated summary as the response body. No preamble like "Here is the summary." No closing remarks. Just the markdown.`
 

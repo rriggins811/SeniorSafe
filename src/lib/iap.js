@@ -1,5 +1,5 @@
 /**
- * Apple In-App Purchase service for SeniorSafeApp iOS app.
+ * Apple In-App Purchase service for Hammock365 iOS app.
  *
  * Uses cordova-plugin-purchase which injects `window.CdvPurchases`
  * at runtime on native iOS devices. This module is safe to import

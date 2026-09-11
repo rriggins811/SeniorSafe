@@ -362,7 +362,7 @@ export default function ParentHome({
                 Call 911
               </a>
               <button
-                onClick={() => { if (window.confirm('Sign out of SeniorSafeApp on this phone? You will need your email and password to sign back in.')) { setMoreOpen(false); onSignOut() } }}
+                onClick={() => { if (window.confirm('Sign out of Hammock365 on this phone? You will need your email and password to sign back in.')) { setMoreOpen(false); onSignOut() } }}
                 className="w-full flex items-center gap-4 py-4 text-[#6B645A] font-semibold text-left"
                 style={{ fontSize: '17px' }}
               >

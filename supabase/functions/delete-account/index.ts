@@ -6,7 +6,7 @@ import Stripe from "https://esm.sh/stripe@14.14.0?target=deno"
 // CORS
 // ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = [
-  'https://app.seniorsafeapp.com',
+  'https://app.hammock365.com',
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
 ]
@@ -105,7 +105,7 @@ serve(async (req: Request) => {
                 const body = new URLSearchParams({
                   To: toPhone,
                   From: FROM_NUMBER,
-                  Body: `${seniorName}'s SeniorSafeApp account has been closed. You can still sign in but family features will be unavailable., SeniorSafeApp. Reply STOP to opt out`,
+                  Body: `${seniorName}'s Hammock365 account has been closed. You can still sign in but family features will be unavailable., Hammock365. Reply STOP to opt out`,
                 })
                 await fetch(
                   `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Messages.json`,
@@ -148,7 +148,7 @@ serve(async (req: Request) => {
       const memberName = profile.first_name || 'A family member'
       await supabase.from('family_messages').insert({
         user_id: profile.invited_by,
-        author_name: 'SeniorSafeApp',
+        author_name: 'Hammock365',
         message_text: `${memberName} has deleted their account and left the family.`,
         family_name: adminProfile?.family_name || null,
       })
@@ -192,7 +192,7 @@ serve(async (req: Request) => {
     await supabase.from('maggie_consent').delete().eq('user_id', user.id)
     await supabase.from('maggie_usage').delete().eq('user_id', user.id)
 
-    // SeniorSafeApp AI (daily-buddy /ai), same pattern.
+    // Hammock365 AI (daily-buddy /ai), same pattern.
     const { data: aiConvs } = await supabase
       .from('ai_conversations')
       .select('id')
@@ -225,13 +225,13 @@ serve(async (req: Request) => {
     }
 
     // ---- 5/6. Remove the account, but PRESERVE a paid Blueprint purchase ----
-    // blueprint-site (the $47/$297 course) and SeniorSafeApp share this one
+    // blueprint-site (the $47/$297 course) and Hammock365 share this one
     // user_profile row + auth user. A paid course lives in course_access.tier
     // (core|premium). Hard-deleting the row + auth user also destroys that paid
-    // course access, this caused a real customer incident (a SeniorSafeApp opt-out
+    // course access, this caused a real customer incident (a Hammock365 opt-out
     // silently wiped a Blueprint purchase). So when the user has paid Blueprint
     // access, keep the auth user + the row + course_access and only reset the
-    // SeniorSafeApp-operational state. Otherwise delete fully as before.
+    // Hammock365-operational state. Otherwise delete fully as before.
     const courseTier = (profile.course_access as { tier?: string } | null)?.tier
     const hasPaidBlueprint = courseTier === 'core' || courseTier === 'premium'
 
@@ -250,7 +250,7 @@ serve(async (req: Request) => {
           onboarding_complete: false,
         })
         .eq('user_id', user.id)
-      console.log(`✅ SeniorSafeApp data removed; PRESERVED paid Blueprint access for ${user.id} (course=${courseTier})`)
+      console.log(`✅ Hammock365 data removed; PRESERVED paid Blueprint access for ${user.id} (course=${courseTier})`)
       return new Response(
         JSON.stringify({ success: true, preservedBlueprintAccess: true }),
         { status: 200, headers: cors }

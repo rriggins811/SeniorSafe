@@ -131,7 +131,7 @@ serve(async (req: Request) => {
       if (profile.phone) {
         const ok = await sendTwilioSMS(
           normalizePhone(profile.phone),
-          `SeniorSafeApp could not renew your subscription through ${platform === 'google' ? 'Google Play' : 'the App Store'}. Update your payment method there so the family texts keep going. Reply STOP to opt out`,
+          `Hammock365 could not renew your subscription through ${platform === 'google' ? 'Google Play' : 'the App Store'}. Update your payment method there so the family texts keep going. Reply STOP to opt out`,
         )
         await supabaseAdmin.from('notification_log').insert({
           user_id: targetId, notification_type: 'payment_failed', channel: 'sms', status: ok ? 'sent' : 'failed', recipient_phone: profile.phone,

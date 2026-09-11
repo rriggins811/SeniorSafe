@@ -12,7 +12,7 @@ import { isServiceBearer } from '../_shared/cronAuth.ts'
 // Invoked by pg_cron with the service role key as Bearer. Nothing else may
 // call it.
 
-const APP_URL = 'https://app.seniorsafeapp.com'
+const APP_URL = 'https://app.hammock365.com'
 const MAX_REMINDERS = 2
 const MIN_GAP_HOURS = 20
 
@@ -80,7 +80,7 @@ serve(async (req) => {
       const link = `${APP_URL}/signup?code=${o.family_code}&who=senior`
       const n = (o.invite_reminders_sent || 0) + 1
 
-      const seniorMsg = `Hi ${name}, it's ${who} again. Here's your SeniorSafeApp link. Open it on your phone and it takes about a minute: ${link}`
+      const seniorMsg = `Hi ${name}, it's ${who} again. Here's your Hammock365 link. Open it on your phone and it takes about a minute: ${link}`
       const r = await sendTwilio(to, seniorMsg)
       await admin.from('notification_log').insert({
         user_id: o.user_id, family_name: o.family_name, notification_type: 'invite_reminder', channel: 'sms',
@@ -94,7 +94,7 @@ serve(async (req) => {
         const tail = n >= MAX_REMINDERS
           ? `That was the last automatic reminder. If it's easier, open this on ${name}'s phone yourself: ${link}`
           : `We'll try once more tomorrow. You can also open this on ${name}'s phone yourself: ${link}`
-        await sendTwilio(ownerTo, `${name} hasn't opened the SeniorSafeApp link yet, so we just sent it again. ${tail}`)
+        await sendTwilio(ownerTo, `${name} hasn't opened the Hammock365 link yet, so we just sent it again. ${tail}`)
       }
 
       await admin.from('user_profile')

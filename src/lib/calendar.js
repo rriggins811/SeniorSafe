@@ -1,5 +1,5 @@
 /**
- * Google Calendar URL helper for SeniorSafeApp.
+ * Google Calendar URL helper for Hammock365.
  * Generates "Add to Google Calendar" links that open in a new tab
  * with event details pre-filled.
  */

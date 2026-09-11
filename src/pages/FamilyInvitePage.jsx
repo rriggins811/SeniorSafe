@@ -102,7 +102,7 @@ export default function FamilyInvitePage() {
 
   async function share(text) {
     if (navigator.share) {
-      try { await navigator.share({ title: 'Join me on SeniorSafeApp', text }) } catch { /* cancelled */ }
+      try { await navigator.share({ title: 'Join me on Hammock365', text }) } catch { /* cancelled */ }
     } else {
       await copy(text, 'share')
     }
@@ -295,7 +295,7 @@ export default function FamilyInvitePage() {
             <div className="flex flex-col items-center gap-3 text-center">
               <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center"><UserMinus size={28} color="#DC2626" strokeWidth={1.5} /></div>
               <h3 className="text-[#1B365D] font-bold text-lg">Not available</h3>
-              <p className="text-gray-600 text-base leading-relaxed">SeniorSafeApp is for people 13 and older.</p>
+              <p className="text-gray-600 text-base leading-relaxed">Hammock365 is for people 13 and older.</p>
               <button onClick={() => setShowAgeBlocked(false)} className="w-full py-3 rounded-xl bg-gray-100 text-gray-700 font-semibold text-base mt-2">Got it</button>
             </div>
           </div>

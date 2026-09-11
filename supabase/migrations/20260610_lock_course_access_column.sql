@@ -1,6 +1,6 @@
 -- 2026-06-10: Lock course_access (paid Blueprint access) against non-service writes.
 --
--- WHY: blueprint-site and the SeniorSafe app share ONE user_profile row per
+-- WHY: blueprint-site and the Hammock365 app share ONE user_profile row per
 -- person. The protect_user_profile_columns trigger already guarded role /
 -- subscription_tier / family_code / invited_by etc. against non-service writes,
 -- but it did NOT cover course_access — the column that holds paid Blueprint

@@ -31,7 +31,7 @@ function DoubleBillingModal({ open, platform, onClose }) {
   const copy = {
     apple: {
       title: 'Existing App Store subscription',
-      body: 'You already have an active SeniorSafeApp subscription on this Apple ID. To change tiers or cancel, manage it in your iPhone Settings.',
+      body: 'You already have an active Hammock365 subscription on this Apple ID. To change tiers or cancel, manage it in your iPhone Settings.',
       ctaLabel: 'Open Settings',
       ctaUrl: 'app-settings:',
       ctaTarget: undefined, // app-settings: is a same-app deep link, not a web URL
@@ -39,7 +39,7 @@ function DoubleBillingModal({ open, platform, onClose }) {
     },
     google: {
       title: 'Existing Google Play subscription',
-      body: 'You already have an active SeniorSafeApp subscription on this Google account. To change tiers or cancel, manage it in the Play Store.',
+      body: 'You already have an active Hammock365 subscription on this Google account. To change tiers or cancel, manage it in the Play Store.',
       ctaLabel: 'Open Play Store',
       ctaUrl: 'https://play.google.com/store/account/subscriptions',
       ctaTarget: '_blank',
@@ -47,9 +47,9 @@ function DoubleBillingModal({ open, platform, onClose }) {
     },
     stripe: {
       title: 'Existing web subscription',
-      body: 'You already have an active SeniorSafeApp subscription managed on the web. Sign in there to change or cancel it.',
+      body: 'You already have an active Hammock365 subscription managed on the web. Sign in there to change or cancel it.',
       ctaLabel: 'Open in browser',
-      ctaUrl: 'https://app.seniorsafeapp.com/upgrade',
+      ctaUrl: 'https://app.hammock365.com/upgrade',
       ctaTarget: '_blank',
       footer: 'Same login as the app',
     },
@@ -207,11 +207,11 @@ export default function UpgradePage() {
         }
         const code = fnError.context?.status || fnError.status || 'fn-error'
         const detail = fnError.message || 'Unable to start checkout.'
-        throw new Error(`${detail} (${code}). If this keeps happening, text Ryan at (336) 553-8933 or email support@seniorsafeapp.com.`)
+        throw new Error(`${detail} (${code}). If this keeps happening, text Ryan at (336) 553-8933 or email support@hammock365.com.`)
       }
 
       if (!data?.url) {
-        throw new Error('Checkout URL missing from response. If this keeps happening, text Ryan at (336) 553-8933 or email support@seniorsafeapp.com.')
+        throw new Error('Checkout URL missing from response. If this keeps happening, text Ryan at (336) 553-8933 or email support@hammock365.com.')
       }
 
       // Redirect to Stripe Checkout
@@ -264,7 +264,7 @@ export default function UpgradePage() {
       if (!session) throw new Error('Not logged in')
 
       // Pull metadata from RevenueCat customerInfo if available
-      const entitlement = customerInfo?.entitlements?.active?.['SeniorSafeApp Pro']
+      const entitlement = customerInfo?.entitlements?.active?.['Hammock365 Pro']
       const body = {
         originalTransactionId: entitlement?.originalPurchaseDate ? String(entitlement?.productIdentifier || '') : null,
         productId: entitlement?.productIdentifier || 'com.rigginsstrategicsolutions.seniorsafe.monthly',

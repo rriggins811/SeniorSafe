@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 // CORS
 // -------------------------------------------------------------------------------------
 const ALLOWED_ORIGINS = [
-  'https://app.seniorsafeapp.com',
+  'https://app.hammock365.com',
   'https://senior-safe-hazel.vercel.app',
   'capacitor://localhost',
   'http://localhost',
@@ -88,7 +88,7 @@ serve(async (req: Request) => {
     const memberName = profile.first_name || 'A family member'
     await supabase.from('family_messages').insert({
       user_id: adminId,
-      author_name: 'SeniorSafeApp',
+      author_name: 'Hammock365',
       message_text: `${memberName} has left the family group.`,
       family_name: adminProfile?.family_name || null,
     })

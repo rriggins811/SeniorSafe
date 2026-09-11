@@ -6,7 +6,7 @@ import Stripe from "https://esm.sh/stripe@14.14.0?target=deno"
 // CORS
 // ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = [
-  'https://app.seniorsafeapp.com',
+  'https://app.hammock365.com',
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
 ]
@@ -166,15 +166,15 @@ serve(async (req: Request) => {
     if (stillPaying && targetPlatform?.stripe_subscription_id) {
       return new Response(JSON.stringify({
         error: 'existing_subscription', platform: 'stripe',
-        message: 'You already have a SeniorSafeApp subscription on the web. Manage it in Settings under Subscription.',
+        message: 'You already have a Hammock365 subscription on the web. Manage it in Settings under Subscription.',
       }), { status: 409, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
     if (hasActiveAppleIAP || hasActiveGoogleIAP) {
       const platform = hasActiveAppleIAP ? 'apple' : 'google'
       const message = platform === 'apple'
-        ? 'You already have an active SeniorSafeApp subscription via the App Store. To change tiers or cancel, manage it in your iPhone Settings > Apple ID > Subscriptions.'
-        : 'You already have an active SeniorSafeApp subscription via Google Play. To change tiers or cancel, manage it in Play Store > Account > Subscriptions.'
+        ? 'You already have an active Hammock365 subscription via the App Store. To change tiers or cancel, manage it in your iPhone Settings > Apple ID > Subscriptions.'
+        : 'You already have an active Hammock365 subscription via Google Play. To change tiers or cancel, manage it in Play Store > Account > Subscriptions.'
       return new Response(JSON.stringify({ error: 'existing_subscription', platform, message }), {
         status: 409,
         headers: { ...cors, 'Content-Type': 'application/json' },
@@ -195,7 +195,7 @@ serve(async (req: Request) => {
 
     // ---- Determine return URL (use origin of request) ----
     const requestOrigin = req.headers.get('Origin') || ''
-    const origin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : 'https://app.seniorsafeapp.com'
+    const origin = ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : 'https://app.hammock365.com'
     const successUrl = `${origin}/dashboard?upgraded=true`
     const cancelUrl = `${origin}/upgrade`
 

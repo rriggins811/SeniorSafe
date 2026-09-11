@@ -1,5 +1,5 @@
 -- 2026-09-04 One assistant (Maggie) for everyone. Ryan's decision, see
--- RSS-Business/SeniorSafe App/AI_MERGE_PLAN_2026-09-04.md.
+-- RSS-Business/Hammock365/AI_MERGE_PLAN_2026-09-04.md.
 --
 -- 1. Fold Maggie's conversation history into the shared tables. Both pairs of
 --    tables have identical columns and UUID ids, so this is a straight copy.

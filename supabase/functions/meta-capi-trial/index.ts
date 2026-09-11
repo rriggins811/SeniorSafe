@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 // ---------------------------------------------------------------------------
 // meta-capi-trial
-// Fires a Meta 'StartTrial' Conversions API event when a SeniorSafeApp trial goes
+// Fires a Meta 'StartTrial' Conversions API event when a Hammock365 trial goes
 // active, so the ad campaign can attribute + optimize for actual signups.
 // Invoked server-side by a Postgres trigger (pg_net) on user_profile; never by
 // the browser. Gated by x-proxy-secret == SOCIAL_PROXY_SECRET. Idempotent: it
@@ -91,7 +91,7 @@ serve(async (req: Request) => {
         event_name: 'StartTrial',
         event_time: Math.floor(Date.now() / 1000),
         event_id: `trial_${userId}`,
-        event_source_url: 'https://app.seniorsafeapp.com',
+        event_source_url: 'https://app.hammock365.com',
         action_source: 'website',
         user_data: userData,
         custom_data: {

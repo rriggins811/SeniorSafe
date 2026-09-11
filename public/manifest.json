@@ -1,6 +1,6 @@
 {
-  "name": "SeniorSafeApp",
-  "short_name": "SeniorSafeApp",
+  "name": "Hammock365",
+  "short_name": "Hammock365",
   "description": "Family coordination app for senior transitions",
   "start_url": "/",
   "display": "standalone",

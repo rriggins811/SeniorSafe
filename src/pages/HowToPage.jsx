@@ -52,7 +52,7 @@ export default function HowToPage() {
             </div>
           </section>
         ))}
-        <p className="text-gray-500 text-sm text-center px-2">Still stuck? Call or text Ryan at (336) 553-8933, or email support@seniorsafeapp.com.</p>
+        <p className="text-gray-500 text-sm text-center px-2">Still stuck? Call or text Ryan at (336) 553-8933, or email support@hammock365.com.</p>
       </div>
     </div>
   )

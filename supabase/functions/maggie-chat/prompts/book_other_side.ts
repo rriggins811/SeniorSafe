@@ -36,7 +36,7 @@ This book is the result. It’s the playbook I wish my own parents had. It’s t
 
 We’re not going to talk about feelings here. My first book, *The Unheard Conversation*, which is published on Amazon KDP, covers the emotional side of this journey—how to actually talk to your parents about what’s next. This book is about the nuts and bolts. It’s about the practical, tactical system you need to protect your family’s single largest asset: their home. For most families, that house isn’t just a house; it’s the physical manifestation of a lifetime of work. It’s the inheritance. It’s the legacy. Losing $20,000, $40,000, or even more because you didn’t have a plan is not just a financial loss; it’s a betrayal of that legacy.
 
-After years of watching families struggle with coordination during transitions, I built SeniorSafeApp—a simple app that brings daily check-ins, medication reminders, appointment tracking, and family messaging into one secure place. Your parent taps 'I'm Okay Today' and everyone gets notified. Documents stay organized in one vault instead of scattered across emails. And there's an AI assistant trained on everything in this book to answer questions 24/7. It's the coordination tool I wish every family had when I was helping them through transitions. You can download it for free at seniorsafeapp.com.
+After years of watching families struggle with coordination during transitions, I built Hammock365—a simple app that brings daily check-ins, medication reminders, appointment tracking, and family messaging into one secure place. Your parent taps 'I'm Okay Today' and everyone gets notified. Documents stay organized in one vault instead of scattered across emails. And there's an AI assistant trained on everything in this book to answer questions 24/7. It's the coordination tool I wish every family had when I was helping them through transitions. You can download it for free at hammock365.com.
 
 I’m going to give you the truth your realtor won’t tell you. I’m going to show you how the system works, where the traps are, and how to navigate the entire process with a clear plan. We'll talk about the seven ways to sell a house when your agent only knows one. We’ll talk about the smart, strategic repairs that actually make you money, and the HGTV-inspired renovations that are a complete waste. Most importantly, I’m going to give you a blueprint to make decisions with confidence, not fear.
 
@@ -68,7 +68,7 @@ Around the same time, life threw a couple of curveballs that hit close to home. 
 
 That’s when it all clicked. The frustration with my parents, the discomfort with my flipping career, the disgust with the traditional real estate model—it all pointed to one, massive, unaddressed problem. The people I used to profit from, people just like my own parents, had no one to advocate for them. They needed a guide, a protector, someone who understood the entire system from the inside out. They didn’t need another salesperson. They needed a Consumer Protection Advisor.
 
-So, I switched sides. I took my eight years of construction project management, my eight years of flipping houses, and my real estate license, and I built Riggins Strategic Solutions. I didn’t just create a course; I built an entire ecosystem to support families. I created the 19-module Senior Transition Blueprint to serve as a step-by-step guide, and I built the SeniorSafeApp app to give families a free tool they could use immediately to stay connected and coordinated. I decided to become the person who gives families the truth, even when it’s not what they want to hear, because it’s what they need to know.
+So, I switched sides. I took my eight years of construction project management, my eight years of flipping houses, and my real estate license, and I built Riggins Strategic Solutions. I didn’t just create a course; I built an entire ecosystem to support families. I created the 19-module Senior Transition Blueprint to serve as a step-by-step guide, and I built the Hammock365 app to give families a free tool they could use immediately to stay connected and coordinated. I decided to become the person who gives families the truth, even when it’s not what they want to hear, because it’s what they need to know.
 
 I’ve played the game. Now, I’m here to make sure your family doesn’t get played.
 
@@ -430,7 +430,7 @@ If aging in place is the goal, you have to approach it like a construction proje
 
 - **Lighting, Lighting, Lighting:** As we age, our eyes need more light to see clearly. Upgrading the lighting in hallways, stairwells, and bathrooms is one of the most effective safety improvements you can make. Nightlights are your best friend.
 
-- **Emergency Preparedness:** Does your parent have a medical alert system they will actually wear and use? This is where a tool like the free SeniorSafeApp app can be a game-changer. The core fear of aging in place is “what if something happens and no one knows,” and the app’s simple “I’m Okay Today” button directly addresses that fear, giving the entire family peace of mind with a single tap.
+- **Emergency Preparedness:** Does your parent have a medical alert system they will actually wear and use? This is where a tool like the free Hammock365 app can be a game-changer. The core fear of aging in place is “what if something happens and no one knows,” and the app’s simple “I’m Okay Today” button directly addresses that fear, giving the entire family peace of mind with a single tap.
 
 These modifications can range from a few hundred dollars for grab bars and nightlights to tens of thousands for a full bathroom remodel or a stairlift. The key is to get a realistic estimate of these costs *before* you commit to the path of aging in place. Get multiple quotes from contractors. Use the \`Contractor Bid Comparison Sheet\` from the Blueprint to compare them on an apples-to-apples basis.
 
@@ -450,7 +450,7 @@ For most professionals involved in a senior transition, the job is over when the
 
 This is a fundamental flaw in the system, and it’s one I was determined to fix. A transaction is a one-time event. A transition is a year-long (or longer) process. That’s why I developed the “Complete Loops” methodology. It’s a system of structured, post-transition check-ins that ensures no family is left behind. It’s built into every engagement, and it’s a core part of the philosophy behind The Senior Transition Blueprint.
 
-The Complete Loops system is simple but powerful. It consists of scheduled check-ins at 30, 90, 180, and 365 days post-move. These aren’t just casual “how are you doing?” calls. They are structured conversations designed to identify and solve the most common post-transition challenges. This methodology is also the philosophical backbone of the SeniorSafeApp app; the app’s daily check-ins, family notifications, and document vault are the digital tools that keep families connected and the Complete Loops system running long after the move is complete.
+The Complete Loops system is simple but powerful. It consists of scheduled check-ins at 30, 90, 180, and 365 days post-move. These aren’t just casual “how are you doing?” calls. They are structured conversations designed to identify and solve the most common post-transition challenges. This methodology is also the philosophical backbone of the Hammock365 app; the app’s daily check-ins, family notifications, and document vault are the digital tools that keep families connected and the Complete Loops system running long after the move is complete.
 
 **The 30-Day Check-In: The Unpacking and Settling Phase**
 
@@ -716,9 +716,9 @@ But knowledge without action is just trivia. The purpose of this book was not ju
 
 I’ve spent my career building a complete ecosystem to help families like yours do exactly that. It’s designed to meet you wherever you are in the process, whether you’re just starting to think about this conversation or you’re in the middle of a full-blown crisis. Here are the three clear, logical next steps you can take right now to turn this information into action.
 
-**Step 1: Download the SeniorSafeApp (Free)**
+**Step 1: Download the Hammock365 (Free)**
 
-The single biggest point of failure in any family transition is a breakdown in communication and coordination. That’s why I built SeniorSafeApp. It’s a simple, powerful, and free app designed to solve this exact problem. It brings daily check-ins, medication and appointment reminders, a secure document vault, and family messaging into one easy-to-use platform. It’s the digital version of the Complete Loops methodology we talked about in Chapter 12. It provides peace of mind for the entire family and a central hub for all the moving parts of the transition. It is launching publicly in March 2026, and you can get on the waitlist and be the first to use it by going to **seniorsafeapp.com**.
+The single biggest point of failure in any family transition is a breakdown in communication and coordination. That’s why I built Hammock365. It’s a simple, powerful, and free app designed to solve this exact problem. It brings daily check-ins, medication and appointment reminders, a secure document vault, and family messaging into one easy-to-use platform. It’s the digital version of the Complete Loops methodology we talked about in Chapter 12. It provides peace of mind for the entire family and a central hub for all the moving parts of the transition. It is launching publicly in March 2026, and you can get on the waitlist and be the first to use it by going to **hammock365.com**.
 
 **Step 2: Get The Senior Transition Blueprint ($47)**
 
@@ -748,9 +748,9 @@ This book is the start of your family's plan, not the end. Here are the resource
 Get our free condensed guide to the senior transition process, including key checklists, worksheets, and an overview of all 7 exit strategies. It's the perfect starting point for your family conversation.
 * **rigginsstrategicsolutions.com/simpleblueprint**
 
-**2. The SeniorSafeApp (Free to Start)**
+**2. The Hammock365 (Free to Start)**
 Coordinate your family with daily check-ins, medication and appointment reminders, a secure document vault, family messaging, and an AI assistant trained on Blueprint methodology. It's the digital coordination tool every family needs.
-* **seniorsafeapp.com**
+* **hammock365.com**
 
 **3. The Senior Transition Blueprint ($47)**
 Get the complete 19-module, 90+ tool system that walks you through every step of the process. It's the full playbook.

@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 // CORS
 // ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = [
-  'https://app.seniorsafeapp.com',
+  'https://app.hammock365.com',
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
 ]
@@ -109,7 +109,7 @@ serve(async (req) => {
     // --- Send email via Resend ---
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
     // Must be an address on a domain verified in Resend (RESEND_FROM_ADDRESS secret).
-    const FROM_ADDRESS = Deno.env.get('RESEND_FROM_ADDRESS')?.trim() || 'alerts@seniorsafeapp.com'
+    const FROM_ADDRESS = Deno.env.get('RESEND_FROM_ADDRESS')?.trim() || 'alerts@hammock365.com'
     if (!RESEND_API_KEY) {
       console.error('RESEND_API_KEY missing — feedback saved to DB but not emailed')
       return new Response(JSON.stringify({
@@ -123,7 +123,7 @@ serve(async (req) => {
     }
 
     const textBody = [
-      `SeniorSafeApp Feedback`,
+      `Hammock365 Feedback`,
       ``,
       `From: ${fullName} <${userEmail}>`,
       `User ID: ${user.id}`,
@@ -139,7 +139,7 @@ serve(async (req) => {
 
     const htmlBody = `
       <div style="font-family:-apple-system,Segoe UI,Arial,sans-serif;font-size:14px;color:#1B365D">
-        <h2 style="margin:0 0 12px 0;color:#1B365D">SeniorSafeApp Feedback</h2>
+        <h2 style="margin:0 0 12px 0;color:#1B365D">Hammock365 Feedback</h2>
         <table style="border-collapse:collapse;font-size:13px;color:#374151">
           <tr><td style="padding:2px 12px 2px 0;color:#6B7280">From</td><td>${escapeHtml(fullName)} &lt;${escapeHtml(userEmail)}&gt;</td></tr>
           <tr><td style="padding:2px 12px 2px 0;color:#6B7280">User ID</td><td><code>${escapeHtml(user.id)}</code></td></tr>
@@ -161,10 +161,10 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: `SeniorSafeApp Feedback <${FROM_ADDRESS}>`,
-        to: ['support@seniorsafeapp.com'],
+        from: `Hammock365 Feedback <${FROM_ADDRESS}>`,
+        to: ['support@hammock365.com'],
         reply_to: userEmail,
-        subject: `SeniorSafeApp Feedback from ${userEmail}`,
+        subject: `Hammock365 Feedback from ${userEmail}`,
         text: textBody,
         html: htmlBody,
       }),
