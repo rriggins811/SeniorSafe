@@ -51,6 +51,16 @@ Your control: You can choose not to use the AI assistant. All other Hammock365 f
 • Apple, In-App Purchase processing for iOS subscriptions. Apple handles payment through your Apple ID.
 • Vercel, Web application hosting.
 
+• Google, Google Play billing for Android subscriptions, and Firebase Cloud Messaging for Android push notifications. Apple's push service delivers iPhone notifications.
+
+• RevenueCat, Subscription records for App Store and Google Play purchases.
+
+• Resend, Transactional email (alerts and account messages).
+
+• GoHighLevel, Our customer relationship system. It holds the account holder's name, email, phone and plan status so we can send onboarding and support messages. It never holds check-ins, medications, documents or family messages.
+
+• Meta, When a family starts the paid plan's free days we send Meta a hashed (unreadable) form of the account holder's email and name so our own advertising can be measured. No check-ins, medications, documents or messages ever go to Meta.
+
 We do not sell your personal information to any third party.`,
   },
   {
@@ -135,7 +145,8 @@ export default function PrivacyPage() {
             </div>
             <div>
               <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Privacy Policy</h1>
-              <p className="text-white/60 text-sm">Last updated: April 2, 2026</p>
+              <p className="text-white/60 text-sm">Last updated: September 11, 2026</p>
+              <p className="text-white/60 text-sm">Hammock365 was called SeniorSafeApp until September 11, 2026. Same app, same company, same policy.</p>
             </div>
           </div>
         </div>

@@ -125,7 +125,8 @@ export default function TermsPage() {
             </div>
             <div>
               <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Terms of Service</h1>
-              <p className="text-white/60 text-sm">Last updated: April 2, 2026</p>
+              <p className="text-white/60 text-sm">Last updated: September 11, 2026</p>
+              <p className="text-white/60 text-sm">Hammock365 was called SeniorSafeApp until September 11, 2026. Same app, same company, same policy.</p>
             </div>
           </div>
         </div>

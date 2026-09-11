@@ -81,7 +81,7 @@ const sections = [
     items: [
       {
         q: 'Is my data secure?',
-        a: 'Yes. Hammock365 uses Supabase with row-level security, meaning each family\'s data is completely isolated. Documents are stored in encrypted private storage with signed URLs that expire after one hour. We never share your data with third parties. All connections use HTTPS encryption.'
+        a: 'Yes, and here is what that means in plain words. Each family\'s records are walled off from every other family at the database level (row-level security), so nobody outside your family can read your check-ins, medications, emergency card or messages. Vault documents live in private storage; only your family can open them, and each link expires after an hour. Card numbers never touch our servers (Stripe, Apple and Google handle payment). Everything travels encrypted (HTTPS). We do not sell your information, and the only companies that touch it are the ones that run the app, listed in the Privacy Policy. Maggie\'s conversations are private to you and clear after 90 days. You can delete your account and everything in it from Settings at any time. We re-checked all of this on September 11, 2026.'
       },
       {
         q: 'Can multiple family members use the app?',

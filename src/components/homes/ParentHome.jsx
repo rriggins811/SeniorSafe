@@ -74,7 +74,7 @@ export default function ParentHome({
             <Shield size={22} color="#D4A843" strokeWidth={1.5} />
             <div className="min-w-0">
               <p className="text-[#D4A843] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.16em' }}>
-                SENIORSAFE
+                HAMMOCK365
               </p>
               <h1
                 className="text-white leading-tight truncate"
