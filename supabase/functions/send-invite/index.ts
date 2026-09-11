@@ -20,6 +20,7 @@ const DAILY_LIMIT = 6
 
 const ALLOWED_ORIGINS = [
   'https://app.hammock365.com',
+  'https://app.seniorsafeapp.com', // old host, still serves the app
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
   'http://localhost',

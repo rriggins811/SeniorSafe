@@ -7,6 +7,7 @@ import Stripe from "https://esm.sh/stripe@14.14.0?target=deno"
 // ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = [
   'https://app.hammock365.com',
+  'https://app.seniorsafeapp.com', // old host, still serves the app
   'https://senior-safe-hazel.vercel.app',
   'capacitor://localhost',
   'http://localhost',

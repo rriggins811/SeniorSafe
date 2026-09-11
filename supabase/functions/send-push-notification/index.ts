@@ -8,6 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const ALLOWED_ORIGINS = [
   'https://app.hammock365.com',
+  'https://app.seniorsafeapp.com', // old host, still serves the app
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
 ]

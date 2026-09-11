@@ -7,6 +7,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const ALLOWED_ORIGINS = [
   'https://app.hammock365.com',
+  'https://app.seniorsafeapp.com', // old host, still serves the app
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
   'http://localhost',
