@@ -1,4 +1,6 @@
-# SeniorSafe — Claude Code Project Brief
+# Hammock365 (formerly SeniorSafeApp): Claude Code Project Brief
+
+> **Renamed 2026-09-11: the app is Hammock365** (hammock365.com, app.hammock365.com; app.seniorsafeapp.com still serves the app and seniorsafeapp.com 308-redirects). Write the name Hammock365 in anything a user sees. Internal identifiers keep the old name on purpose, do not rename them: the bundle id com.rigginsstrategicsolutions.seniorsafe, product ids, push channel `seniorsafe`, storage keys, GHL tags (seniorsafe-*, SeniorSafe-Free/Paid), this repo `senior-safe`, the Supabase project "SeniorSafe", and the "SeniorSafe App" folder in RSS-Business. Never write "SeniorSafe" alone anywhere public (that is Sentien's scam-call app). Sections below dated before September 2026 are history; the top of this file is current.
 Last updated: September 4, 2026 (evening)
 
 ---
@@ -9,7 +11,7 @@ Everything below this section is session history. Some of it is stale (the March
 "known issues", the freemium notes, the `user_profile` column list). Trust this
 section, then verify against production.
 
-### What is live (app.seniorsafeapp.com, Vercel auto-deploys `main`)
+### What is live (app.hammock365.com, Vercel auto-deploys `main`)
 - **Setup flow (rebuilt 2026-09-04).** The adult child signs up alone on their own
   phone (`SignUpPage`, mode `family`), names the person they look after and picks a
   check-in time, then sends a link (`OnboardingPage`, two screens). The senior opens
@@ -242,7 +244,7 @@ Massive security audit + feature buildout session. 50+ fixes deployed across sec
 2. **Stage 2:** Invite 3–5 trusted families with direct links
 3. **Stage 3:** Gather feedback, fix issues, iterate
 4. All beta users stay on `paid` tier. No payment required during beta.
-5. Share invite links: `https://app.seniorsafeapp.com/signup?code=XXXXXX`
+5. Share invite links: `https://app.hammock365.com/signup?code=XXXXXX`
 
 ### Storage Architecture
 - **Bucket:** `Documents` (private, 10MB limit)
@@ -272,7 +274,7 @@ SUPABASE_ACCESS_TOKEN=<your-supabase-access-token> \
 ---
 
 ## What This Project Is
-SeniorSafe is a family coordination app for seniors and their adult children, built by Ryan Riggins of Riggins Strategic Solutions. It helps families navigate senior housing transitions with daily check-ins, AI guidance, document storage, medication tracking, and family coordination tools.
+Hammock365 (formerly SeniorSafeApp) is a family coordination app for seniors and their adult children, built by Ryan Riggins of Riggins Strategic Solutions. It helps families navigate senior housing transitions with daily check-ins, AI guidance, document storage, medication tracking, and family coordination tools.
 
 ---
 
@@ -291,7 +293,7 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 1. **FREE** — Simple Blueprint (primary lead magnet, email capture via GHL at rigginsstrategicsolutions.com/simpleblueprint)
 2. **$47** — Senior Transition Blueprint Core (21 modules, 71 tools) at blueprint.rigginsstrategicsolutions.com
 3. **$297** — Senior Transition Blueprint Premium (Core + personalized plan + 60-min coaching call + 90 days email support)
-4. **$15/month** — SeniorSafe App subscription (currently free beta)
+4. **$15/month** — Hammock365 subscription (history; the current plans are at the top of this file)
 5. **~$15** — Books on Amazon KDP (2 published — see Books section)
 
 ### Tier 2: Real Estate (15% — bonus income, not primary focus)
@@ -302,7 +304,7 @@ SeniorSafe is a family coordination app for seniors and their adult children, bu
 * Consulting is being **phased out** — replaced by Premium Blueprint ($297)
 * Speaking engagements ($5K-10K/event at scale)
 
-* Blueprint buyers get 3 months free SeniorSafe access (access code system not yet built)
+* Blueprint buyers get 3 months free Hammock365 access (access code system not yet built)
 
 ---
 
@@ -332,18 +334,18 @@ Both books drive readers to rigginsstrategicsolutions.com/bookresources for emai
 
 ---
 
-## SeniorSafe App — Current Deployment
+## Hammock365 app: deployment (history from March 2026; current facts are at the top)
 
 ### Live URLs
-- **App:** https://app.seniorsafeapp.com (custom domain, configured March 2, 2026)
-- **Landing Page:** https://seniorsafeapp.com (GHL marketing page, configured March 2, 2026)
+- **App:** https://app.hammock365.com (was app.seniorsafeapp.com, configured March 2, 2026, and still serving)
+- **Landing Page:** https://hammock365.com (Vercel, repo seniorsafe-site; seniorsafeapp.com redirects there)
 - **Legacy URL:** https://senior-safe-hazel.vercel.app (still works, redirects to custom domain)
 
 ### Domain Setup (March 2, 2026)
-- **Root domain:** seniorsafeapp.com → GoHighLevel landing page
+- **Root domain:** hammock365.com → Vercel (seniorsafe-site)
   - DNS: A record + CNAME pointing to GHL servers
   - Managed in Squarespace domain registrar
-- **Subdomain:** app.seniorsafeapp.com → Vercel React app
+- **Subdomain:** app.hammock365.com → Vercel React app (this repo)
   - DNS: CNAME pointing to Vercel (`cname.vercel-dns.com`)
   - SSL auto-provisioned by Vercel
 
@@ -367,7 +369,7 @@ Both books drive readers to rigginsstrategicsolutions.com/bookresources for emai
 | AI | Anthropic Claude API | claude-haiku-4-5 via Edge Function (prompt caching enabled) |
 | SMS | Twilio REST API | via Supabase Edge Functions |
 | Hosting | Vercel | auto-deploy from GitHub |
-| Landing Page | GoHighLevel | seniorsafeapp.com |
+| Landing Page | Vercel (seniorsafe-site) | hammock365.com |
 
 ### Tailwind CSS v4 — CRITICAL
 Do NOT use `tailwind.config.js`. Config lives in `src/index.css`:
@@ -626,7 +628,7 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
   - Confirmation modal prevents accidental clicks: "⚠️ Are you sure? This will send an urgent alert to your entire family."
   - Two-button modal: "Yes, Send Alert" (red) | "Cancel" (gray)
   - On confirm: SMS blast to all family members with phones
-  - Message: "🆘 URGENT: [Senior Name] pressed 'I Need Help' at [time]. Please check on them immediately. - SeniorSafe Alert"
+  - Message: "🆘 URGENT: [Senior Name] pressed 'I Need Help' at [time]. Please check on them immediately. - Hammock365"
   - Success message: "Help alert sent to your family!" (auto-closes after 3 seconds)
   - Uses existing sendSMS() from src/lib/sms.js, queries user_profile for family_code matches
 - Header icons: Family Invite, Profile, Emergency, Contact Ryan, Sign Out
@@ -684,7 +686,7 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 
 ## Family Invite System
 - Admin generates unique 6-char uppercase `family_code` (stored in `user_profile`)
-- Share link: `https://app.seniorsafeapp.com/signup?code=XXXXXX`
+- Share link: `https://app.hammock365.com/signup?code=XXXXXX`
 - Member lands on simplified join form → profile created with `role='member'`, `invited_by=admin.user_id`
 - family_code generation: SignUpPage → stored in user_metadata → OnboardingPage reads metadata OR generates inline → FamilyInvitePage auto-generates if still null (3 layers of safety)
 
@@ -703,16 +705,16 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 
 ## Landing Page (GoHighLevel)
 
-**URL:** https://seniorsafeapp.com
+**URL:** https://hammock365.com
 **Built:** March 2, 2026
-**Purpose:** Marketing landing page for SeniorSafe app
+**Purpose:** Marketing landing page for the Hammock365 app
 
 ### Page Structure
 1. **Hero Section**
    - Shield logo with navy/gold branding
    - Headline: "Your family. One place. One plan."
    - Subheadline: "The app built for families navigating senior transitions."
-   - CTAs: "Get Started" + "Sign In" → app.seniorsafeapp.com
+   - CTAs: "Get Started" + "Sign In" → app.hammock365.com
 
 2. **Features Grid** (8 feature cards)
    - Daily Check-Ins, Medication Tracking, AI Assistant
@@ -746,19 +748,19 @@ Final upsert generates `family_code` inline if not in metadata (safety net). Set
 
 ## RSS Website Integration
 
-**New Page:** /seniorsafe-app (created March 2, 2026)
+**New Page:** /hammock365 (created March 2, 2026 as /seniorsafe-app, which now redirects)
 **Status:** Built, unlisted until payment integration complete
-**Purpose:** Showcase SeniorSafe on main RSS website
+**Purpose:** Showcase Hammock365 on main RSS website
 
 ### Page Content
 - Standalone product positioning (not dependent on Blueprint)
 - All 8 features highlighted
 - Pricing displayed ($14.99/month Premium, Free tier)
 - Connection to Blueprint explained (optional companion tool)
-- Links to app.seniorsafeapp.com
+- Links to app.hammock365.com
 
 ### Header Navigation
-When published, add to main nav as: "SeniorSafe App"
+When published, add to main nav as: "Hammock365"
 
 ---
 
@@ -780,8 +782,8 @@ When published, add to main nav as: "SeniorSafe App"
 9. **Medication reminders cron verification** — confirm 5-minute schedule fires correctly
 10. **Mobile responsiveness testing** — all pages need phone/tablet verification
 11. **Family invite flow testing** — confirm invite codes work end-to-end
-12. **Supabase → GHL webhook** — when a new user signs up in SeniorSafe, their email needs to auto-sync to GHL and trigger a workflow (tag: "SeniorSafe-Free" or "SeniorSafe-Paid")
-13. **SeniorSafe GHL workflows** — need Free User onboarding sequence and Paid User onboarding + testimonial request sequence
+12. **Supabase → GHL webhook** — when a new user signs up in Hammock365, their email needs to auto-sync to GHL and trigger a workflow (tag: "SeniorSafe-Free" or "SeniorSafe-Paid")
+13. **Hammock365 GHL workflows (still named SeniorSafe-* in GHL)** — need Free User onboarding sequence and Paid User onboarding + testimonial request sequence
 
 ---
 
@@ -826,7 +828,7 @@ Git config for this repo:
 * Blueprint purchase: blueprint.rigginsstrategicsolutions.com/pricing
 * Starter Guide: rigginsstrategicsolutions.com/starterguide
 * Booking (20-min discovery, Google Calendar; cal.com retired Jun 2026): https://calendar.google.com/calendar/appointments/schedules/AcZssZ0y_kQQfkvnf6jQEBvA5X2Onolndq6VleuID3n9hDujDd4CjpOsaJzKqs_eXujvfVVayudxp2h5
-* App (production): app.seniorsafeapp.com
+* App (production): app.hammock365.com
 * App (beta): senior-safe-hazel.vercel.app
 * GHL landing pages: go.rigginsstrategicsolutions.com
 
