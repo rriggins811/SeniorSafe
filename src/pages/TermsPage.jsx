@@ -77,7 +77,7 @@ No refunds are provided for partial billing periods. Prices may change with noti
   },
   {
     title: '11. Limitation of Liability',
-    body: `TO THE MAXIMUM EXTENT PERMITTED BY LAW, RIGGINS STRATEGIC SOLUTIONS, LLC SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF SENIORSAFE.
+    body: `TO THE MAXIMUM EXTENT PERMITTED BY LAW, RIGGINS STRATEGIC SOLUTIONS, LLC SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF Hammock365.
 
 This includes but is not limited to: missed check-in notifications, failed SMS delivery, AI assistant errors, data loss, medication reminder failures, or any reliance on information provided through the app. Hammock365 is provided "as is" without warranties of any kind.`,
   },
