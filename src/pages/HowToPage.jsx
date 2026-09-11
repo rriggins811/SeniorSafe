@@ -2,18 +2,18 @@ import { useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, PlayCircle } from 'lucide-react'
 
-const MEDIA = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/storage/v1/object/public/marketing-cards/2026-09-09/howto'
+const MEDIA = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/storage/v1/object/public/marketing-cards/2026-09-11/h365'
 
 const VIDEOS = [
-  { id: 'invite-link', title: 'How Mom opens her invite link', plan: 'Free', seconds: 24, file: '07_mom_opens_invite_link.mp4', poster: 'poster_07.jpg',
+  { id: 'invite-link', title: 'How Mom opens her invite link', plan: 'Free', seconds: 24, file: 'howto_07_mom_opens_invite_link_h365.mp4', poster: 'poster_07.jpg',
     steps: ['She taps the link you sent her. No app store, no download.', 'Her name is already there. She types an email and picks a password; do it for her if you are holding her phone.', 'Tap Continue. Her button is waiting.', 'She taps it once, and your phone says she is okay.'] },
-  { id: 'medication', title: 'How to add a medication', plan: 'Free', seconds: 27, file: '08_add_a_medication.mp4', poster: 'poster_08.jpg',
+  { id: 'medication', title: 'How to add a medication', plan: 'Free', seconds: 27, file: 'howto_08_add_medication_h365.mp4', poster: 'poster_08.jpg',
     steps: ['Tap Medications, then the plus.', 'Name, dose, how often, and what time.', 'Turn on Remind me on my phone. Her phone tells her when it is time, with an I took it button.', 'On the paid plan, if the box is still empty an hour later, the family hears about it.'] },
-  { id: 'appointment', title: 'How to add an appointment', plan: 'Paid plan', seconds: 19, file: '09_add_an_appointment.mp4', poster: 'poster_09.jpg',
+  { id: 'appointment', title: 'How to add an appointment', plan: 'Paid plan', seconds: 19, file: 'howto_09_add_appointment_h365.mp4', poster: 'poster_09.jpg',
     steps: ['Tap Next appointment, then the plus.', 'Who, and where.', 'Pick the day and the time.', 'Notes are for the family. Tap Add Appointment and everyone can see it.'] },
-  { id: 'emergency-card', title: 'How to set up the emergency card', plan: 'Free', seconds: 18, file: '10_emergency_card.mp4', poster: 'poster_10.jpg',
+  { id: 'emergency-card', title: 'How to set up the emergency card', plan: 'Free', seconds: 18, file: 'howto_10_emergency_card_h365.mp4', poster: 'poster_10.jpg',
     steps: ['Tap ER card.', 'Her legal name and her allergies. The medication list fills itself in.', 'Her doctor, and who to call.', 'Save. It is on her phone too, in big type.'] },
-  { id: 'family-and-settings', title: 'Inviting family, and your settings', plan: 'Free', seconds: 24, file: '11_family_invite_and_settings.mp4', poster: 'poster_11.jpg',
+  { id: 'family-and-settings', title: 'Inviting family, and your settings', plan: 'Free', seconds: 25, file: 'howto_11_family_invite_and_settings_h365.mp4', poster: 'poster_11.jpg',
     steps: ['Tap the people icon. Text a sibling an invite or share the family code. Everyone who joins sees the board; on the paid plan they get the texts too.', 'Tap the gear for your settings. The mobile number here is the one that gets the text.', 'The check-in time is the deadline. If she has not tapped by then, you hear about it.'] },
 ]
 
