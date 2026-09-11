@@ -307,25 +307,6 @@ export default function SignUpPage() {
         </Shell>
       )
     }
-    // Free plan: one family contact. A second adult needs the paid plan.
-    // The senior's seat is always open; the free limit is about a second adult.
-    const familyFull = !!invite.has_senior && (invite.subscription_tier || 'free') === 'free' && (invite.contact_count || 0) >= 1
-    if (familyFull) {
-      return (
-        <Shell onBack={() => { if (urlCode) navigate('/signup'); else setInvite(null) }}>
-          <Heading
-            title={seniorName ? `${seniorName}'s family is on the free plan` : `${invite.family_name || 'This family'} is on the free plan`}
-            sub={`The free plan covers one family contact, and ${ownerFirst || 'the person who set it up'} already has that seat. On the paid plan ($14.99 a month) everyone in the family joins and gets the texts.`}
-          />
-          <p className="text-[#1B365D]" style={{ fontSize: '17px', lineHeight: 1.45 }}>
-            Ask {ownerFirst || 'them'} to open Hammock365, tap the family icon at the top of their home screen, and turn on the paid plan. Then use this link again.
-          </p>
-          <p className="text-center text-gray-500">
-            Already have an account? <TextLink to="/signin">Sign in</TextLink>
-          </p>
-        </Shell>
-      )
-    }
     return (
       <Shell onBack={() => { if (urlCode) navigate('/signup'); else setInvite(null) }}>
         <Heading

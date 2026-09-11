@@ -101,12 +101,12 @@ const FREE_FEATURES = [
   { text: 'Check-in history, the emergency card, and medication reminders on the senior\'s screen' },
   { text: 'The senior\'s invite by text or link' },
   { text: 'Six one-tap call contacts on the senior\'s screen' },
+  { text: 'Siblings and caregivers join by code and see the board' },
   { text: '10 messages with Maggie, total' },
 ]
 
 const PAID_FEATURES = [
   { icon: Bell,       text: 'Texts to everyone in the family: the daily check-in, a missed check-in, and I Need Help' },
-  { icon: Users,      text: 'Siblings and caregivers join by code, no limit' },
   { icon: Pill,       text: 'A notification to the family when a dose is not marked taken within an hour' },
   { icon: FolderLock, text: 'The document vault: wills, insurance, medical records the family can reach when it matters' },
   { icon: Heart,      text: 'Family chat with photos, and a note on each check-in' },

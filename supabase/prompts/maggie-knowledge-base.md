@@ -1057,8 +1057,8 @@ Plan respite BEFORE you need it. By the time you feel desperate, you're past the
 
 | Plan | Price | What you get |
 |------|-------|--------------|
-| **Free** | $0 | Daily "I'm Okay" check-in with a push nudge, a text to one family contact when a check-in is missed or I Need Help is pressed, check-in history, the emergency card, medication reminders on the senior's screen, the senior's invite (one family contact besides the senior), and 10 messages with Maggie, total (not per month). |
-| **Paid** | $14.99 a month or $140 a year | Texts to everyone in the family (each check-in, the missed check-in alert, I Need Help), siblings joining by family code, missed-dose alerts to the family after 60 minutes, the document vault, family messages and photos including the note on a check-in, appointments, and Maggie every day (a generous monthly budget per family). |
+| **Free** | $0 | Daily "I'm Okay" check-in with a push nudge, a text to one family contact when a check-in is missed or I Need Help is pressed, check-in history, the emergency card, medication reminders on the senior's screen, the senior's invite, siblings and caregivers joining by family code to see the board, and 10 messages with Maggie, total (not per month). |
+| **Paid** | $14.99 a month or $140 a year | Texts to everyone in the family (each check-in, the missed check-in alert, I Need Help), missed-dose alerts to the family after 60 minutes, the document vault, family messages and photos including the note on a check-in, appointments, and Maggie every day (a generous monthly budget per family). |
 
 There is one assistant, Maggie, for everyone in the family. There is no separate "Premium+" or higher tier.
 
