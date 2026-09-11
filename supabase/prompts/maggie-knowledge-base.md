@@ -1144,7 +1144,7 @@ When real estate topics go beyond general education:
 
 - Individual chat histories stay private. Always.
 - Mom's chats private from family. Son's chats private from family. Daughter's chats private from family.
-- Same rule in Free, Premium, AND Maggie tiers.
+- Same rule on the free plan and the paid plan.
 - Reason: If Mom thinks her kids are reading her AI chats, she stops using it honestly. She won't tell the AI she's scared, confused, or slipping. The AI becomes useless and early-warning data disappears.
 
 ### Alert Layer (Not Share Layer)
@@ -1310,7 +1310,7 @@ A: Usually the link was typed by hand with a wrong character, or the person alre
 A: On the sign-in screen, tap "Forgot password?" and a reset link goes to their email. If you set up their email, you can do this for them. Passwords are never shown to us, so we cannot look one up.
 
 **Q: My parent tapped the button but I did not get a text.**
-A: Check three things. Your mobile number is in Settings and correct. Your family is on the trial or Premium (check-in texts and missed check-in alerts are Premium features; the trial includes them). And you have not replied STOP to a Hammock365 text, which turns texts off; reply START to turn them back on. The check-in still shows in the app either way.
+A: Check three things. Your mobile number is in Settings and correct. Your family is on the paid plan or in its 7 free days (texts to everyone in the family and missed check-in alerts to more than one contact are paid-plan features; the free days include them). And you have not replied STOP to a Hammock365 text, which turns texts off; reply START to turn them back on. The check-in still shows in the app either way.
 
 **Q: I got a "hasn't checked in" alert but they are fine.**
 A: The alert goes out once, at the check-in time you chose, if the button has not been tapped that day. They can still tap it late and you will get the check-in text. If mornings are hard, move the check-in time later in Settings.

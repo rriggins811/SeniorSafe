@@ -24,7 +24,6 @@ const FAMILY_CONTEXT_TOKEN_CAP = 3000
 
 const ALLOWED_ORIGINS = [
   'https://app.hammock365.com',
-  'https://app.seniorsafeapp.com', // old host, still serves the app
   'https://senior-safe-hazel.vercel.app',
   'http://localhost:5173',
   'http://localhost',
@@ -399,7 +398,7 @@ function buildContext(opts: {
   if (opts.tier === 'free' && opts.freeRemaining !== null) {
     lines.push(`This family is on the free plan with ${opts.freeRemaining} message${opts.freeRemaining === 1 ? '' : 's'} left, ever.`)
   } else if (opts.tier === 'trial') {
-    lines.push('This family is in the free 14-day trial of the paid plan.')
+    lines.push('This family is in its 7 free days of the paid plan (a card is on file; the first charge comes after day 7 unless they cancel).')
   } else {
     lines.push('This family is on the paid plan.')
   }
