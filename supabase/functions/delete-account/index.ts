@@ -259,15 +259,32 @@ serve(async (req: Request) => {
     }
 
     // ---- 5. Delete user_profile ----
-    await supabase.from('user_profile').delete().eq('user_id', user.id)
+    // Paid, trial and comped rows are protected by guard_paid_profile_delete
+    // (the Debra safeguard). delete_profile_for_account_deletion is the one
+    // deliberate path: it sets app.allow_paid_delete for this transaction and
+    // the trigger snapshots the row into backups.user_profile_deleted first.
+    // Found 2026-09-11: without it a paying family got "success" and nothing
+    // was deleted. Never report success unless both deletes went through.
+    const { error: profileErr } = await supabase.rpc('delete_profile_for_account_deletion', { p_user: user.id })
+    if (profileErr) {
+      console.error('Profile deletion error:', profileErr.message)
+      return new Response(
+        JSON.stringify({ error: 'We could not delete your account just now. Nothing was removed. Please try again or email support@hammock365.com.' }),
+        { status: 500, headers: cors }
+      )
+    }
 
     // ---- 6. Delete auth user ----
     const { error: deleteAuthErr } = await supabase.auth.admin.deleteUser(user.id)
     if (deleteAuthErr) {
       console.error('Auth deletion error:', deleteAuthErr.message)
+      return new Response(
+        JSON.stringify({ error: 'Your family data was removed but the sign-in could not be deleted. Please email support@hammock365.com and we will finish it.' }),
+        { status: 500, headers: cors }
+      )
     }
 
-    console.log(`✅ Account fully deleted: ${user.id}`)
+    console.log('Account fully deleted: ' + user.id)
 
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: cors })
   } catch (err) {
