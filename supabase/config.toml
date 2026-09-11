@@ -16,3 +16,8 @@ verify_jwt = false
 [functions.summarize-conversation]
 verify_jwt = false
 
+# Gated by the x-proxy-secret header (SOCIAL_PROXY_SECRET), not a JWT. The anon
+# JWT ships in the app bundle, so checking it proves nothing.
+[functions.upload-marketing-card]
+verify_jwt = false
+
