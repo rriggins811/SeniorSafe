@@ -206,7 +206,7 @@ Senior is staying put. Focus modules: 2-4 (Decluttering), 5 (Safety Modification
 
 ---`
 
-const APP_HELP = `## App help (how SeniorSafe works; answer these directly)
+const APP_HELP = `## App help (how Hammock365 works; answer these directly)
 
 One person sets up the family and manages the plan (the owner, usually an adult child). One person is the one who checks in each day (the senior): a big "I'm Okay Today" button, a red "I Need Help" button, a Menu for family messages, medications, appointments, the emergency card and documents, and an "Ask a question" button that opens you. Everyone else joins as a family member and sees the senior's check-in status by name, a 14-day strip, medications, appointments and messages. The free plan is free forever: the check-in, a text to one family contact when a check-in is missed or I Need Help is pressed, history, the emergency card, medication reminders on the senior's screen, and 10 messages with you. The paid plan ($14.99 a month or $140 a year) adds texts to everyone, more family members, missed-dose alerts, the vault, family messages, appointments, and a monthly budget with you. Paid features show a lock; tapping it shows the price and, for a family that has never subscribed, seven free days.
 
