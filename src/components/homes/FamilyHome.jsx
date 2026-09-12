@@ -1,6 +1,6 @@
 import {
   CheckCircle, AlertTriangle, Clock, Pill, Calendar, MessageCircle,
-  ChevronRight, Phone, Heart, FolderLock, Settings, Sparkles, Home, Users, MessageSquare, Copy,
+  ChevronRight, Phone, Heart, FolderLock, Settings, Sparkles, Home, Users, MessageSquare, Copy, Bell,
 } from 'lucide-react'
 import BottomNav from '../BottomNav'
 import { isPremium, MONTHLY_PRICE } from '../../lib/subscription'
@@ -84,6 +84,11 @@ export default function FamilyHome({
   onDismissToast,
   preview = false,
   partner = null,
+  webPushPrompt = false,
+  webPushWorking = false,
+  webPushError = '',
+  onEnableWebPush,
+  onDismissWebPush,
 }) {
   const name = seniorName || 'Your loved one'
   const hour = new Date().getHours()
@@ -283,6 +288,30 @@ export default function FamilyHome({
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 flex items-center gap-3">
             <p className="text-blue-800 text-base flex-1">{smsToast}</p>
             <button onClick={onDismissToast} className="text-blue-400" aria-label="Dismiss">&times;</button>
+          </div>
+        )}
+
+        {/* Web push opt-in (2026-09-12): the browser version's answer to the
+            store apps' "just checked in" notification, free, no text needed.
+            Browsers only show the permission prompt from a tap, so a button. */}
+        {webPushPrompt && (
+          <div className="bg-white border-2 border-[#F2B544] rounded-2xl p-4 flex items-start gap-3">
+            <Bell size={20} color="#8A6A1E" className="flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-[#1F5A4B] font-semibold text-base">Get a notification when {name} checks in</p>
+              <p className="text-[#6B645A] text-base mt-0.5 leading-relaxed">
+                Free, right here in this browser. Your phone or computer will ask once.
+              </p>
+              <button
+                onClick={onEnableWebPush}
+                disabled={webPushWorking}
+                className="mt-2 px-4 py-2 rounded-xl bg-[#1F5A4B] text-white font-semibold text-base disabled:opacity-60"
+              >
+                {webPushWorking ? 'One moment...' : 'Turn on notifications'}
+              </button>
+              {webPushError && <p className="text-[#7A2E28] text-sm mt-2">{webPushError}</p>}
+            </div>
+            <button onClick={onDismissWebPush} className="text-[#6B645A] text-lg leading-none" aria-label="Not now">&times;</button>
           </div>
         )}
 

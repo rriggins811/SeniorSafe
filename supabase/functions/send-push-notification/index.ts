@@ -1,10 +1,54 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import * as webpush from "jsr:@negrel/webpush@0.5.0"
 
 // ---------------------------------------------------------------------------
-// Send Push Notification via APNs (iOS) or FCM (Android)
+// Send Push Notification via APNs (iOS), FCM (Android) or Web Push (browser)
 // Called internally by other edge functions or cron jobs.
+//
+// Web Push (2026-09-12): device_platform 'web' rows hold the browser's
+// PushSubscription JSON in device_token (src/lib/pushNotifications.js). The
+// VAPID key pair is the VAPID_KEYS_JWK secret ({publicKey, privateKey} as
+// JWKs); the public half is also baked into the client. No per-message cost.
 // ---------------------------------------------------------------------------
+
+let webPushServer: webpush.ApplicationServer | null = null
+async function getWebPushServer(): Promise<webpush.ApplicationServer> {
+  if (webPushServer) return webPushServer
+  const raw = Deno.env.get('VAPID_KEYS_JWK')
+  if (!raw) throw new Error('VAPID_KEYS_JWK secret not set')
+  const vapidKeys = await webpush.importVapidKeys(JSON.parse(raw), { extractable: false })
+  webPushServer = await webpush.ApplicationServer.new({
+    contactInformation: Deno.env.get('VAPID_SUBJECT') || 'mailto:support@hammock365.com',
+    vapidKeys,
+  })
+  return webPushServer
+}
+
+// Returns true when the push service accepted the message. A 404 or 410 means
+// the browser unsubscribed (or the subscription rotated), so the stale row is
+// cleared and the next dashboard load re-subscribes.
+async function sendWebPush(userId: string, tokenJson: string, title: string, body: string, data?: Record<string, unknown>, notificationType?: string): Promise<boolean> {
+  try {
+    const subscription = JSON.parse(tokenJson)
+    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+      lastPushError = 'web push: malformed subscription'
+      return false
+    }
+    const server = await getWebPushServer()
+    const subscriber = server.subscribe(subscription)
+    const payload = JSON.stringify({ title, body, data: { ...(data || {}), notification_type: notificationType || 'system' } })
+    await subscriber.pushTextMessage(payload, { ttl: 86400, urgency: webpush.Urgency.High })
+    return true
+  } catch (e) {
+    const status = e instanceof webpush.PushMessageError ? e.response.status : 0
+    lastPushError = `web push: ${e instanceof Error ? e.message : String(e)}`
+    if (status === 404 || status === 410) {
+      await supabaseAdmin.from('user_profile').update({ device_token: null }).eq('user_id', userId).eq('device_platform', 'web')
+    }
+    return false
+  }
+}
 
 const ALLOWED_ORIGINS = [
   'https://app.hammock365.com',
@@ -325,6 +369,8 @@ serve(async (req) => {
           pushSent = await sendApnsPush(profile.device_token, title, body, data)
         } else if (profile.device_platform === 'android') {
           pushSent = await sendFcmPush(profile.device_token, title, body, data)
+        } else if (profile.device_platform === 'web') {
+          pushSent = await sendWebPush(userId, profile.device_token, title, body, data, notification_type)
         }
       }
 

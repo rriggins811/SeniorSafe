@@ -3,7 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { sendSMS } from '../lib/sms'
 import { isPremium, trialDaysRemaining, tasteDaysRemaining, planEnded, primaryContact } from '../lib/subscription'
-import { registerPushNotifications } from '../lib/pushNotifications'
+import {
+  registerPushNotifications, webPushSupport, webPushPromptDismissed, dismissWebPushPrompt, enableWebPush,
+} from '../lib/pushNotifications'
 import { copyToClipboard } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
 import { formatTime12 } from '../lib/time'
@@ -91,6 +93,11 @@ export default function DashboardPage() {
   const [smsToast, setSmsToast] = useState('')
   const [trialDays, setTrialDays] = useState(null)
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false)
+  // Web push opt-in card (2026-09-12): shown on the family screen in a browser
+  // that can take push and has not been asked yet. Never on the senior's screen.
+  const [webPushPrompt, setWebPushPrompt] = useState(false)
+  const [webPushWorking, setWebPushWorking] = useState(false)
+  const [webPushError, setWebPushError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -109,6 +116,10 @@ export default function DashboardPage() {
         }
         setFamily(fam)
         registerPushNotifications(u.id)
+        if (!fam.me.is_senior) {
+          const wp = webPushSupport()
+          if (wp.supported && wp.permission === 'default' && !webPushPromptDismissed()) setWebPushPrompt(true)
+        }
 
         const p = fam.me
         const todayStart = localDayStartIso()
@@ -520,6 +531,18 @@ export default function DashboardPage() {
     )
   }
 
+  async function turnOnWebPush() {
+    setWebPushWorking(true)
+    setWebPushError('')
+    const r = await enableWebPush(user.id)
+    setWebPushWorking(false)
+    if (r.ok) { setWebPushPrompt(false); setSmsToast('Notifications are on for this browser.'); return }
+    if (r.reason === 'denied') { setWebPushPrompt(false); dismissWebPushPrompt(); return }
+    setWebPushError(r.reason === 'no-worker'
+      ? 'Notifications are not available here yet. Try again after reopening the app.'
+      : 'That did not work. You can try again later from this screen.')
+  }
+
   const seniorJoined = !!family.senior
   const alertLabel = formatTime12(family.checkinAlertTime)
   const late = seniorJoined && seniorCheckInLoaded && !seniorCheckIn && isPastAlertTime(family.checkinAlertTime)
@@ -567,6 +590,11 @@ export default function DashboardPage() {
       }}
       trialDays={trialDays}
       trialBannerDismissed={trialBannerDismissed}
+      webPushPrompt={webPushPrompt}
+      webPushWorking={webPushWorking}
+      webPushError={webPushError}
+      onEnableWebPush={turnOnWebPush}
+      onDismissWebPush={() => { dismissWebPushPrompt(); setWebPushPrompt(false) }}
       onDismissTrial={() => setTrialBannerDismissed(true)}
       planEnded={planEnded(family.owner)}
       contactName={primaryContact(family)?.first_name || ''}

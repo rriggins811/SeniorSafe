@@ -1,4 +1,40 @@
-const CACHE_NAME = 'seniorsafe-v1';
+const CACHE_NAME = 'hammock365-v2';
+
+// Web push (2026-09-12). The browser's push service wakes this worker with a
+// JSON payload {title, body, data:{route}} sent by send-push-notification.
+// iOS shows web push only for the home-screen app, and every push must show
+// a notification, so this handler always shows one.
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch { payload = { body: event.data && event.data.text() }; }
+  const title = payload.title || 'Hammock365';
+  const options = {
+    body: payload.body || '',
+    icon: '/icon-192x192.png',
+    badge: '/icon-96x96.png',
+    tag: (payload.data && payload.data.notification_type) || 'hammock365',
+    data: payload.data || {},
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Tapping the notification opens the app at the route the server sent, or
+// focuses the tab that is already open.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const route = (event.notification.data && event.notification.data.route) || '/dashboard';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if ('focus' in client) {
+          client.navigate(route).catch(() => {});
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(route);
+    })
+  );
+});
 
 // App shell files to cache on install
 const APP_SHELL = [
