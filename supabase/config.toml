@@ -21,3 +21,12 @@ verify_jwt = false
 [functions.upload-marketing-card]
 verify_jwt = false
 
+# Partner co-branding (2026-09-12): the public "Get your code" form (honeypot
+# and size limits instead of a JWT) and the review page Ryan opens from email
+# (a single-use token is the credential).
+[functions.partner-apply]
+verify_jwt = false
+
+[functions.partner-review]
+verify_jwt = false
+
