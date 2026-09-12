@@ -61,7 +61,7 @@ export default function HelpModal({
               <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
                 <AlertTriangle size={30} color="#DC2626" strokeWidth={2} />
               </div>
-              <h2 className="text-[#1B365D] font-bold text-xl">Are you sure?</h2>
+              <h2 className="text-[#1F5A4B] font-bold text-xl">Are you sure?</h2>
               <p className="text-gray-500 text-base leading-relaxed">
                 This sends an urgent text to your family asking someone to check on you.
               </p>

@@ -30,13 +30,13 @@ export default class ErrorBoundary extends Component {
         }}>
           <div style={{
             width: 64, height: 64, borderRadius: '50%',
-            backgroundColor: '#1B365D', display: 'flex',
+            backgroundColor: '#1F5A4B', display: 'flex',
             alignItems: 'center', justifyContent: 'center',
             marginBottom: 24, fontSize: 28,
           }}>
             ⚠️
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1B365D', margin: '0 0 8px' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1F5A4B', margin: '0 0 8px' }}>
             Something went wrong
           </h1>
           <p style={{ fontSize: 16, color: '#6B7280', margin: '0 0 24px', maxWidth: 360 }}>
@@ -47,8 +47,8 @@ export default class ErrorBoundary extends Component {
             style={{
               padding: '12px 32px',
               borderRadius: 12,
-              backgroundColor: '#1B365D',
-              color: '#D4A843',
+              backgroundColor: '#1F5A4B',
+              color: '#F2B544',
               fontSize: 16,
               fontWeight: 600,
               border: 'none',

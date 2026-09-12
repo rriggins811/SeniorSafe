@@ -1,5 +1,6 @@
 import { useNavigate, Link } from 'react-router-dom'
-import { Shield } from 'lucide-react'
+import { } from 'lucide-react'
+import HammockMark from '../components/HammockMark'
 
 export default function WelcomePage() {
   const navigate = useNavigate()
@@ -10,17 +11,17 @@ export default function WelcomePage() {
 
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
-          <div className="bg-[#1B365D] rounded-2xl p-4">
-            <Shield size={48} color="#D4A843" strokeWidth={1.5} />
+          <div className="bg-[#1F5A4B] rounded-2xl p-4">
+            <HammockMark size={48} />
           </div>
-          <h1 className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '40px', fontWeight: 700, letterSpacing: '-0.01em' }}>
+          <h1 className="text-[#1F5A4B]" style={{ fontFamily: 'var(--font-display)', fontSize: '40px', fontWeight: 700, letterSpacing: '-0.01em' }}>
             Hammock365
           </h1>
         </div>
 
         {/* Tagline + Description */}
         <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 600 }}>
+          <p className="text-[#1F5A4B]" style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 600 }}>
             Your family. One place. One plan.
           </p>
           <p className="text-[#6B645A] leading-relaxed italic" style={{ fontSize: '16px' }}>
@@ -32,13 +33,13 @@ export default function WelcomePage() {
         <div className="w-full flex flex-col gap-3">
           <button
             onClick={() => navigate('/signup')}
-            className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg shadow-[0_2px_6px_rgba(27,54,93,0.18)]"
+            className="w-full py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-lg shadow-[0_2px_6px_rgba(31,90,75,0.18)]"
           >
             Get Started
           </button>
           <button
             onClick={() => navigate('/signin')}
-            className="w-full py-4 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-lg bg-[#FAF8F4]"
+            className="w-full py-4 rounded-xl border-2 border-[#1F5A4B] text-[#1F5A4B] font-semibold text-lg bg-[#FAF8F4]"
           >
             Sign In
           </button>
@@ -49,9 +50,9 @@ export default function WelcomePage() {
           Powered by Riggins Strategic Solutions
         </p>
         <p className="text-xs text-[#6B645A] text-center">
-          <Link to="/terms" className="underline hover:text-[#1B365D]">Terms of Service</Link>
+          <Link to="/terms" className="underline hover:text-[#1F5A4B]">Terms of Service</Link>
           {' | '}
-          <Link to="/privacy" className="underline hover:text-[#1B365D]">Privacy Policy</Link>
+          <Link to="/privacy" className="underline hover:text-[#1F5A4B]">Privacy Policy</Link>
         </p>
       </div>
     </div>

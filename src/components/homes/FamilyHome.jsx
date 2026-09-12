@@ -1,11 +1,12 @@
 import {
-  Shield, CheckCircle, AlertTriangle, Clock, Pill, Calendar, MessageCircle,
+  CheckCircle, AlertTriangle, Clock, Pill, Calendar, MessageCircle,
   ChevronRight, Phone, Heart, FolderLock, Settings, Sparkles, Home, Users, MessageSquare, Copy,
 } from 'lucide-react'
 import BottomNav from '../BottomNav'
 import { isPremium, MONTHLY_PRICE } from '../../lib/subscription'
 import { Lock } from 'lucide-react'
 import { logFunnel } from '../../lib/funnel'
+import HammockMark from '../HammockMark'
 
 // The adult child's morning board. One question first: is Mom okay today.
 // Everything else sits below it.
@@ -110,9 +111,9 @@ export default function FamilyHome({
     icon: Clock,
     title: `Waiting on ${name}`,
     body: alertLabel ? `Their check-in time is ${alertLabel}.` : 'No check-in yet this morning.',
-    wrap: 'bg-[#FAF8F4] border-[#D4A843]',
-    iconColor: '#D4A843',
-    titleClass: 'text-[#1B365D]',
+    wrap: 'bg-[#FAF8F4] border-[#F2B544]',
+    iconColor: '#F2B544',
+    titleClass: 'text-[#1F5A4B]',
     bodyClass: 'text-[#6B645A]',
   }
   if (!seniorJoined && !preview) {
@@ -121,9 +122,9 @@ export default function FamilyHome({
       icon: Clock,
       title: `Waiting for ${name} to join`,
       body: `${name} needs Hammock365 on their phone. Once they open the link, their check-ins show up here.`,
-      wrap: 'bg-white border-[#D4A843]',
+      wrap: 'bg-white border-[#F2B544]',
       iconColor: '#8A6A1E',
-      titleClass: 'text-[#1B365D]',
+      titleClass: 'text-[#1F5A4B]',
       bodyClass: 'text-[#6B645A]',
     }
   } else if (!adminCheckInLoaded) {
@@ -134,7 +135,7 @@ export default function FamilyHome({
       body: 'One moment.',
       wrap: 'bg-white border-[#E7E2D8]',
       iconColor: '#6B645A',
-      titleClass: 'text-[#1B365D]',
+      titleClass: 'text-[#1F5A4B]',
       bodyClass: 'text-[#6B645A]',
     }
   } else if (checkedIn) {
@@ -165,12 +166,12 @@ export default function FamilyHome({
 
   return (
     <div className="min-h-screen bg-[#FAF8F4] pb-24">
-      <header className="bg-[#1B365D] px-5 pt-10 pb-6">
+      <header className="bg-[#1F5A4B] px-5 pt-10 pb-6">
         <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Shield size={22} color="#D4A843" strokeWidth={1.5} />
+            <HammockMark size={22} />
             <div className="min-w-0">
-              <p className="text-[#D4A843] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.16em' }}>
+              <p className="text-[#F2B544] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.16em' }}>
                 TODAY
               </p>
               <h1
@@ -248,7 +249,7 @@ export default function FamilyHome({
               {isOwner && (
                 <button
                   onClick={() => onNavigate('/upgrade')}
-                  className="mt-2 px-4 py-2 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base"
+                  className="mt-2 px-4 py-2 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-base"
                 >
                   Turn it back on
                 </button>
@@ -269,7 +270,7 @@ export default function FamilyHome({
               </p>
               <button
                 onClick={() => onNavigate('/upgrade')}
-                className="mt-2 px-4 py-2 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-base"
+                className="mt-2 px-4 py-2 rounded-xl bg-[#F2B544] text-[#2D2A24] font-semibold text-base"
               >
                 Subscribe
               </button>
@@ -294,7 +295,7 @@ export default function FamilyHome({
               </p>
               <p className={`${status.bodyClass} text-base mt-1 leading-relaxed`}>{status.body}</p>
               {adminCheckIn?.note && (
-                <p className="text-[#1B365D] text-base mt-2 italic">&ldquo;{adminCheckIn.note}&rdquo;</p>
+                <p className="text-[#1F5A4B] text-base mt-2 italic">&ldquo;{adminCheckIn.note}&rdquo;</p>
               )}
             </div>
           </div>
@@ -305,7 +306,7 @@ export default function FamilyHome({
                 <button
                   onClick={onSendInvite}
                   disabled={inviteSending}
-                  className="w-full py-3.5 rounded-xl bg-[#1B365D] text-[#D4A843] font-bold text-base flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="w-full py-3.5 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-bold text-base flex items-center justify-center gap-2 disabled:opacity-60"
                 >
                   <MessageSquare size={18} /> {inviteSending ? 'Sending…' : `Text ${name} the link again`}
                 </button>
@@ -319,13 +320,13 @@ export default function FamilyHome({
                 <div className="bg-[#FDF2F0] border border-[#B5483F]/40 rounded-xl p-3 flex flex-col gap-1">
                   <p className="text-[#7A2E28] text-base">{inviteError}</p>
                   {inviteSmsHref && (
-                    <a href={inviteSmsHref} className="text-[#1B365D] font-semibold underline underline-offset-2 text-base">
+                    <a href={inviteSmsHref} className="text-[#1F5A4B] font-semibold underline underline-offset-2 text-base">
                       Text it from this phone instead
                     </a>
                   )}
                 </div>
               )}
-              <button onClick={onCopyInvite} className="w-full py-3.5 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-base flex items-center justify-center gap-2">
+              <button onClick={onCopyInvite} className="w-full py-3.5 rounded-xl border-2 border-[#1F5A4B] text-[#1F5A4B] font-semibold text-base flex items-center justify-center gap-2">
                 {copied ? <><CheckCircle size={18} /> Copied</> : <><Copy size={18} /> Copy the link</>}
               </button>
             </div>
@@ -342,7 +343,7 @@ export default function FamilyHome({
                     <button
                       onClick={onNudge}
                       disabled={reminding}
-                      className="w-full py-3.5 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-base disabled:opacity-60"
+                      className="w-full py-3.5 rounded-xl bg-[#F2B544] text-[#2D2A24] font-bold text-base disabled:opacity-60"
                     >
                       {reminding ? 'Sending…' : 'Send a nudge'}
                     </button>
@@ -354,7 +355,7 @@ export default function FamilyHome({
               {callHref && (
                 <a
                   href={callHref}
-                  className="w-full py-3.5 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-base flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-xl border-2 border-[#1F5A4B] text-[#1F5A4B] font-semibold text-base flex items-center justify-center gap-2"
                 >
                   <Phone size={18} /> Call {name}
                 </a>
@@ -380,7 +381,7 @@ export default function FamilyHome({
               <p className="text-[#6B645A] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
                 SHARED BY
               </p>
-              <p className="text-[#1B365D] font-bold leading-tight" style={{ fontSize: '17px' }}>{partner.name}</p>
+              <p className="text-[#1F5A4B] font-bold leading-tight" style={{ fontSize: '17px' }}>{partner.name}</p>
               {partner.tagline && (
                 <p className="text-[#6B645A] text-sm truncate">{partner.tagline}</p>
               )}
@@ -389,7 +390,7 @@ export default function FamilyHome({
               <a
                 href={formatTelHref(partner.phone)}
                 aria-label={`Call ${partner.name}`}
-                className="flex-shrink-0 px-3.5 py-2.5 rounded-xl bg-[#1B365D] text-white font-semibold text-sm flex items-center gap-1.5"
+                className="flex-shrink-0 px-3.5 py-2.5 rounded-xl bg-[#1F5A4B] text-white font-semibold text-sm flex items-center gap-1.5"
               >
                 <Phone size={16} strokeWidth={2} /> Call
               </a>
@@ -399,7 +400,7 @@ export default function FamilyHome({
 
         {seniorJoined && history.length > 0 && (
           <section className="bg-white rounded-2xl p-4 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4A843] mb-3">Last 14 days</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F2B544] mb-3">Last 14 days</p>
             <div className="grid grid-cols-14 gap-1" style={{ gridTemplateColumns: 'repeat(14, minmax(0, 1fr))' }}>
               {history.map(h => {
                 const decidedToday = h.isToday && (h.checked || late)
@@ -409,12 +410,12 @@ export default function FamilyHome({
                   : 'missed'
                 const dot = state === 'ok' ? 'bg-green-500'
                   : state === 'missed' ? 'bg-[#B5483F]/70'
-                  : state === 'pending' ? 'border-2 border-[#D4A843] bg-white'
+                  : state === 'pending' ? 'border-2 border-[#F2B544] bg-white'
                   : 'border border-dashed border-[#E7E2D8] bg-transparent'
                 const title = state === 'ok' ? 'Checked in' : state === 'missed' ? 'No check-in' : state === 'pending' ? 'Today, not yet' : 'Before they joined'
                 return (
                   <div key={h.key} className="flex flex-col items-center gap-1" title={title} aria-label={`${h.label} ${h.dayNum}: ${title}`}>
-                    <span className={`w-full aspect-square max-w-[22px] rounded-full ${dot} ${h.isToday ? 'ring-2 ring-offset-1 ring-[#1B365D]/30' : ''}`} />
+                    <span className={`w-full aspect-square max-w-[22px] rounded-full ${dot} ${h.isToday ? 'ring-2 ring-offset-1 ring-[#1F5A4B]/30' : ''}`} />
                     <span className="text-[10px] text-[#6B645A] leading-none">{h.label}</span>
                   </div>
                 )
@@ -429,11 +430,11 @@ export default function FamilyHome({
             onClick={() => onNavigate('/family-invite')}
             className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm text-left"
           >
-            <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
-              <Users size={22} color="#1B365D" strokeWidth={1.6} />
+            <div className="w-12 h-12 rounded-xl bg-[#1F5A4B]/8 flex items-center justify-center flex-shrink-0">
+              <Users size={22} color="#1F5A4B" strokeWidth={1.6} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>Add the rest of the family</p>
+              <p className="text-[#1F5A4B] font-semibold" style={{ fontSize: '16px' }}>Add the rest of the family</p>
               <p className="text-[#6B645A] text-sm">{premium ? 'Siblings and caregivers get the same check-in text.' : 'Siblings and caregivers join free and see the board. Texts to everyone is on the paid plan.'}</p>
             </div>
             <ChevronRight size={18} color="#C4BDB3" />
@@ -441,7 +442,7 @@ export default function FamilyHome({
         )}
 
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4A843] mb-3 px-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F2B544] mb-3 px-1">
             {seniorName ? `${seniorName}'s day` : 'Today'}
           </p>
           <div className="flex flex-col gap-2">
@@ -449,11 +450,11 @@ export default function FamilyHome({
               onClick={() => onNavigate('/medications')}
               className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm"
             >
-              <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
-                <Pill size={22} color="#1B365D" strokeWidth={1.6} />
+              <div className="w-12 h-12 rounded-xl bg-[#1F5A4B]/8 flex items-center justify-center flex-shrink-0">
+                <Pill size={22} color="#1F5A4B" strokeWidth={1.6} />
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>Medications</p>
+                <p className="text-[#1F5A4B] font-semibold" style={{ fontSize: '16px' }}>Medications</p>
                 <p className="text-[#6B645A] text-sm">
                   {!seniorJoined
                     ? 'Set up once they join'
@@ -469,11 +470,11 @@ export default function FamilyHome({
               onClick={() => { if (!premium) logFunnel('lock_tap', 'appointments'); onNavigate(premium ? '/appointments' : '/upgrade?feature=appointments') }}
               className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm"
             >
-              <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
-                <Calendar size={22} color="#1B365D" strokeWidth={1.6} />
+              <div className="w-12 h-12 rounded-xl bg-[#1F5A4B]/8 flex items-center justify-center flex-shrink-0">
+                <Calendar size={22} color="#1F5A4B" strokeWidth={1.6} />
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>Next appointment</p>
+                <p className="text-[#1F5A4B] font-semibold" style={{ fontSize: '16px' }}>Next appointment</p>
                 <p className="text-[#6B645A] text-sm truncate">
                   {!premium
                     ? `Paid plan, ${MONTHLY_PRICE} a month`
@@ -482,18 +483,18 @@ export default function FamilyHome({
                     : 'Nothing upcoming'}
                 </p>
               </div>
-              {premium ? <ChevronRight size={18} color="#C4BDB3" /> : <Lock size={18} color="#D4A843" />}
+              {premium ? <ChevronRight size={18} color="#C4BDB3" /> : <Lock size={18} color="#F2B544" />}
             </button>
 
             <button
               onClick={() => { if (!premium) logFunnel('lock_tap', 'chat'); onNavigate(premium ? '/family' : '/upgrade?feature=chat') }}
               className="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm"
             >
-              <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
-                <MessageCircle size={22} color="#1B365D" strokeWidth={1.6} />
+              <div className="w-12 h-12 rounded-xl bg-[#1F5A4B]/8 flex items-center justify-center flex-shrink-0">
+                <MessageCircle size={22} color="#1F5A4B" strokeWidth={1.6} />
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>Family</p>
+                <p className="text-[#1F5A4B] font-semibold" style={{ fontSize: '16px' }}>Family</p>
                 <p className="text-[#6B645A] text-sm">
                   {!premium
                     ? `Chat and photos, paid plan, ${MONTHLY_PRICE} a month`
@@ -508,28 +509,28 @@ export default function FamilyHome({
         </div>
 
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4A843] mb-3 px-1">If you need it</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F2B544] mb-3 px-1">If you need it</p>
           <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => onNavigate('/vault')}
               className="bg-white rounded-2xl p-4 flex flex-col gap-2 shadow-sm text-left"
             >
-              <FolderLock size={20} color="#1B365D" strokeWidth={1.6} />
-              <span className="text-[#1B365D] font-semibold text-sm">Vault</span>
+              <FolderLock size={20} color="#1F5A4B" strokeWidth={1.6} />
+              <span className="text-[#1F5A4B] font-semibold text-sm">Vault</span>
             </button>
             <button
               onClick={() => onNavigate('/emergency')}
               className="bg-white rounded-2xl p-4 flex flex-col gap-2 shadow-sm text-left"
             >
               <Heart size={20} color="#B5483F" strokeWidth={1.6} />
-              <span className="text-[#1B365D] font-semibold text-sm">ER card</span>
+              <span className="text-[#1F5A4B] font-semibold text-sm">ER card</span>
             </button>
             <button
               onClick={() => onNavigate('/maggie')}
               className="bg-white rounded-2xl p-4 flex flex-col gap-2 shadow-sm text-left"
             >
-              <Sparkles size={20} color="#D4A843" strokeWidth={1.6} />
-              <span className="text-[#1B365D] font-semibold text-sm">Maggie</span>
+              <Sparkles size={20} color="#F2B544" strokeWidth={1.6} />
+              <span className="text-[#1F5A4B] font-semibold text-sm">Maggie</span>
             </button>
           </div>
         </div>
@@ -537,7 +538,7 @@ export default function FamilyHome({
         {callHref && (checkedIn || !seniorJoined) && (
           <a
             href={callHref}
-            className="w-full rounded-2xl py-4 bg-[#1B365D] text-white font-semibold text-center flex items-center justify-center gap-2"
+            className="w-full rounded-2xl py-4 bg-[#1F5A4B] text-white font-semibold text-center flex items-center justify-center gap-2"
           >
             <Phone size={18} /> Call {name}
           </a>
@@ -555,9 +556,9 @@ export default function FamilyHome({
             ].map((tab) => (
               <div
                 key={tab.label}
-                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 min-h-[60px] ${tab.on ? 'text-[#1B365D]' : 'text-[#6B645A]'}`}
+                className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 min-h-[60px] ${tab.on ? 'text-[#1F5A4B]' : 'text-[#6B645A]'}`}
               >
-                <span className={`block w-1 h-1 rounded-full ${tab.on ? 'bg-[#D4A843]' : 'bg-transparent'}`} />
+                <span className={`block w-1 h-1 rounded-full ${tab.on ? 'bg-[#F2B544]' : 'bg-transparent'}`} />
                 <tab.Icon size={22} strokeWidth={tab.on ? 2.5 : 1.5} />
                 <span className="text-xs font-medium">{tab.label}</span>
               </div>

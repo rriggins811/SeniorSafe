@@ -92,9 +92,9 @@ export default function InstallPrompt() {
   // Android/Chrome native install banner
   if (showAndroidBanner) {
     return (
-      <div className="fixed top-0 left-0 right-0 z-50 bg-[#1B365D] text-white px-4 py-3 flex items-center justify-between shadow-lg">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[#1F5A4B] text-white px-4 py-3 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <Download size={20} className="text-[#D4A843] shrink-0" />
+          <Download size={20} className="text-[#F2B544] shrink-0" />
           <p className="text-sm truncate">
             Install Hammock365 for quick access
           </p>
@@ -102,7 +102,7 @@ export default function InstallPrompt() {
         <div className="flex items-center gap-2 shrink-0 ml-2">
           <button
             onClick={handleInstall}
-            className="bg-[#D4A843] text-[#1B365D] px-3 py-1 rounded-lg text-sm font-semibold"
+            className="bg-[#F2B544] text-[#2D2A24] px-3 py-1 rounded-lg text-sm font-semibold"
           >
             Install
           </button>
@@ -117,9 +117,9 @@ export default function InstallPrompt() {
   // iOS Safari manual install instructions
   if (showIOSBanner) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#1B365D] text-white px-4 py-3 shadow-lg safe-area-bottom">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#1F5A4B] text-white px-4 py-3 shadow-lg safe-area-bottom">
         <div className="flex items-start gap-3">
-          <Share size={20} className="text-[#D4A843] shrink-0 mt-0.5" />
+          <Share size={20} className="text-[#F2B544] shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold">Put Hammock365 on your home screen</p>
             <p className="text-xs text-white/80 mt-1 leading-relaxed">

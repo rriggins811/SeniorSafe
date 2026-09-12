@@ -29,7 +29,7 @@ function Field({ label, value }) {
 function Section({ title, children }) {
   return (
     <div className="bg-white rounded-2xl px-4 shadow-sm overflow-hidden">
-      <p className="text-[#1B365D] font-bold text-sm uppercase tracking-wide py-3 border-b border-gray-100">
+      <p className="text-[#1F5A4B] font-bold text-sm uppercase tracking-wide py-3 border-b border-gray-100">
         {title}
       </p>
       {children}
@@ -116,7 +116,7 @@ export default function EmergencyPage() {
     <input
       value={draft[key]}
       onChange={e => set(key, e.target.value)}
-      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D] bg-white"
+      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B] bg-white"
       style={{ fontSize: '16px' }}
       {...opts}
     />
@@ -127,7 +127,7 @@ export default function EmergencyPage() {
       value={draft[key]}
       onChange={e => set(key, e.target.value)}
       rows={rows}
-      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D] resize-none bg-white"
+      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B] resize-none bg-white"
       style={{ fontSize: '16px' }}
     />
   )
@@ -194,7 +194,7 @@ export default function EmergencyPage() {
                       <select
                         value={draft.blood_type}
                         onChange={e => set('blood_type', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1B365D]"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1F5A4B]"
                         style={{ fontSize: '16px' }}
                       >
                         {BLOOD_TYPES.map(bt => <option key={bt}>{bt}</option>)}

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { setSeniorScreen } from '../../lib/seniorScreen'
 import {
-  Shield, CheckCircle, Phone, Settings, LogOut, Pill, Menu, ChevronRight, MessageCircle,
+  CheckCircle, Phone, Settings, LogOut, Pill, Menu, ChevronRight, MessageCircle,
   Users, Calendar, Heart, FolderLock, Lock, X,
 } from 'lucide-react'
 import HelpModal from './HelpModal'
 import { formatTime12 } from '../../lib/time'
+import HammockMark from '../HammockMark'
 
 function formatTelHref(phone) {
   if (!phone) return 'tel:'
@@ -69,12 +70,12 @@ export default function ParentHome({
 
   return (
     <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
-      <header className="bg-[#1B365D] px-5 pt-10 pb-6">
+      <header className="bg-[#1F5A4B] px-5 pt-10 pb-6">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <Shield size={22} color="#D4A843" strokeWidth={1.5} />
+            <HammockMark size={22} />
             <div className="min-w-0">
-              <p className="text-[#D4A843] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.16em' }}>
+              <p className="text-[#F2B544] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.16em' }}>
                 HAMMOCK365
               </p>
               <h1
@@ -115,12 +116,12 @@ export default function ParentHome({
             onClick={onCheckIn}
             disabled={checkInStatus === 'loading' || alreadyCheckedIn}
             className={`w-full rounded-[28px] py-10 px-5 flex flex-col items-center gap-3 shadow-md transition-colors ${
-              checked ? 'bg-green-600' : 'bg-[#1B365D]'
+              checked ? 'bg-green-600' : 'bg-[#1F5A4B]'
             }`}
           >
             <CheckCircle
               size={56}
-              color={checked ? 'white' : '#D4A843'}
+              color={checked ? 'white' : '#F2B544'}
               strokeWidth={checked ? 2.5 : 1.6}
             />
             <span className="text-white font-bold text-center" style={{ fontSize: '28px', lineHeight: 1.15 }}>
@@ -141,12 +142,12 @@ export default function ParentHome({
 
           {/* Medicine that is due right now. Gone once it is taken. */}
           {dueDoses.length > 0 && (
-            <section className="bg-white rounded-[24px] border-2 border-[#D4A843] p-5 shadow-sm" aria-live="polite">
+            <section className="bg-white rounded-[24px] border-2 border-[#F2B544] p-5 shadow-sm" aria-live="polite">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-2xl bg-[#D4A843]/20 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-[#F2B544]/20 flex items-center justify-center flex-shrink-0">
                   <Pill size={26} color="#8A6A1E" strokeWidth={1.8} />
                 </div>
-                <p className="text-[#1B365D] font-bold" style={{ fontSize: '22px', lineHeight: 1.15 }}>
+                <p className="text-[#1F5A4B] font-bold" style={{ fontSize: '22px', lineHeight: 1.15 }}>
                   {dueDoses.length === 1 ? 'Time for your medicine' : `${dueDoses.length} medicines are due`}
                 </p>
               </div>
@@ -156,7 +157,7 @@ export default function ParentHome({
                   return (
                     <div key={key} className="py-3 flex items-center gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[#1B365D] font-semibold" style={{ fontSize: '20px' }}>{d.med_name}</p>
+                        <p className="text-[#1F5A4B] font-semibold" style={{ fontSize: '20px' }}>{d.med_name}</p>
                         <p className="text-[#6B645A]" style={{ fontSize: '16px' }}>
                           {[d.dosage, formatTime12(d.time)].filter(Boolean).join(', ')}
                         </p>
@@ -164,7 +165,7 @@ export default function ParentHome({
                       <button
                         onClick={() => onTakeDose && onTakeDose(d)}
                         disabled={takingDose === key}
-                        className="px-5 py-3 rounded-2xl bg-[#1B365D] text-[#D4A843] font-bold flex-shrink-0 disabled:opacity-60"
+                        className="px-5 py-3 rounded-2xl bg-[#1F5A4B] text-[#F2B544] font-bold flex-shrink-0 disabled:opacity-60"
                         style={{ fontSize: '18px', minHeight: '56px' }}
                       >
                         {takingDose === key ? 'Saving...' : 'I took it'}
@@ -178,19 +179,19 @@ export default function ParentHome({
 
           {/* Appointment day only. */}
           {isPremiumUser && todaysAppointments.length > 0 && (
-            <section className="bg-white rounded-[24px] border-2 border-[#1B365D] p-5 shadow-sm">
+            <section className="bg-white rounded-[24px] border-2 border-[#1F5A4B] p-5 shadow-sm">
               <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-2xl bg-[#1B365D]/10 flex items-center justify-center flex-shrink-0">
-                  <Calendar size={26} color="#1B365D" strokeWidth={1.8} />
+                <div className="w-12 h-12 rounded-2xl bg-[#1F5A4B]/10 flex items-center justify-center flex-shrink-0">
+                  <Calendar size={26} color="#1F5A4B" strokeWidth={1.8} />
                 </div>
-                <p className="text-[#1B365D] font-bold" style={{ fontSize: '22px', lineHeight: 1.15 }}>
+                <p className="text-[#1F5A4B] font-bold" style={{ fontSize: '22px', lineHeight: 1.15 }}>
                   {todaysAppointments.length === 1 ? 'You have an appointment today' : `You have ${todaysAppointments.length} appointments today`}
                 </p>
               </div>
               <div className="flex flex-col divide-y divide-[#E7E2D8]">
                 {todaysAppointments.map(a => (
                   <button key={a.id} onClick={() => onNavigate && onNavigate('/appointments')} className="py-3 text-left w-full">
-                    <p className="text-[#1B365D] font-semibold" style={{ fontSize: '20px' }}>
+                    <p className="text-[#1F5A4B] font-semibold" style={{ fontSize: '20px' }}>
                       {a.appointment_time ? `${formatTime12(String(a.appointment_time).slice(0, 5))}, ` : ''}{a.title}
                     </p>
                     {(a.provider_name || a.location) && (
@@ -213,21 +214,21 @@ export default function ParentHome({
 
           {showNoteInput && isPremiumUser && (
             <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-              <p className="text-[#1B365D] font-semibold text-sm">Add a note for your family (optional)</p>
+              <p className="text-[#1F5A4B] font-semibold text-sm">Add a note for your family (optional)</p>
               <input
                 type="text"
                 value={checkinNote}
                 onChange={(e) => onCheckinNoteChange(e.target.value)}
                 placeholder="e.g. Going to the store"
                 maxLength={200}
-                className="w-full px-4 py-3 border-2 border-[#E7E2D8] rounded-xl focus:outline-none focus:border-[#1B365D] text-[#2D2A24]"
+                className="w-full px-4 py-3 border-2 border-[#E7E2D8] rounded-xl focus:outline-none focus:border-[#1F5A4B] text-[#2D2A24]"
                 style={{ fontSize: '16px' }}
               />
               <div className="flex gap-2">
                 <button
                   onClick={onSaveNote}
                   disabled={!checkinNote.trim() || noteSaving}
-                  className="flex-1 py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-sm disabled:opacity-40"
+                  className="flex-1 py-3 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-sm disabled:opacity-40"
                 >
                   {noteSaving ? 'Sending...' : 'Send Note'}
                 </button>
@@ -243,11 +244,11 @@ export default function ParentHome({
 
           {alreadyCheckedIn && dailyQuote && (
             <div className="bg-[#F5E1E6]/40 border border-[#E7E2D8] rounded-2xl p-5">
-              <p className="text-[#D4A843] font-semibold text-center mb-3" style={{ fontSize: '11px', letterSpacing: '0.16em' }}>
+              <p className="text-[#F2B544] font-semibold text-center mb-3" style={{ fontSize: '11px', letterSpacing: '0.16em' }}>
                 {dailyQuote.type === 'quote' ? 'DAILY INSPIRATION' : 'DAILY LAUGH'}
               </p>
               <p
-                className="text-[#1B365D] leading-relaxed text-center"
+                className="text-[#1F5A4B] leading-relaxed text-center"
                 style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontStyle: 'italic' }}
               >
                 &ldquo;{dailyQuote.content}&rdquo;
@@ -268,20 +269,20 @@ export default function ParentHome({
 
           <button
             onClick={onAsk}
-            className="w-full rounded-[28px] py-5 px-5 flex items-center gap-4 bg-white border-2 border-[#1B365D] shadow-sm active:scale-[0.99] transition-transform"
+            className="w-full rounded-[28px] py-5 px-5 flex items-center gap-4 bg-white border-2 border-[#1F5A4B] shadow-sm active:scale-[0.99] transition-transform"
           >
-            <div className="w-12 h-12 rounded-2xl bg-[#1B365D] flex items-center justify-center flex-shrink-0">
-              <MessageCircle size={22} color="#D4A843" strokeWidth={1.8} />
+            <div className="w-12 h-12 rounded-2xl bg-[#1F5A4B] flex items-center justify-center flex-shrink-0">
+              <MessageCircle size={22} color="#F2B544" strokeWidth={1.8} />
             </div>
             <div className="text-left min-w-0">
-              <p className="text-[#1B365D] font-bold" style={{ fontSize: '20px' }}>Ask a question</p>
+              <p className="text-[#1F5A4B] font-bold" style={{ fontSize: '20px' }}>Ask a question</p>
               <p className="text-[#6B645A] text-sm">Recipes, weather, everyday help</p>
             </div>
           </button>
 
           {quickDialContacts.length > 0 && (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4A843] mb-3 px-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F2B544] mb-3 px-1">
                 Call
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -295,7 +296,7 @@ export default function ParentHome({
                       <Phone size={18} color="#16A34A" strokeWidth={2} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[#1B365D] font-bold text-sm truncate">{c.label}</p>
+                      <p className="text-[#1F5A4B] font-bold text-sm truncate">{c.label}</p>
                       <p className="text-[#6B645A] text-xs truncate">{c.name}</p>
                     </div>
                   </a>
@@ -320,7 +321,7 @@ export default function ParentHome({
               <p className="text-[#6B645A] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
                 SHARED BY
               </p>
-              <p className="text-[#1B365D] font-bold leading-tight" style={{ fontSize: '17px' }}>{partner.name}</p>
+              <p className="text-[#1F5A4B] font-bold leading-tight" style={{ fontSize: '17px' }}>{partner.name}</p>
             </div>
           </div>
         )}
@@ -336,9 +337,9 @@ export default function ParentHome({
             aria-label="Menu"
           >
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[#1B365D] font-bold" style={{ fontSize: '22px', fontFamily: 'var(--font-display)' }}>Menu</p>
+              <p className="text-[#1F5A4B] font-bold" style={{ fontSize: '22px', fontFamily: 'var(--font-display)' }}>Menu</p>
               <button onClick={() => setMoreOpen(false)} aria-label="Close menu" className="w-11 h-11 rounded-xl bg-[#F3EFE7] flex items-center justify-center">
-                <X size={22} color="#1B365D" />
+                <X size={22} color="#1F5A4B" />
               </button>
             </div>
 
@@ -351,15 +352,15 @@ export default function ParentHome({
                     onClick={() => go(item.path)}
                     className="w-full flex items-center gap-4 py-4 text-left"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0">
-                      <item.Icon size={24} color="#1B365D" strokeWidth={1.7} />
+                    <div className="w-12 h-12 rounded-xl bg-[#1F5A4B]/8 flex items-center justify-center flex-shrink-0">
+                      <item.Icon size={24} color="#1F5A4B" strokeWidth={1.7} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[#1B365D] font-semibold" style={{ fontSize: '19px' }}>{item.label}</p>
+                      <p className="text-[#1F5A4B] font-semibold" style={{ fontSize: '19px' }}>{item.label}</p>
                       {item.sub && <p className="text-[#B5483F] font-semibold" style={{ fontSize: '15px' }}>{item.sub}</p>}
                       {locked && <p className="text-[#6B645A]" style={{ fontSize: '15px' }}>Paid plan</p>}
                     </div>
-                    {locked ? <Lock size={18} color="#D4A843" /> : <ChevronRight size={20} color="#C4BDB3" />}
+                    {locked ? <Lock size={18} color="#F2B544" /> : <ChevronRight size={20} color="#C4BDB3" />}
                   </button>
                 )
               })}
@@ -368,10 +369,10 @@ export default function ParentHome({
             <div className="mt-2 pt-2 border-t-2 border-[#E7E2D8] flex flex-col divide-y divide-[#E7E2D8]">
               <button
                 onClick={() => { setMoreOpen(false); onSettings() }}
-                className="w-full flex items-center gap-4 py-4 text-[#1B365D] font-semibold text-left"
+                className="w-full flex items-center gap-4 py-4 text-[#1F5A4B] font-semibold text-left"
                 style={{ fontSize: '19px' }}
               >
-                <div className="w-12 h-12 rounded-xl bg-[#1B365D]/8 flex items-center justify-center flex-shrink-0"><Settings size={24} color="#1B365D" strokeWidth={1.7} /></div>
+                <div className="w-12 h-12 rounded-xl bg-[#1F5A4B]/8 flex items-center justify-center flex-shrink-0"><Settings size={24} color="#1F5A4B" strokeWidth={1.7} /></div>
                 Settings
               </button>
               <a

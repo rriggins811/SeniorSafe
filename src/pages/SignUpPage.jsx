@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import HammockMark from '../components/HammockMark'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { Shield, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { phoneProblem } from '../lib/phone'
 import { generateFamilyCode } from '../lib/familyCode'
@@ -253,7 +254,7 @@ export default function SignUpPage() {
   if (checking) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
-        <Loader2 size={32} className="animate-spin text-[#1B365D]" />
+        <Loader2 size={32} className="animate-spin text-[#1F5A4B]" />
         <p className="text-gray-500 text-lg">Opening your invite...</p>
       </div>
     )
@@ -267,8 +268,8 @@ export default function SignUpPage() {
     return (
       <Shell>
         <div className="flex flex-col items-center gap-2 text-center">
-          <div className="bg-[#1B365D] rounded-2xl p-3">
-            <Shield size={32} color="#D4A843" strokeWidth={1.5} />
+          <div className="bg-[#1F5A4B] rounded-2xl p-3">
+            <HammockMark size={32} />
           </div>
         </div>
         <Heading
@@ -309,7 +310,7 @@ export default function SignUpPage() {
             maxLength={6}
             autoCapitalize="characters"
             autoCorrect="off"
-            className="w-full px-6 py-5 border-2 border-gray-200 rounded-2xl text-center text-3xl font-bold tracking-[0.3em] text-[#1B365D] focus:outline-none focus:border-[#1B365D] uppercase"
+            className="w-full px-6 py-5 border-2 border-gray-200 rounded-2xl text-center text-3xl font-bold tracking-[0.3em] text-[#1F5A4B] focus:outline-none focus:border-[#1F5A4B] uppercase"
             autoFocus
           />
           <ErrorText>{error}</ErrorText>
@@ -375,8 +376,8 @@ export default function SignUpPage() {
   return (
     <Shell onBack={() => navigate('/')}>
       <div className="flex items-center gap-3">
-        <div className="bg-[#1B365D] rounded-2xl p-2.5">
-          <Shield size={26} color="#D4A843" strokeWidth={1.5} />
+        <div className="bg-[#1F5A4B] rounded-2xl p-2.5">
+          <HammockMark size={26} />
         </div>
         <Heading title="Set up Hammock365" />
       </div>
@@ -401,7 +402,7 @@ export default function SignUpPage() {
       <div className="flex flex-col gap-3 pt-2 text-center text-gray-600" style={{ fontSize: '16px' }}>
         <p>Have an invite code? <TextLink onClick={() => { setMode('join'); setError('') }}>Join your family</TextLink></p>
         <p>Setting this up for yourself? <TextLink onClick={() => { setMode('self'); setError('') }}>Start here</TextLink></p>
-        <p>Already have an account? <Link to="/signin" className="text-[#1B365D] font-semibold underline underline-offset-2">Sign in</Link></p>
+        <p>Already have an account? <Link to="/signin" className="text-[#1F5A4B] font-semibold underline underline-offset-2">Sign in</Link></p>
       </div>
     </Shell>
   )

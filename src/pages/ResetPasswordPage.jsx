@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, CheckCircle } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
+import HammockMark from '../components/HammockMark'
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate()
@@ -60,10 +61,10 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-sm flex flex-col gap-6">
 
         <div className="flex flex-col items-center gap-2">
-          <div className="bg-[#1B365D] rounded-2xl p-3">
-            <Shield size={32} color="#D4A843" strokeWidth={1.5} />
+          <div className="bg-[#1F5A4B] rounded-2xl p-3">
+            <HammockMark size={32} />
           </div>
-          <h1 className="text-2xl font-bold text-[#1B365D]">
+          <h1 className="text-2xl font-bold text-[#1F5A4B]">
             {success ? 'Password Updated' : 'Set New Password'}
           </h1>
           <p className="text-sm text-gray-500 text-center">
@@ -84,7 +85,7 @@ export default function ResetPasswordPage() {
             <p className="text-gray-400 text-xs mt-2">If this takes more than a few seconds, the link may have expired. Go back to Sign In and request a new one.</p>
             <button
               onClick={() => navigate('/signin')}
-              className="mt-4 text-[#1B365D] text-sm font-semibold hover:underline"
+              className="mt-4 text-[#1F5A4B] text-sm font-semibold hover:underline"
             >
               Back to Sign In
             </button>
@@ -99,7 +100,7 @@ export default function ResetPasswordPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="At least 6 characters"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1F5A4B]"
               />
             </div>
             <div>
@@ -110,7 +111,7 @@ export default function ResetPasswordPage() {
                 value={confirm}
                 onChange={e => setConfirm(e.target.value)}
                 placeholder="Re-enter your password"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1F5A4B]"
               />
             </div>
 
@@ -121,7 +122,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg disabled:opacity-60"
+              className="w-full py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-lg disabled:opacity-60"
             >
               {loading ? 'Updating...' : 'Update Password'}
             </button>

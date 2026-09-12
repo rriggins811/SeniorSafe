@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import HammockMark from '../components/HammockMark'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import {
-  Shield, CheckCircle, X, Sparkles, ArrowLeft,
+  CheckCircle, X, Sparkles, ArrowLeft,
   Heart, Pill, FolderLock, Bot, Users, Bell, Clock,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -66,10 +67,10 @@ function DoubleBillingModal({ open, platform, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3 mb-3">
-          <div className="bg-[#D4A843]/15 rounded-xl p-2 flex-shrink-0">
-            <Shield size={20} className="text-[#D4A843]" strokeWidth={1.5} />
+          <div className="bg-[#F2B544]/15 rounded-xl p-2 flex-shrink-0">
+            <HammockMark size={20} />
           </div>
-          <h2 className="text-[#1B365D] font-bold text-lg leading-tight pt-1">{c.title}</h2>
+          <h2 className="text-[#1F5A4B] font-bold text-lg leading-tight pt-1">{c.title}</h2>
         </div>
         <p className="text-gray-700 text-sm leading-relaxed mb-3">{c.body}</p>
         <p className="text-gray-500 text-xs mb-5">{c.footer}</p>
@@ -79,7 +80,7 @@ function DoubleBillingModal({ open, platform, onClose }) {
             target={c.ctaTarget}
             rel={c.ctaTarget === '_blank' ? 'noopener noreferrer' : undefined}
             onClick={onClose}
-            className="w-full py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base text-center"
+            className="w-full py-3 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-base text-center"
           >
             {c.ctaLabel}
           </a>
@@ -365,7 +366,7 @@ export default function UpgradePage() {
         onClose={() => setBillingModalOpen(false)}
       />
       <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
-        <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
+        <div className="bg-[#1F5A4B] px-6 pt-12 pb-5 flex-shrink-0">
           <div className="max-w-lg mx-auto flex items-center gap-3">
             <button onClick={() => navigate('/dashboard')} className="text-white">
               <ArrowLeft size={22} />
@@ -378,14 +379,14 @@ export default function UpgradePage() {
             <div className="bg-green-100 rounded-2xl p-5">
               <CheckCircle size={40} className="text-green-600" strokeWidth={1.5} />
             </div>
-            <h2 className="text-[#1B365D] text-xl font-bold">You&apos;re on the paid plan</h2>
+            <h2 className="text-[#1F5A4B] text-xl font-bold">You&apos;re on the paid plan</h2>
             <p className="text-gray-500 text-base leading-relaxed max-w-xs">
               Everything is on: check-in texts, the missed check-in alert, reminders, the vault, and Maggie every day. Thank you.
             </p>
 
             <button
               onClick={() => navigate('/dashboard')}
-              className="w-full max-w-xs py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg mt-2"
+              className="w-full max-w-xs py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-lg mt-2"
             >
               Back to Dashboard
             </button>
@@ -405,7 +406,7 @@ export default function UpgradePage() {
     />
     <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
       {/* Header */}
-      <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
+      <div className="bg-[#1F5A4B] px-6 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <button onClick={() => navigate('/dashboard')} className="text-white">
             <ArrowLeft size={22} />
@@ -437,7 +438,7 @@ export default function UpgradePage() {
                 onClick={() => setPlan('monthly')}
                 className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-colors ${
                   plan === 'monthly'
-                    ? 'bg-[#1B365D] text-white'
+                    ? 'bg-[#1F5A4B] text-white'
                     : 'text-gray-500'
                 }`}
               >
@@ -447,12 +448,12 @@ export default function UpgradePage() {
                 onClick={() => setPlan('annual')}
                 className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-colors relative ${
                   plan === 'annual'
-                    ? 'bg-[#1B365D] text-white'
+                    ? 'bg-[#1F5A4B] text-white'
                     : 'text-gray-500'
                 }`}
               >
                 Annual
-                <span className="absolute -top-2.5 right-2 bg-[#D4A843] text-[#1B365D] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <span className="absolute -top-2.5 right-2 bg-[#F2B544] text-[#2D2A24] text-[10px] font-bold px-2 py-0.5 rounded-full">
                   Save {savingsPercent}
                 </span>
               </button>
@@ -463,19 +464,19 @@ export default function UpgradePage() {
           <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
             {onNativeStore ? (
               <>
-                <p className="text-4xl font-bold text-[#1B365D]">{monthlyPrice}<span className="text-lg font-normal text-gray-400">/mo</span></p>
+                <p className="text-4xl font-bold text-[#1F5A4B]">{monthlyPrice}<span className="text-lg font-normal text-gray-400">/mo</span></p>
                 <p className="text-gray-400 text-sm mt-1">Free trial first, then billed monthly via {isIOS() ? 'Apple' : 'Google Play'}. Cancel anytime.</p>
               </>
             ) : plan === 'monthly' ? (
               <>
-                <p className="text-4xl font-bold text-[#1B365D]">{monthlyPrice}<span className="text-lg font-normal text-gray-400">/mo</span></p>
+                <p className="text-4xl font-bold text-[#1F5A4B]">{monthlyPrice}<span className="text-lg font-normal text-gray-400">/mo</span></p>
                 <p className="text-gray-400 text-sm mt-1">{tasteEligible ? `${TASTE_DAYS} days free with a card, then billed monthly. Cancel anytime.` : 'Billed monthly. Cancel anytime.'}</p>
               </>
             ) : (
               <>
-                <p className="text-4xl font-bold text-[#1B365D]">{annualMonthly}<span className="text-lg font-normal text-gray-400">/mo</span></p>
+                <p className="text-4xl font-bold text-[#1F5A4B]">{annualMonthly}<span className="text-lg font-normal text-gray-400">/mo</span></p>
                 <p className="text-gray-400 text-sm mt-1">{annualPrice} a year, billed annually</p>
-                <p className="text-[#D4A843] text-sm font-semibold mt-1">Save {savingsPercent} vs. monthly</p>
+                <p className="text-[#F2B544] text-sm font-semibold mt-1">Save {savingsPercent} vs. monthly</p>
               </>
             )}
           </div>
@@ -483,16 +484,16 @@ export default function UpgradePage() {
           {/* Premium features */}
           <div className="bg-white rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles size={18} className="text-[#D4A843]" />
-              <h2 className="text-[#1B365D] font-bold text-lg">The paid plan</h2>
+              <Sparkles size={18} className="text-[#F2B544]" />
+              <h2 className="text-[#1F5A4B] font-bold text-lg">The paid plan</h2>
             </div>
             <ul className="flex flex-col gap-3">
               {PAID_FEATURES.map((feat, i) => {
                 const Icon = feat.icon
                 return (
                   <li key={i} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#D4A843]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Icon size={13} className="text-[#D4A843]" strokeWidth={2} />
+                    <div className="w-6 h-6 rounded-full bg-[#F2B544]/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Icon size={13} className="text-[#F2B544]" strokeWidth={2} />
                     </div>
                     <span className="text-gray-700 text-[15px] leading-snug">{feat.text}</span>
                   </li>
@@ -520,7 +521,7 @@ export default function UpgradePage() {
               <button
                 onClick={handleIAPPurchase}
                 disabled={iapLoading}
-                className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
+                className="w-full py-4 rounded-xl bg-[#F2B544] text-[#2D2A24] font-bold text-lg disabled:opacity-50 shadow-lg"
               >
                 {iapLoading ? 'Processing...' : 'Start the free trial'}
               </button>
@@ -528,7 +529,7 @@ export default function UpgradePage() {
               <button
                 onClick={handleRestore}
                 disabled={restoring}
-                className="w-full py-3 text-[#1B365D] text-sm font-semibold underline disabled:opacity-50"
+                className="w-full py-3 text-[#1F5A4B] text-sm font-semibold underline disabled:opacity-50"
               >
                 {restoring ? 'Restoring...' : 'Restore Purchases'}
               </button>
@@ -538,7 +539,7 @@ export default function UpgradePage() {
               <button
                 onClick={() => handleCheckout()}
                 disabled={loading || tier === null}
-                className="w-full py-4 rounded-xl bg-[#D4A843] text-[#1B365D] font-bold text-lg disabled:opacity-50 shadow-lg"
+                className="w-full py-4 rounded-xl bg-[#F2B544] text-[#2D2A24] font-bold text-lg disabled:opacity-50 shadow-lg"
               >
                 {tier === null ? 'Loading...' : loading ? 'Redirecting to checkout...' : tasteEligible ? `Start ${TASTE_DAYS} free days` : `Subscribe, ${plan === 'monthly' ? monthlyPrice + ' a month' : annualPrice + ' a year'}`}
               </button>

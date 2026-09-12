@@ -155,14 +155,14 @@ export default function AppointmentsPage() {
     const isToday = appt.appointment_date === today
     const typeStyle = TYPE_COLORS[appt.appointment_type] || TYPE_COLORS.Other
     return (
-      <div className={`bg-white rounded-2xl overflow-hidden shadow-sm ${isToday ? 'ring-2 ring-[#D4A843]' : ''}`}>
+      <div className={`bg-white rounded-2xl overflow-hidden shadow-sm ${isToday ? 'ring-2 ring-[#F2B544]' : ''}`}>
         <div className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               {isToday && (
-                <span className="text-xs font-bold text-[#D4A843] uppercase tracking-wide">Today</span>
+                <span className="text-xs font-bold text-[#F2B544] uppercase tracking-wide">Today</span>
               )}
-              <p className="text-[#1B365D] font-bold leading-tight" style={{ fontSize: '17px' }}>
+              <p className="text-[#1F5A4B] font-bold leading-tight" style={{ fontSize: '17px' }}>
                 {appt.title}
               </p>
               {appt.provider_name && (
@@ -214,7 +214,7 @@ export default function AppointmentsPage() {
                 appt.provider_name ? `with ${appt.provider_name}${appt.notes ? '\n' + appt.notes : ''}` : (appt.notes || ''),
                 appt.location || ''
               ))}
-              className="flex items-center gap-1.5 text-[#1B365D] text-sm font-medium hover:opacity-70"
+              className="flex items-center gap-1.5 text-[#1F5A4B] text-sm font-medium hover:opacity-70"
             >
               <Calendar size={14} strokeWidth={2} />
               Add to Google Calendar
@@ -235,7 +235,7 @@ export default function AppointmentsPage() {
   return (
     <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
       {/* Header */}
-      <div className="bg-[#1B365D] px-5 pt-12 pb-5 flex-shrink-0">
+      <div className="bg-[#1F5A4B] px-5 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
           <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-white/70 text-sm mb-4">
             <ArrowLeft size={16} /> Back
@@ -243,7 +243,7 @@ export default function AppointmentsPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-white/15 rounded-xl p-2">
-                <Calendar size={20} color="#D4A843" strokeWidth={1.5} />
+                <Calendar size={20} color="#F2B544" strokeWidth={1.5} />
               </div>
               <div>
                 <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Appointments</h1>
@@ -252,9 +252,9 @@ export default function AppointmentsPage() {
             </div>
             <button
               onClick={() => setShowForm(true)}
-              className="w-10 h-10 rounded-xl bg-[#D4A843] flex items-center justify-center"
+              className="w-10 h-10 rounded-xl bg-[#F2B544] flex items-center justify-center"
             >
-              <Plus size={22} color="#1B365D" strokeWidth={2.5} />
+              <Plus size={22} color="#1F5A4B" strokeWidth={2.5} />
             </button>
           </div>
         </div>
@@ -315,7 +315,7 @@ export default function AppointmentsPage() {
             className="bg-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-4"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-[#1B365D] font-bold" style={{ fontSize: '20px' }}>Add Appointment</h2>
+              <h2 className="text-[#1F5A4B] font-bold" style={{ fontSize: '20px' }}>Add Appointment</h2>
               <button type="button" onClick={() => setShowForm(false)} className="p-2 text-gray-400">
                 <X size={22} />
               </button>
@@ -333,7 +333,7 @@ export default function AppointmentsPage() {
                   value={form[key]}
                   onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                   placeholder={placeholder}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                   style={{ fontSize: '16px' }}
                 />
               </div>
@@ -344,7 +344,7 @@ export default function AppointmentsPage() {
               <select
                 value={form.appointment_type}
                 onChange={e => setForm(f => ({ ...f, appointment_type: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1B365D]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1F5A4B]"
                 style={{ fontSize: '16px' }}
               >
                 {APPT_TYPES.map(t => <option key={t}>{t}</option>)}
@@ -359,7 +359,7 @@ export default function AppointmentsPage() {
                   required
                   value={form.appointment_date}
                   onChange={e => setForm(f => ({ ...f, appointment_date: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                   style={{ fontSize: '16px' }}
                 />
               </div>
@@ -369,7 +369,7 @@ export default function AppointmentsPage() {
                   type="time"
                   value={form.appointment_time}
                   onChange={e => setForm(f => ({ ...f, appointment_time: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                   style={{ fontSize: '16px' }}
                 />
               </div>
@@ -382,7 +382,7 @@ export default function AppointmentsPage() {
                 onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                 placeholder="Any special instructions or reminders..."
                 rows={2}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D] resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B] resize-none"
                 style={{ fontSize: '16px' }}
               />
             </div>
@@ -390,7 +390,7 @@ export default function AppointmentsPage() {
             <button
               type="submit"
               disabled={saving || !form.title.trim() || !form.appointment_date}
-              className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold disabled:opacity-50"
+              className="w-full py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold disabled:opacity-50"
               style={{ fontSize: '17px' }}
             >
               {saving ? 'Saving...' : 'Add Appointment'}

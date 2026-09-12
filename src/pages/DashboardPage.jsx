@@ -457,8 +457,8 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-[#FAF8F4] flex items-center justify-center px-6">
         <div className="text-center flex flex-col gap-4">
-          <p className="text-[#1B365D] text-lg">{loadError}</p>
-          <button onClick={() => window.location.reload()} className="px-6 py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg">Try again</button>
+          <p className="text-[#1F5A4B] text-lg">{loadError}</p>
+          <button onClick={() => window.location.reload()} className="px-6 py-3 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-lg">Try again</button>
         </div>
       </div>
     )
@@ -468,8 +468,8 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-[#FAF8F4] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="bg-[#1B365D] rounded-2xl p-3">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D4A843" strokeWidth="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div className="bg-[#1F5A4B] rounded-2xl p-3">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F2B544" strokeWidth="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </div>
           <p className="text-[#6B645A] text-sm">Loading…</p>
         </div>

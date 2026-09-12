@@ -4,8 +4,8 @@
   "description": "Family coordination app for senior transitions",
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#1B365D",
-  "background_color": "#F5F5F5",
+  "theme_color": "#1F5A4B",
+  "background_color": "#FAF8F4",
   "orientation": "portrait-primary",
   "icons": [
     {

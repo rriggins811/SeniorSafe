@@ -29,7 +29,7 @@ export default function HowToPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F4] flex flex-col pb-10">
-      <div className="bg-[#1B365D] px-5 pt-12 pb-5 flex-shrink-0">
+      <div className="bg-[#1F5A4B] px-5 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/70 text-base mb-4"><ArrowLeft size={18} /> Back</button>
           <h1 className="text-white text-xl font-bold">How-to videos</h1>
@@ -45,7 +45,7 @@ export default function HowToPage() {
             </video>
             <div className="p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-gray-400 flex items-center gap-1"><PlayCircle size={14} /> {i + 1} of {VIDEOS.length} · {v.plan} · {v.seconds} seconds</p>
-              <h2 className="text-[#1B365D] font-bold text-lg mt-1">{v.title}</h2>
+              <h2 className="text-[#1F5A4B] font-bold text-lg mt-1">{v.title}</h2>
               <ol className="mt-2 list-decimal pl-5 text-gray-700 text-base leading-relaxed space-y-1">
                 {v.steps.map(s => <li key={s}>{s}</li>)}
               </ol>

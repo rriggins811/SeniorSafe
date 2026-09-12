@@ -163,7 +163,7 @@ export default function MedicationsPage() {
   return (
     <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
       {/* Header */}
-      <div className="bg-[#1B365D] px-5 pt-12 pb-5 flex-shrink-0">
+      <div className="bg-[#1F5A4B] px-5 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
           <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-white/70 text-sm mb-4">
             <ArrowLeft size={16} /> Back
@@ -171,7 +171,7 @@ export default function MedicationsPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-white/15 rounded-xl p-2">
-                <Pill size={20} color="#D4A843" strokeWidth={1.5} />
+                <Pill size={20} color="#F2B544" strokeWidth={1.5} />
               </div>
               <div>
                 <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Medications</h1>
@@ -183,9 +183,9 @@ export default function MedicationsPage() {
                 setForm(f => ({ ...f, reminder_phone: f.reminder_phone || userPhone }))
                 setShowForm(true)
               }}
-              className="w-10 h-10 rounded-xl bg-[#D4A843] flex items-center justify-center"
+              className="w-10 h-10 rounded-xl bg-[#F2B544] flex items-center justify-center"
             >
-              <Plus size={22} color="#1B365D" strokeWidth={2.5} />
+              <Plus size={22} color="#1F5A4B" strokeWidth={2.5} />
             </button>
           </div>
         </div>
@@ -212,7 +212,7 @@ export default function MedicationsPage() {
                   {/* Med header */}
                   <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
                     <div>
-                      <p className="text-[#1B365D] font-bold" style={{ fontSize: '17px' }}>{med.med_name}</p>
+                      <p className="text-[#1F5A4B] font-bold" style={{ fontSize: '17px' }}>{med.med_name}</p>
                       <p className="text-gray-500 text-sm">
                         {med.dosage && `${med.dosage} · `}{med.frequency}
                       </p>
@@ -274,7 +274,7 @@ export default function MedicationsPage() {
                                   'Medication reminder, Hammock365'
                                 ))
                               }}
-                              className="ml-1 text-gray-300 hover:text-[#1B365D] flex-shrink-0"
+                              className="ml-1 text-gray-300 hover:text-[#1F5A4B] flex-shrink-0"
                               title="Add to Google Calendar"
                             >
                               <Calendar size={14} />
@@ -302,7 +302,7 @@ export default function MedicationsPage() {
             className="bg-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-4"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-[#1B365D] font-bold" style={{ fontSize: '20px' }}>Add Medication</h2>
+              <h2 className="text-[#1F5A4B] font-bold" style={{ fontSize: '20px' }}>Add Medication</h2>
               <button type="button" onClick={() => setShowForm(false)} className="p-2 text-gray-400">
                 <X size={22} />
               </button>
@@ -315,7 +315,7 @@ export default function MedicationsPage() {
                 value={form.med_name}
                 onChange={e => setForm(f => ({ ...f, med_name: e.target.value }))}
                 placeholder="e.g. Lisinopril"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                 style={{ fontSize: '16px' }}
               />
             </div>
@@ -326,7 +326,7 @@ export default function MedicationsPage() {
                 value={form.dosage}
                 onChange={e => setForm(f => ({ ...f, dosage: e.target.value }))}
                 placeholder="e.g. 10mg"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                 style={{ fontSize: '16px' }}
               />
             </div>
@@ -336,7 +336,7 @@ export default function MedicationsPage() {
               <select
                 value={form.frequency}
                 onChange={e => handleFreqChange(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1B365D]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1F5A4B]"
                 style={{ fontSize: '16px' }}
               >
                 {FREQUENCIES.map(f => <option key={f}>{f}</option>)}
@@ -353,7 +353,7 @@ export default function MedicationsPage() {
                       type="time"
                       value={t}
                       onChange={e => setTimeAt(i, e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                       style={{ fontSize: '16px' }}
                     />
                   ))}
@@ -372,7 +372,7 @@ export default function MedicationsPage() {
                   type="button"
                   onClick={() => setForm(f => ({ ...f, reminder_enabled: !f.reminder_enabled }))}
                   className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-                    form.reminder_enabled ? 'bg-[#1B365D]' : 'bg-gray-300'
+                    form.reminder_enabled ? 'bg-[#1F5A4B]' : 'bg-gray-300'
                   }`}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
@@ -386,7 +386,7 @@ export default function MedicationsPage() {
             <button
               type="submit"
               disabled={saving || !form.med_name.trim()}
-              className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold disabled:opacity-50"
+              className="w-full py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold disabled:opacity-50"
               style={{ fontSize: '17px' }}
             >
               {saving ? 'Saving...' : 'Add Medication'}

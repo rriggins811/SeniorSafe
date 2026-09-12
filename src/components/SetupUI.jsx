@@ -9,21 +9,21 @@ export function Shell({ step, total, onBack, children, wide }) {
   const pct = step && total ? (step / total) * 100 : 0
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <div className="bg-[#1B365D] flex-shrink-0">
+      <div className="bg-[#1F5A4B] flex-shrink-0">
         <div className="px-6 pt-12 pb-4 max-w-md mx-auto w-full flex items-center justify-between">
           {onBack ? (
             <button onClick={onBack} aria-label="Back" className="p-2 -ml-2 rounded-lg text-white/70 active:text-white min-w-[44px] min-h-[44px] flex items-center justify-center">
               <ChevronLeft size={26} />
             </button>
           ) : <div className="w-11" />}
-          <span className="text-[#D4A843] text-sm font-semibold">
+          <span className="text-[#F2B544] text-sm font-semibold">
             {step && total ? `Step ${step} of ${total}` : 'Hammock365'}
           </span>
           <div className="w-11" />
         </div>
         {step && total ? (
           <div className="w-full h-1 bg-white/20">
-            <div className="h-full bg-[#D4A843] transition-all duration-500" style={{ width: `${pct}%` }} />
+            <div className="h-full bg-[#F2B544] transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
         ) : null}
       </div>
@@ -37,7 +37,7 @@ export function Shell({ step, total, onBack, children, wide }) {
 export function Heading({ title, sub, large }) {
   return (
     <div className="flex flex-col gap-2">
-      <h1 className="text-[#1B365D] font-bold" style={{ fontSize: large ? '32px' : '26px', lineHeight: 1.15 }}>{title}</h1>
+      <h1 className="text-[#1F5A4B] font-bold" style={{ fontSize: large ? '32px' : '26px', lineHeight: 1.15 }}>{title}</h1>
       {sub && <p className="text-[#6B645A]" style={{ fontSize: large ? '20px' : '17px', lineHeight: 1.45 }}>{sub}</p>}
     </div>
   )
@@ -57,7 +57,7 @@ export function Field({ label, hint, value, onChange, type = 'text', large, auto
           value={value}
           autoFocus={autoFocus}
           onChange={e => onChange(e.target.value)}
-          className="w-full px-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-[#2D2A24]"
+          className="w-full px-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1F5A4B] text-[#2D2A24]"
           style={{ fontSize: large ? '20px' : '18px', paddingTop: large ? '18px' : '14px', paddingBottom: large ? '18px' : '14px', paddingRight: isPassword ? '64px' : undefined }}
         />
         {isPassword && (
@@ -78,8 +78,8 @@ export function Field({ label, hint, value, onChange, type = 'text', large, auto
 
 export function BigButton({ onClick, disabled, children, secondary, large, type = 'button', href }) {
   const cls = secondary
-    ? 'w-full rounded-2xl border-2 border-[#1B365D] text-[#1B365D] font-bold bg-white disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-2'
-    : 'w-full rounded-2xl bg-[#1B365D] text-[#D4A843] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-2'
+    ? 'w-full rounded-2xl border-2 border-[#1F5A4B] text-[#1F5A4B] font-bold bg-white disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-2'
+    : 'w-full rounded-2xl bg-[#1F5A4B] text-[#F2B544] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-2'
   const style = { fontSize: large ? '22px' : '19px', paddingTop: large ? '22px' : '18px', paddingBottom: large ? '22px' : '18px' }
   if (href) {
     return <a href={href} onClick={onClick} className={cls} style={style}>{children}</a>
@@ -88,7 +88,7 @@ export function BigButton({ onClick, disabled, children, secondary, large, type 
 }
 
 export function TextLink({ onClick, children, to }) {
-  const cls = 'text-[#1B365D] font-semibold underline underline-offset-2 text-base'
+  const cls = 'text-[#1F5A4B] font-semibold underline underline-offset-2 text-base'
   if (to) return <Link to={to} className={cls}>{children}</Link>
   return <button type="button" onClick={onClick} className={cls}>{children}</button>
 }
@@ -159,7 +159,7 @@ export function Select({ label, value, onChange, options, hint, large }) {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full px-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] bg-white text-[#2D2A24] font-semibold"
+        className="w-full px-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1F5A4B] bg-white text-[#2D2A24] font-semibold"
         style={{ fontSize: large ? '20px' : '18px', paddingTop: '14px', paddingBottom: '14px' }}
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}

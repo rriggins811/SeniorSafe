@@ -127,11 +127,11 @@ export default function FamilyInvitePage() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F4] flex flex-col pb-8">
-      <div className="bg-[#1B365D] px-5 pt-12 pb-5 flex-shrink-0">
+      <div className="bg-[#1F5A4B] px-5 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
           <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-white/70 text-base mb-4"><ArrowLeft size={18} /> Back</button>
           <div className="flex items-center gap-3">
-            <div className="bg-white/15 rounded-xl p-2"><Users size={20} color="#D4A843" strokeWidth={1.5} /></div>
+            <div className="bg-white/15 rounded-xl p-2"><Users size={20} color="#F2B544" strokeWidth={1.5} /></div>
             <div>
               <h1 className="text-white font-bold" style={{ fontSize: '22px' }}>Family</h1>
               <p className="text-white/60 text-sm">Who gets the check-in, and how to add more people</p>
@@ -150,18 +150,18 @@ export default function FamilyInvitePage() {
               <div className="bg-white rounded-2xl p-5 shadow-sm">
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3">Checks in each day</p>
                 <div className="flex items-center gap-3">
-                  <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${seniorJoined ? 'bg-green-50' : 'bg-[#D4A843]/20'}`}>
+                  <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${seniorJoined ? 'bg-green-50' : 'bg-[#F2B544]/20'}`}>
                     {seniorJoined ? <Heart size={20} color="#16A34A" /> : <Clock size={20} color="#8A6A1E" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[#1B365D] font-semibold" style={{ fontSize: '17px' }}>{seniorName || 'Not set yet'}</p>
+                    <p className="text-[#1F5A4B] font-semibold" style={{ fontSize: '17px' }}>{seniorName || 'Not set yet'}</p>
                     <p className="text-gray-500 text-sm">{seniorJoined ? 'Has the app and can check in' : 'Has not opened their link yet'}</p>
                   </div>
                 </div>
                 {isOwner && !seniorJoined && !family.isSenior && (
                   <div className="flex flex-col gap-2 mt-4">
                     {family.seniorPhone && (
-                      <button onClick={textSenior} disabled={seniorSending} className="w-full py-3.5 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base flex items-center justify-center gap-2 disabled:opacity-60">
+                      <button onClick={textSenior} disabled={seniorSending} className="w-full py-3.5 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-base flex items-center justify-center gap-2 disabled:opacity-60">
                         <MessageSquare size={18} /> {seniorSending ? 'Sending...' : `Text ${seniorName || 'them'} the link`}
                       </button>
                     )}
@@ -172,14 +172,14 @@ export default function FamilyInvitePage() {
                       <div className="bg-[#FDF2F0] border border-[#B5483F]/40 rounded-xl p-3 flex flex-col gap-1">
                         <p className="text-[#7A2E28] text-base">{seniorError}</p>
                         {family.seniorPhone && (
-                          <a href={smsHref(family.seniorPhone, seniorText)} className="text-[#1B365D] font-semibold underline underline-offset-2 text-base">Text it from this phone instead</a>
+                          <a href={smsHref(family.seniorPhone, seniorText)} className="text-[#1F5A4B] font-semibold underline underline-offset-2 text-base">Text it from this phone instead</a>
                         )}
                       </div>
                     )}
-                    <button onClick={() => copy(seniorInviteLink(code), 'senior')} className="w-full py-3.5 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-base flex items-center justify-center gap-2">
+                    <button onClick={() => copy(seniorInviteLink(code), 'senior')} className="w-full py-3.5 rounded-xl border-2 border-[#1F5A4B] text-[#1F5A4B] font-semibold text-base flex items-center justify-center gap-2">
                       {copied === 'senior' ? <><CheckCircle size={18} /> Copied</> : <><Copy size={18} /> Copy {seniorName ? `${seniorName}'s` : 'their'} link</>}
                     </button>
-                    <button onClick={() => navigate('/how-to#invite-link')} className="w-full py-2 text-[#1B365D] text-base underline underline-offset-2">Watch what {seniorName || 'they'} will see</button>
+                    <button onClick={() => navigate('/how-to#invite-link')} className="w-full py-2 text-[#1F5A4B] text-base underline underline-offset-2">Watch what {seniorName || 'they'} will see</button>
                   </div>
                 )}
               </div>
@@ -200,10 +200,10 @@ export default function FamilyInvitePage() {
                         value={memberPhone}
                         onChange={e => { setMemberPhone(e.target.value); setMemberError('') }}
                         placeholder="10-digit mobile number"
-                        className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-[#2D2A24]"
+                        className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1F5A4B] text-[#2D2A24]"
                         style={{ fontSize: '17px' }}
                       />
-                      <button onClick={() => gated(textMember)} disabled={memberSending} className="px-4 py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base flex items-center gap-2 disabled:opacity-60">
+                      <button onClick={() => gated(textMember)} disabled={memberSending} className="px-4 py-3 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-base flex items-center gap-2 disabled:opacity-60">
                         <MessageSquare size={18} /> {memberSending ? 'Sending' : 'Send'}
                       </button>
                     </div>
@@ -213,13 +213,13 @@ export default function FamilyInvitePage() {
                   <p className="text-gray-500 text-sm mb-2">Or share the code and link another way:</p>
                   <div className="bg-[#FAF8F4] rounded-xl py-4 flex flex-col items-center gap-1 mb-4">
                     <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Family code</p>
-                    <span className="text-[#1B365D] font-bold tracking-[0.25em] select-all" style={{ fontSize: '32px' }}>{code || '------'}</span>
+                    <span className="text-[#1F5A4B] font-bold tracking-[0.25em] select-all" style={{ fontSize: '32px' }}>{code || '------'}</span>
                   </div>
                   <div className="flex gap-3">
-                    <button onClick={() => gated(() => copy(memberInviteLink(code), 'member'))} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-[#1B365D] text-[#1B365D] font-semibold text-base">
+                    <button onClick={() => gated(() => copy(memberInviteLink(code), 'member'))} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-[#1F5A4B] text-[#1F5A4B] font-semibold text-base">
                       {copied === 'member' ? <><CheckCircle size={18} /> Copied</> : <><Copy size={18} /> Copy link</>}
                     </button>
-                    <button onClick={() => gated(() => share(memberText))} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base">
+                    <button onClick={() => gated(() => share(memberText))} className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-base">
                       <Share2 size={18} /> Share
                     </button>
                   </div>
@@ -230,7 +230,7 @@ export default function FamilyInvitePage() {
                 <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-4 text-center">
                   <p className="text-yellow-800 font-semibold text-base mb-1">On the free plan, the texts go to one contact</p>
                   <p className="text-yellow-700 text-base mb-3 leading-relaxed">Everyone here sees the check-in. The paid plan texts every member for the daily check-in, a missed check-in, and I Need Help. $14.99 a month.</p>
-                  <button onClick={() => { logFunnel('lock_tap', 'texts'); navigate('/upgrade?feature=texts') }} className="px-6 py-2.5 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-base">See the paid plan</button>
+                  <button onClick={() => { logFunnel('lock_tap', 'texts'); navigate('/upgrade?feature=texts') }} className="px-6 py-2.5 rounded-xl bg-[#F2B544] text-[#2D2A24] font-semibold text-base">See the paid plan</button>
                 </div>
               )}
 
@@ -252,11 +252,11 @@ export default function FamilyInvitePage() {
                       const isMe = m.user_id === family.me.user_id
                       return (
                         <div key={m.user_id} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-full bg-[#1B365D]/10 flex items-center justify-center flex-shrink-0">
-                            <span className="text-[#1B365D] font-bold text-base">{initials}</span>
+                          <div className="w-11 h-11 rounded-full bg-[#1F5A4B]/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-[#1F5A4B] font-bold text-base">{initials}</span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[#1B365D] font-semibold text-base leading-tight truncate">{displayName}{isMe ? ' (you)' : ''}{m.user_id === family.ownerId ? ' · set up the family' : ''}</p>
+                            <p className="text-[#1F5A4B] font-semibold text-base leading-tight truncate">{displayName}{isMe ? ' (you)' : ''}{m.user_id === family.ownerId ? ' · set up the family' : ''}</p>
                             <p className="text-gray-400 text-sm mt-0.5">{m.phone ? m.phone : 'No phone number, will not get texts'}</p>
                           </div>
                           {isOwner && m.user_id !== family.ownerId && (
@@ -279,10 +279,10 @@ export default function FamilyInvitePage() {
         <>
           <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowAgeGate(false)} />
           <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl p-6 max-w-sm mx-auto shadow-xl">
-            <h3 className="text-[#1B365D] font-bold text-lg text-center mb-3">Quick check</h3>
+            <h3 className="text-[#1F5A4B] font-bold text-lg text-center mb-3">Quick check</h3>
             <p className="text-gray-600 text-base text-center leading-relaxed mb-5">Is the person you're inviting 13 or older?</p>
             <div className="flex flex-col gap-3">
-              <button onClick={() => { setShowAgeGate(false); ageGateAction && ageGateAction() }} className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-base">Yes, they are 13 or older</button>
+              <button onClick={() => { setShowAgeGate(false); ageGateAction && ageGateAction() }} className="w-full py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-base">Yes, they are 13 or older</button>
               <button onClick={() => { setShowAgeGate(false); setShowAgeBlocked(true) }} className="w-full py-4 rounded-xl border border-gray-300 text-gray-600 font-semibold text-base">No</button>
             </div>
           </div>
@@ -294,7 +294,7 @@ export default function FamilyInvitePage() {
           <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl p-6 max-w-sm mx-auto shadow-xl">
             <div className="flex flex-col items-center gap-3 text-center">
               <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center"><UserMinus size={28} color="#DC2626" strokeWidth={1.5} /></div>
-              <h3 className="text-[#1B365D] font-bold text-lg">Not available</h3>
+              <h3 className="text-[#1F5A4B] font-bold text-lg">Not available</h3>
               <p className="text-gray-600 text-base leading-relaxed">Hammock365 is for people 13 and older.</p>
               <button onClick={() => setShowAgeBlocked(false)} className="w-full py-3 rounded-xl bg-gray-100 text-gray-700 font-semibold text-base mt-2">Got it</button>
             </div>

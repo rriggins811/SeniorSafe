@@ -40,7 +40,7 @@ export default function PartnerCodeField({ linkPartner, value, onChange }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="text-[#1B365D] font-semibold underline underline-offset-2"
+          className="text-[#1F5A4B] font-semibold underline underline-offset-2"
         >
           Enter their code
         </button>
@@ -66,7 +66,7 @@ export default function PartnerCodeField({ linkPartner, value, onChange }) {
         autoCorrect="off"
         spellCheck={false}
         autoFocus
-        className="w-full px-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-[#2D2A24]"
+        className="w-full px-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1F5A4B] text-[#2D2A24]"
         style={{ fontSize: '18px', paddingTop: '14px', paddingBottom: '14px' }}
       />
       {match && (

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Shield, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { isNative } from '../lib/platform'
 import { Browser } from '@capacitor/browser'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
+import HammockMark from '../components/HammockMark'
 
 const NATIVE_REDIRECT = 'com.rigginsstrategicsolutions.seniorsafe://auth/callback'
 
@@ -133,10 +134,10 @@ export default function SignInPage() {
       <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 py-12 keyboard-safe-bottom">
         <div className="w-full max-w-sm flex flex-col gap-6">
           <div className="flex flex-col items-center gap-2">
-            <div className="bg-[#1B365D] rounded-2xl p-3">
-              <Shield size={32} color="#D4A843" strokeWidth={1.5} />
+            <div className="bg-[#1F5A4B] rounded-2xl p-3">
+              <HammockMark size={32} />
             </div>
-            <h1 className="text-2xl font-bold text-[#1B365D]">Reset Password</h1>
+            <h1 className="text-2xl font-bold text-[#1F5A4B]">Reset Password</h1>
             <p className="text-sm text-gray-500 text-center">
               {resetSent
                 ? "Check your email for a password reset link. It may take a minute to arrive."
@@ -154,7 +155,7 @@ export default function SignInPage() {
                   value={resetEmail}
                   onChange={e => setResetEmail(e.target.value)}
                   placeholder="jane@example.com"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1F5A4B]"
                 />
               </div>
               {resetError && (
@@ -163,7 +164,7 @@ export default function SignInPage() {
               <button
                 type="submit"
                 disabled={resetLoading}
-                className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg disabled:opacity-60"
+                className="w-full py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-lg disabled:opacity-60"
               >
                 {resetLoading ? 'Sending...' : 'Send Reset Link'}
               </button>
@@ -177,7 +178,7 @@ export default function SignInPage() {
 
           <button
             onClick={() => { setShowReset(false); setResetSent(false); setResetError('') }}
-            className="flex items-center justify-center gap-2 text-[#1B365D] text-sm font-semibold"
+            className="flex items-center justify-center gap-2 text-[#1F5A4B] text-sm font-semibold"
           >
             <ArrowLeft size={14} /> Back to Sign In
           </button>
@@ -193,10 +194,10 @@ export default function SignInPage() {
 
         {/* Header */}
         <div className="flex flex-col items-center gap-2">
-          <div className="bg-[#1B365D] rounded-2xl p-3">
-            <Shield size={32} color="#D4A843" strokeWidth={1.5} />
+          <div className="bg-[#1F5A4B] rounded-2xl p-3">
+            <HammockMark size={32} />
           </div>
-          <h1 className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 700 }}>Welcome back</h1>
+          <h1 className="text-[#1F5A4B]" style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 700 }}>Welcome back</h1>
           <p className="text-[#6B645A] italic text-center" style={{ fontSize: '15px' }}>Sign in to your Hammock365 account.</p>
         </div>
 
@@ -210,7 +211,7 @@ export default function SignInPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="jane@example.com"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1F5A4B]"
             />
           </div>
 
@@ -222,13 +223,13 @@ export default function SignInPage() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="Your password"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1B365D]"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base focus:outline-none focus:border-[#1F5A4B]"
             />
             <div className="text-right mt-1.5">
               <button
                 type="button"
                 onClick={() => { setShowReset(true); setResetEmail(email) }}
-                className="text-xs text-[#1B365D] font-medium hover:underline"
+                className="text-xs text-[#1F5A4B] font-medium hover:underline"
               >
                 Forgot password?
               </button>
@@ -241,7 +242,7 @@ export default function SignInPage() {
               type="checkbox"
               checked={rememberMe}
               onChange={e => setRememberMe(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-[#1B365D] accent-[#1B365D]"
+              className="w-4 h-4 rounded border-gray-300 text-[#1F5A4B] accent-[#1F5A4B]"
             />
             <span className="text-sm text-gray-600">Remember me for 30 days</span>
           </label>
@@ -253,7 +254,7 @@ export default function SignInPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg mt-1 disabled:opacity-60"
+            className="w-full py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-lg mt-1 disabled:opacity-60"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
@@ -295,7 +296,7 @@ export default function SignInPage() {
 
         <p className="text-sm text-center text-gray-500">
           Don&apos;t have an account?{' '}
-          <Link to="/signup" className="text-[#1B365D] font-semibold underline">
+          <Link to="/signup" className="text-[#1F5A4B] font-semibold underline">
             Get started
           </Link>
         </p>

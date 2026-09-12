@@ -10,14 +10,14 @@ export default function AIMark({ size = 36 }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <circle cx="18" cy="18" r="17" fill="#D4A843" />
+      <circle cx="18" cy="18" r="17" fill="#F2B544" />
       <path
         d="M18 9 L25 12 L25 19 C25 23 22 26 18 27.5 C14 26 11 23 11 19 L11 12 Z"
-        fill="#1B365D"
+        fill="#1F5A4B"
       />
       <path
         d="M14.8 18 L17 20.2 L21.4 15.8"
-        stroke="#D4A843"
+        stroke="#F2B544"
         strokeWidth="1.6"
         fill="none"
         strokeLinecap="round"

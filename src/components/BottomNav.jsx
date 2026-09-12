@@ -94,11 +94,11 @@ export default function BottomNav({ inline = false }) {
               aria-label={ariaLabel}
               aria-current={active ? 'page' : undefined}
               className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 min-h-[60px] transition-colors ${
-                active ? 'text-[#1B365D]' : 'text-[#6B645A]'
+                active ? 'text-[#1F5A4B]' : 'text-[#6B645A]'
               }`}
             >
               {/* Active gold dot indicator above icon */}
-              <span className={`block w-1 h-1 rounded-full ${active ? 'bg-[#D4A843]' : 'bg-transparent'}`} aria-hidden="true" />
+              <span className={`block w-1 h-1 rounded-full ${active ? 'bg-[#F2B544]' : 'bg-transparent'}`} aria-hidden="true" />
               <div className="relative">
                 {kind === 'aimark' ? (
                   <AIMark size={22} />
@@ -106,7 +106,7 @@ export default function BottomNav({ inline = false }) {
                   <Icon size={22} strokeWidth={active ? 2.5 : 1.5} />
                 )}
                 {locked && (
-                  <Lock size={10} strokeWidth={2.5} className="absolute -top-1 -right-2.5 text-[#D4A843]" />
+                  <Lock size={10} strokeWidth={2.5} className="absolute -top-1 -right-2.5 text-[#F2B544]" />
                 )}
                 {showBadge && (
                   <span

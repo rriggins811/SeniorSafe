@@ -115,9 +115,9 @@ function AccordionItem({ question, answer }) {
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between py-3 px-1 text-left gap-3"
       >
-        <span className="text-sm font-medium text-[#1B365D] flex-1">{question}</span>
+        <span className="text-sm font-medium text-[#1F5A4B] flex-1">{question}</span>
         {open
-          ? <ChevronUp size={16} className="text-[#D4A843] shrink-0" />
+          ? <ChevronUp size={16} className="text-[#F2B544] shrink-0" />
           : <ChevronDown size={16} className="text-gray-400 shrink-0" />
         }
       </button>
@@ -139,13 +139,13 @@ function AccordionSection({ title, icon: Icon, items }) {
         className="w-full flex items-center justify-between px-4 py-4 text-left"
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#1B365D]/10 flex items-center justify-center">
-            <Icon size={16} className="text-[#1B365D]" />
+          <div className="w-8 h-8 rounded-lg bg-[#1F5A4B]/10 flex items-center justify-center">
+            <Icon size={16} className="text-[#1F5A4B]" />
           </div>
-          <span className="font-semibold text-[#1B365D]">{title}</span>
+          <span className="font-semibold text-[#1F5A4B]">{title}</span>
         </div>
         {expanded
-          ? <ChevronUp size={18} className="text-[#D4A843]" />
+          ? <ChevronUp size={18} className="text-[#F2B544]" />
           : <ChevronDown size={18} className="text-gray-400" />
         }
       </button>
@@ -166,7 +166,7 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen bg-[#FAF8F4] pb-10">
       {/* Header */}
-      <div className="bg-[#1B365D] text-white px-4 pt-12 pb-6">
+      <div className="bg-[#1F5A4B] text-white px-4 pt-12 pb-6">
         <div className="flex items-center gap-3 mb-3">
           <button onClick={() => navigate(-1)} className="p-1 -ml-1">
             <ArrowLeft size={22} />
@@ -183,14 +183,14 @@ export default function SupportPage() {
         <button
           type="button"
           onClick={() => navigate('/how-to')}
-          className="w-full text-left bg-white rounded-2xl border border-[#1B365D]/15 p-4 mb-4 shadow-sm active:scale-[0.99]"
+          className="w-full text-left bg-white rounded-2xl border border-[#1F5A4B]/15 p-4 mb-4 shadow-sm active:scale-[0.99]"
         >
           <div className="flex items-start gap-3">
-            <div className="bg-[#1B365D] rounded-xl p-2 flex-shrink-0">
+            <div className="bg-[#1F5A4B] rounded-xl p-2 flex-shrink-0">
               <BookOpen size={20} className="text-white" />
             </div>
             <div>
-              <p className="font-bold text-[#1B365D]">Watch the how-to videos</p>
+              <p className="font-bold text-[#1F5A4B]">Watch the how-to videos</p>
               <p className="text-sm text-gray-600 mt-1">
                 Five videos under thirty seconds: the invite link, medications, appointments, the emergency card, and the family page.
               </p>
@@ -211,10 +211,10 @@ export default function SupportPage() {
         {/* Contact Us, always visible */}
         <div className="bg-white rounded-2xl shadow-sm px-4 py-5">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-[#D4A843]/20 flex items-center justify-center">
-              <HelpCircle size={16} className="text-[#D4A843]" />
+            <div className="w-8 h-8 rounded-lg bg-[#F2B544]/20 flex items-center justify-center">
+              <HelpCircle size={16} className="text-[#F2B544]" />
             </div>
-            <span className="font-semibold text-[#1B365D]">Contact Us</span>
+            <span className="font-semibold text-[#1F5A4B]">Contact Us</span>
           </div>
 
           <div className="space-y-2">
@@ -223,9 +223,9 @@ export default function SupportPage() {
               href="sms:+13365538933?body=Hi%20Ryan%2C%20I%20need%20help%20with%20Hammock365."
               className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
-              <Phone size={18} className="text-[#1B365D] shrink-0" />
+              <Phone size={18} className="text-[#1F5A4B] shrink-0" />
               <div>
-                <p className="text-[#1B365D] font-semibold text-sm">Text Ryan</p>
+                <p className="text-[#1F5A4B] font-semibold text-sm">Text Ryan</p>
                 <p className="text-gray-400 text-xs">(336) 553-8933</p>
               </div>
             </a>
@@ -235,9 +235,9 @@ export default function SupportPage() {
               href="mailto:support@hammock365.com?subject=Hammock365%20Support%20Request"
               className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
-              <Mail size={18} className="text-[#1B365D] shrink-0" />
+              <Mail size={18} className="text-[#1F5A4B] shrink-0" />
               <div>
-                <p className="text-[#1B365D] font-semibold text-sm">Email Support</p>
+                <p className="text-[#1F5A4B] font-semibold text-sm">Email Support</p>
                 <p className="text-gray-400 text-xs">support@hammock365.com</p>
               </div>
             </a>
@@ -247,9 +247,9 @@ export default function SupportPage() {
               onClick={() => openExternalLink('https://calendar.google.com/calendar/appointments/schedules/AcZssZ0y_kQQfkvnf6jQEBvA5X2Onolndq6VleuID3n9hDujDd4CjpOsaJzKqs_eXujvfVVayudxp2h5')}
               className="w-full flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left"
             >
-              <Calendar size={18} className="text-[#1B365D] shrink-0" />
+              <Calendar size={18} className="text-[#1F5A4B] shrink-0" />
               <div>
-                <p className="text-[#1B365D] font-semibold text-sm">Book a Call</p>
+                <p className="text-[#1F5A4B] font-semibold text-sm">Book a Call</p>
                 <p className="text-gray-400 text-xs">Schedule a free consultation</p>
               </div>
             </button>
@@ -259,9 +259,9 @@ export default function SupportPage() {
               onClick={() => openExternalLink('https://rigginsstrategicsolutions.com')}
               className="w-full flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left"
             >
-              <Globe size={18} className="text-[#1B365D] shrink-0" />
+              <Globe size={18} className="text-[#1F5A4B] shrink-0" />
               <div>
-                <p className="text-[#1B365D] font-semibold text-sm">Visit Our Website</p>
+                <p className="text-[#1F5A4B] font-semibold text-sm">Visit Our Website</p>
                 <p className="text-gray-400 text-xs">rigginsstrategicsolutions.com</p>
               </div>
             </button>

@@ -300,7 +300,7 @@ export default function OnboardingPage() {
               {inviteError && (
                 <div className="bg-[#FDF2F0] border border-[#B5483F]/40 rounded-xl p-3 flex flex-col gap-2">
                   <p className="text-[#7A2E28]" style={{ fontSize: '15px' }}>{inviteError}</p>
-                  <a href={smsHref(seniorPhone, text)} className="text-[#1B365D] font-semibold underline underline-offset-2" style={{ fontSize: '16px' }}>
+                  <a href={smsHref(seniorPhone, text)} className="text-[#1F5A4B] font-semibold underline underline-offset-2" style={{ fontSize: '16px' }}>
                     Text it from this phone instead
                   </a>
                 </div>
@@ -317,7 +317,7 @@ export default function OnboardingPage() {
         </div>
 
         <div className="bg-[#FAF8F4] border border-[#E7E2D8] rounded-2xl p-4 flex flex-col gap-2">
-          <p className="text-[#1B365D] font-semibold" style={{ fontSize: '16px' }}>What happens next</p>
+          <p className="text-[#1F5A4B] font-semibold" style={{ fontSize: '16px' }}>What happens next</p>
           <p className="text-[#2D2A24]" style={{ fontSize: '16px', lineHeight: 1.5 }}>
             {name} opens the link, picks an email and password, and sees their "I'm Okay" button. You see every tap on your home screen, and you get a text if they haven't by {timeLabel}. Your dashboard shows "waiting for {name}" until then.
           </p>
@@ -334,8 +334,8 @@ export default function OnboardingPage() {
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-6">
             <div className="bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-xl">
               <div className="flex items-center gap-3">
-                <Smartphone size={26} color="#1B365D" />
-                <h2 className="text-[#1B365D] font-bold text-xl">Set up {name}'s phone now</h2>
+                <Smartphone size={26} color="#1F5A4B" />
+                <h2 className="text-[#1F5A4B] font-bold text-xl">Set up {name}'s phone now</h2>
               </div>
               <p className="text-[#2D2A24]" style={{ fontSize: '16px', lineHeight: 1.5 }}>
                 We'll sign you out of this phone and open {name}'s setup here. Later, sign in on your own phone with your email to see their check-ins.
@@ -382,7 +382,7 @@ export default function OnboardingPage() {
       <Heading large title="Invite your family" sub="Send this to the people who should hear from you each morning. You can add more later." />
       <div className="bg-[#FAF8F4] rounded-2xl p-6 flex flex-col items-center gap-2">
         <p className="text-sm text-gray-500 font-medium uppercase tracking-wider">Your family code</p>
-        <p className="text-[#1B365D] font-bold tracking-[0.25em]" style={{ fontSize: '40px' }}>{codeForLinks}</p>
+        <p className="text-[#1F5A4B] font-bold tracking-[0.25em]" style={{ fontSize: '40px' }}>{codeForLinks}</p>
       </div>
       <div className="flex flex-col gap-3">
         <BigButton large onClick={() => share(mText)}><Share2 size={22} /> Share the link</BigButton>

@@ -9,14 +9,14 @@
 }
 
 @theme {
-  /* Existing identity (kept for back-compat with inline bg-[#1B365D] usage) */
-  --color-navy: #1B365D;
-  --color-gold: #D4A843;
+  /* Existing identity (kept for back-compat with inline bg-[#1F5A4B] usage) */
+  --color-navy: #1F5A4B;
+  --color-gold: #F2B544;
   --color-lightgray: #FAF8F4;
 
   /* Brand scale (Build 25, ported warmth from RSS) */
-  --color-brand-navy: #1B365D;
-  --color-brand-gold: #D4A843;
+  --color-brand-navy: #1F5A4B;
+  --color-brand-gold: #F2B544;
   --color-brand-cream: #FAF8F4;
   --color-brand-tan: #F9F6F1;
   --color-brand-rose: #F5E1E6;

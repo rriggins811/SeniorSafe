@@ -192,9 +192,9 @@ export default function App() {
         <Route path="/privacy"       element={<PrivacyPage />} />
         <Route path="*" element={
           <div className="min-h-screen bg-[#FAF8F4] flex flex-col items-center justify-center px-6 text-center gap-4">
-            <p className="text-6xl font-bold text-[#1B365D]">404</p>
+            <p className="text-6xl font-bold text-[#1F5A4B]">404</p>
             <p className="text-gray-500 text-lg">Page not found</p>
-            <Link to="/dashboard" className="mt-2 px-6 py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold">
+            <Link to="/dashboard" className="mt-2 px-6 py-3 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold">
               Go to Dashboard
             </Link>
           </div>

@@ -251,10 +251,10 @@ export default function VaultPage() {
   if (isMember && adminVaultShared === false) {
     return (
       <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
-        <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
+        <div className="bg-[#1F5A4B] px-6 pt-12 pb-5 flex-shrink-0">
           <div className="max-w-lg mx-auto flex items-center gap-3">
             <div className="bg-white/15 rounded-xl p-2">
-              <FolderLock size={22} color="#D4A843" strokeWidth={1.5} />
+              <FolderLock size={22} color="#F2B544" strokeWidth={1.5} />
             </div>
             <div>
               <h1 className="text-white text-xl font-bold leading-tight">Family Vault</h1>
@@ -267,12 +267,12 @@ export default function VaultPage() {
             <EyeOff size={40} color="#9CA3AF" strokeWidth={1.5} />
           </div>
           <div>
-            <h2 className="text-[#1B365D] text-xl font-bold mb-2">Vault Not Shared Yet</h2>
+            <h2 className="text-[#1F5A4B] text-xl font-bold mb-2">Vault Not Shared Yet</h2>
             <p className="text-gray-500 text-base leading-relaxed max-w-xs">
               Your family member hasn&apos;t shared their vault yet. Once they turn on vault sharing, you&apos;ll be able to view their documents here.
             </p>
           </div>
-          <button onClick={() => navigate('/dashboard')} className="text-[#1B365D] text-sm underline">
+          <button onClick={() => navigate('/dashboard')} className="text-[#1F5A4B] text-sm underline">
             ← Back to Dashboard
           </button>
         </div>
@@ -305,11 +305,11 @@ export default function VaultPage() {
       )}
 
       {/* Header */}
-      <div className="bg-[#1B365D] px-6 pt-12 pb-5 flex-shrink-0">
+      <div className="bg-[#1F5A4B] px-6 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
           <div className="flex items-center gap-3">
             <div className="bg-white/15 rounded-xl p-2">
-              <FolderLock size={22} color="#D4A843" strokeWidth={1.5} />
+              <FolderLock size={22} color="#F2B544" strokeWidth={1.5} />
             </div>
             <div>
               <h1 className="text-white text-xl font-bold leading-tight">Family Vault</h1>
@@ -323,10 +323,10 @@ export default function VaultPage() {
 
       {/* Member read-only banner */}
       {isMember && (
-        <div className="px-4 py-2 bg-[#D4A843]/10 border-b border-[#D4A843]/30 flex-shrink-0">
+        <div className="px-4 py-2 bg-[#F2B544]/10 border-b border-[#F2B544]/30 flex-shrink-0">
           <div className="max-w-lg mx-auto flex items-center gap-2">
-            <Eye size={14} className="text-[#D4A843] shrink-0" />
-            <p className="text-[#1B365D] text-xs font-medium italic">View only, shared by your family admin.</p>
+            <Eye size={14} className="text-[#F2B544] shrink-0" />
+            <p className="text-[#1F5A4B] text-xs font-medium italic">View only, shared by your family admin.</p>
           </div>
         </div>
       )}
@@ -337,7 +337,7 @@ export default function VaultPage() {
           <div className="max-w-lg mx-auto">
             <button
               onClick={() => setShowAddSheet(true)}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-[#1B365D] text-white font-semibold text-base shadow-[0_2px_6px_rgba(27,54,93,0.15)]"
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-[#1F5A4B] text-white font-semibold text-base shadow-[0_2px_6px_rgba(31,90,75,0.15)]"
             >
               <Plus size={20} strokeWidth={2.5} />
               Add a Document
@@ -357,11 +357,11 @@ export default function VaultPage() {
                 onClick={() => setFilter(tab)}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
                   active
-                    ? 'bg-[#1B365D] text-white'
+                    ? 'bg-[#1F5A4B] text-white'
                     : 'bg-white text-[#6B645A] border border-[#E7E2D8]'
                 }`}
               >
-                {active && <span className="block w-1.5 h-1.5 rounded-full bg-[#D4A843]" aria-hidden="true" />}
+                {active && <span className="block w-1.5 h-1.5 rounded-full bg-[#F2B544]" aria-hidden="true" />}
                 {tab}
               </button>
             )
@@ -379,7 +379,7 @@ export default function VaultPage() {
               <div className="w-40 h-40">
                 <EmptyVault />
               </div>
-              <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>
+              <p className="text-[#1F5A4B]" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>
                 {isAdmin ? 'Your vault is empty.' : 'Nothing shared yet.'}
               </p>
               <p className="text-[#6B645A] italic text-sm leading-relaxed max-w-xs">
@@ -409,7 +409,7 @@ export default function VaultPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[#1B365D] font-semibold text-base leading-tight truncate">{doc.label}</p>
+                    <p className="text-[#1F5A4B] font-semibold text-base leading-tight truncate">{doc.label}</p>
                     <p className="text-gray-400 text-sm mt-0.5">
                       {new Date(doc.uploaded_at).toLocaleDateString('en-US', {
                         month: 'short', day: 'numeric', year: 'numeric',
@@ -446,7 +446,7 @@ export default function VaultPage() {
           <div className="min-h-full flex items-end justify-center sm:items-center">
             <div className="bg-white w-full max-w-sm rounded-t-3xl sm:rounded-3xl p-6 flex flex-col gap-5">
               <div className="flex items-center justify-between">
-                <h2 className="text-[#1B365D] text-xl font-bold">What is this document?</h2>
+                <h2 className="text-[#1F5A4B] text-xl font-bold">What is this document?</h2>
                 <button onClick={cancelModal} className="p-2 text-gray-400 hover:text-gray-600">
                   <X size={22} />
                 </button>
@@ -478,7 +478,7 @@ export default function VaultPage() {
                   value={label}
                   onChange={e => setLabel(e.target.value)}
                   placeholder="e.g. Dad's Power of Attorney"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                   style={{ fontSize: '16px' }}
                   autoFocus
                 />
@@ -490,7 +490,7 @@ export default function VaultPage() {
                 <select
                   value={category}
                   onChange={e => setCategory(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1B365D]"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1F5A4B]"
                   style={{ fontSize: '16px' }}
                 >
                   {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -500,7 +500,7 @@ export default function VaultPage() {
               <button
                 onClick={handleUploadConfirm}
                 disabled={uploading || !label.trim()}
-                className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg disabled:opacity-50"
+                className="w-full py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-lg disabled:opacity-50"
               >
                 {uploading ? 'Uploading...' : 'Save Document'}
               </button>
@@ -521,17 +521,17 @@ export default function VaultPage() {
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
           >
             <div className="w-10 h-1 rounded-full bg-[#E7E2D8] mx-auto mb-2" aria-hidden="true" />
-            <h3 className="text-[#1B365D] text-center" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>Add a Document</h3>
+            <h3 className="text-[#1F5A4B] text-center" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>Add a Document</h3>
             <button
               onClick={() => { setShowAddSheet(false); fileInputRef.current?.click() }}
-              className="w-full flex items-center gap-3 px-4 py-4 rounded-xl border border-[#E7E2D8] bg-[#FAF8F4] text-[#1B365D]"
+              className="w-full flex items-center gap-3 px-4 py-4 rounded-xl border border-[#E7E2D8] bg-[#FAF8F4] text-[#1F5A4B]"
             >
               <Upload size={20} />
               <span className="font-semibold">Choose a file</span>
             </button>
             <button
               onClick={() => { setShowAddSheet(false); cameraInputRef.current?.click() }}
-              className="w-full flex items-center gap-3 px-4 py-4 rounded-xl border border-[#E7E2D8] bg-[#FAF8F4] text-[#1B365D]"
+              className="w-full flex items-center gap-3 px-4 py-4 rounded-xl border border-[#E7E2D8] bg-[#FAF8F4] text-[#1F5A4B]"
             >
               <Camera size={20} />
               <span className="font-semibold">Take a photo</span>
@@ -552,7 +552,7 @@ export default function VaultPage() {
           <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               {vaultShared
-                ? <Eye size={16} className="text-[#D4A843] shrink-0" />
+                ? <Eye size={16} className="text-[#F2B544] shrink-0" />
                 : <EyeOff size={16} className="text-[#6B645A] shrink-0" />
               }
               <p className="text-[#6B645A] text-xs italic truncate">
@@ -563,7 +563,7 @@ export default function VaultPage() {
               onClick={toggleVaultSharing}
               disabled={togglingShare}
               className={`relative w-10 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
-                vaultShared ? 'bg-[#D4A843]' : 'bg-[#E7E2D8]'
+                vaultShared ? 'bg-[#F2B544]' : 'bg-[#E7E2D8]'
               } disabled:opacity-50`}
               aria-label={vaultShared ? 'Disable vault sharing' : 'Enable vault sharing'}
             >

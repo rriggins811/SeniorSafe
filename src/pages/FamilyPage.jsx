@@ -11,7 +11,7 @@ import EmptyChat from '../components/illustrations/EmptyChat'
 import EmptyPhotos from '../components/illustrations/EmptyPhotos'
 
 // Stable warm accent ring colors so siblings can be distinguished without the chat looking like a playroom.
-const AVATAR_RING_COLORS = ['#F5E1E6', '#D4A843', '#F9F6F1', '#DCE1EB']
+const AVATAR_RING_COLORS = ['#F5E1E6', '#F2B544', '#F9F6F1', '#DCE1EB']
 function ringColorFor(name) {
   if (!name) return AVATAR_RING_COLORS[0]
   let hash = 0
@@ -256,7 +256,7 @@ export default function FamilyPage() {
       <input ref={photoUploadRef} type="file" accept="image/*" onChange={uploadPhoto} className="hidden" />
 
       {/* Header */}
-      <div className="bg-[#1B365D] px-5 pt-12 pb-0 flex-shrink-0">
+      <div className="bg-[#1F5A4B] px-5 pt-12 pb-0 flex-shrink-0">
         <div className="max-w-lg mx-auto">
           <button
             onClick={() => navigate('/dashboard')}
@@ -267,7 +267,7 @@ export default function FamilyPage() {
           </button>
           <div className="flex items-center gap-3 mb-4">
             <div className="bg-white/15 rounded-xl p-2">
-              <Users size={20} color="#D4A843" strokeWidth={1.5} />
+              <Users size={20} color="#F2B544" strokeWidth={1.5} />
             </div>
             <div>
               <h1 className="text-white" style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700 }}>Family Hub</h1>
@@ -286,7 +286,7 @@ export default function FamilyPage() {
               >
                 {t}
                 {tab === t && (
-                  <span className="absolute left-0 right-0 -bottom-px h-[2px] bg-[#D4A843] rounded-full" aria-hidden="true" />
+                  <span className="absolute left-0 right-0 -bottom-px h-[2px] bg-[#F2B544] rounded-full" aria-hidden="true" />
                 )}
               </button>
             ))}
@@ -307,7 +307,7 @@ export default function FamilyPage() {
                   <div className="w-40 h-40">
                     <EmptyChat />
                   </div>
-                  <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>
+                  <p className="text-[#1F5A4B]" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>
                     Start the conversation.
                   </p>
                   <p className="text-[#6B645A] italic max-w-xs" style={{ fontSize: '15px' }}>
@@ -325,12 +325,12 @@ export default function FamilyPage() {
                             className="w-9 h-9 rounded-full bg-[#FAF8F4] flex items-center justify-center flex-shrink-0"
                             style={{ boxShadow: `inset 0 0 0 2px ${ringColor}` }}
                           >
-                            <span className="text-[#1B365D] text-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
+                            <span className="text-[#1F5A4B] text-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
                               {msg.author_name?.[0]?.toUpperCase() || 'F'}
                             </span>
                           </div>
                           <div>
-                            <p className="text-[#1B365D] font-semibold text-sm">{msg.author_name}</p>
+                            <p className="text-[#1F5A4B] font-semibold text-sm">{msg.author_name}</p>
                             <p className="text-[#6B645A] text-xs">{formatTs(msg.created_at)}</p>
                           </div>
                         </div>
@@ -368,7 +368,7 @@ export default function FamilyPage() {
                   <img src={msgPhoto.previewUrl} alt="preview" className="w-full h-full object-cover rounded-xl" />
                   <button
                     onClick={() => { URL.revokeObjectURL(msgPhoto.previewUrl); setMsgPhoto(null) }}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#1B365D] rounded-full flex items-center justify-center"
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#1F5A4B] rounded-full flex items-center justify-center"
                   >
                     <X size={10} color="white" />
                   </button>
@@ -381,23 +381,23 @@ export default function FamilyPage() {
                   className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#FAF8F4] border border-[#E7E2D8] flex items-center justify-center"
                   aria-label="Attach photo"
                 >
-                  <ImagePlus size={20} color="#1B365D" strokeWidth={1.5} />
+                  <ImagePlus size={20} color="#1F5A4B" strokeWidth={1.5} />
                 </button>
                 <textarea
                   value={newMsg}
                   onChange={e => setNewMsg(e.target.value)}
                   placeholder="Say something to your family..."
                   rows={1}
-                  className="flex-1 px-4 py-3 bg-[#FAF8F4] border border-[#E7E2D8] rounded-2xl resize-none focus:outline-none focus:border-[#1B365D] text-[#2D2A24] placeholder:italic placeholder:text-[#6B645A]"
+                  className="flex-1 px-4 py-3 bg-[#FAF8F4] border border-[#E7E2D8] rounded-2xl resize-none focus:outline-none focus:border-[#1F5A4B] text-[#2D2A24] placeholder:italic placeholder:text-[#6B645A]"
                   style={{ fontSize: '16px', maxHeight: '100px' }}
                 />
                 <button
                   type="submit"
                   disabled={posting || (!newMsg.trim() && !msgPhoto)}
-                  className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#1B365D] flex items-center justify-center disabled:opacity-40"
+                  className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#1F5A4B] flex items-center justify-center disabled:opacity-40"
                   aria-label="Send"
                 >
-                  <Send size={18} color="#D4A843" strokeWidth={2} />
+                  <Send size={18} color="#F2B544" strokeWidth={2} />
                 </button>
               </form>
             </div>
@@ -413,7 +413,7 @@ export default function FamilyPage() {
             <button
               onClick={() => photoUploadRef.current?.click()}
               disabled={uploading}
-              className="w-full py-4 rounded-xl bg-[#1B365D] flex items-center justify-center gap-2 text-white font-semibold mb-4 disabled:opacity-60 shadow-[0_2px_6px_rgba(27,54,93,0.15)]"
+              className="w-full py-4 rounded-xl bg-[#1F5A4B] flex items-center justify-center gap-2 text-white font-semibold mb-4 disabled:opacity-60 shadow-[0_2px_6px_rgba(31,90,75,0.15)]"
               style={{ fontSize: '16px' }}
             >
               <ImagePlus size={20} strokeWidth={1.5} />
@@ -427,7 +427,7 @@ export default function FamilyPage() {
                 <div className="w-40 h-40">
                   <EmptyPhotos />
                 </div>
-                <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>No photos yet.</p>
+                <p className="text-[#1F5A4B]" style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 700 }}>No photos yet.</p>
                 <p className="text-[#6B645A] italic max-w-xs" style={{ fontSize: '15px' }}>Share one with your family.</p>
               </div>
             ) : (

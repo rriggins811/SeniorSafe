@@ -477,7 +477,7 @@ export default function MaggiePage() {
           <div className="bg-white rounded-2xl shadow-lg p-6 max-w-sm w-full flex flex-col gap-5">
             <div className="flex flex-col items-center gap-3 text-center">
               <AIMark size={56} />
-              <h2 className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700 }}>Meet Maggie</h2>
+              <h2 className="text-[#1F5A4B]" style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700 }}>Meet Maggie</h2>
             </div>
             <div className="text-[#2D2A24] flex flex-col gap-3" style={{ fontSize: '17px', lineHeight: 1.5 }}>
               <p>Maggie is an assistant Ryan built. She can help with everyday things and with the bigger questions about looking after a parent.</p>
@@ -485,7 +485,7 @@ export default function MaggiePage() {
               <p>Your chats are private to you. Maggie keeps a short running summary so you do not have to repeat yourself; you can clear it in Settings any time.</p>
             </div>
             {notice && <p className="text-[#B5483F] text-base">{notice}</p>}
-            <button onClick={acceptConsent} disabled={consentSaving} className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold disabled:opacity-60" style={{ fontSize: '18px' }}>
+            <button onClick={acceptConsent} disabled={consentSaving} className="w-full py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold disabled:opacity-60" style={{ fontSize: '18px' }}>
               {consentSaving ? 'One moment...' : 'Okay, let\'s talk'}
             </button>
             <button onClick={() => navigate('/dashboard')} className="w-full py-3 rounded-xl text-gray-500 font-medium" style={{ fontSize: '16px' }}>Not now</button>
@@ -505,7 +505,7 @@ export default function MaggiePage() {
 
   return (
     <div className="bg-[#FAF8F4] flex flex-col overflow-hidden" style={{ height: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))' }}>
-      <div className="bg-[#1B365D] px-4 pt-12 pb-4 flex-shrink-0">
+      <div className="bg-[#1F5A4B] px-4 pt-12 pb-4 flex-shrink-0">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2 rounded-lg text-white/80 active:text-white min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Back to home">
@@ -537,7 +537,7 @@ export default function MaggiePage() {
       {isMobileDevice && soundOn && !voiceUnlocked && (
         <button
           onClick={() => { window.speechSynthesis?.speak(new SpeechSynthesisUtterance('')); setVoiceUnlocked(true) }}
-          className="flex-shrink-0 bg-[#D4A843]/15 border-b border-[#D4A843]/30 px-4 py-3 text-center text-[#1B365D] font-medium"
+          className="flex-shrink-0 bg-[#F2B544]/15 border-b border-[#F2B544]/30 px-4 py-3 text-center text-[#1F5A4B] font-medium"
           style={{ fontSize: '16px' }}
         >
           Tap here so Maggie can read her answers out loud
@@ -546,8 +546,8 @@ export default function MaggiePage() {
 
       {notice && (
         <div className="flex-shrink-0 bg-[#F5E1E6]/50 border-b border-[#E7E2D8] px-4 py-3 flex items-center gap-3">
-          <p className="text-[#1B365D] flex-1" style={{ fontSize: '15px' }}>{notice}</p>
-          {tier === 'free' && <button onClick={() => navigate('/upgrade')} className="text-[#1B365D] font-semibold underline text-sm">See the paid plan</button>}
+          <p className="text-[#1F5A4B] flex-1" style={{ fontSize: '15px' }}>{notice}</p>
+          {tier === 'free' && <button onClick={() => navigate('/upgrade')} className="text-[#1F5A4B] font-semibold underline text-sm">See the paid plan</button>}
           <button onClick={() => setNotice('')} aria-label="Dismiss" className="text-[#6B645A]"><X size={18} /></button>
         </div>
       )}
@@ -557,7 +557,7 @@ export default function MaggiePage() {
           {messages.length === 0 ? (
             <div className="flex flex-col items-center gap-4 py-6 text-center">
               <AIMark size={64} />
-              <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 700 }}>
+              <p className="text-[#1F5A4B]" style={{ fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 700 }}>
                 {firstName ? `Hi ${firstName}.` : 'Hi.'}
               </p>
               <p className="text-[#6B645A] italic leading-relaxed max-w-md" style={{ fontSize: '17px' }}>
@@ -567,7 +567,7 @@ export default function MaggiePage() {
               </p>
               <div className="flex flex-col gap-3 w-full max-w-md mt-2">
                 {starters.map(q => (
-                  <button key={q} onClick={() => sendMessage(q)} className="w-full text-left px-5 py-4 rounded-xl bg-white border-l-4 border-[#D4A843] text-[#1B365D] font-medium leading-snug shadow-[0_1px_3px_rgba(45,42,36,0.05)]" style={{ fontSize: bubbleSize }}>
+                  <button key={q} onClick={() => sendMessage(q)} className="w-full text-left px-5 py-4 rounded-xl bg-white border-l-4 border-[#F2B544] text-[#1F5A4B] font-medium leading-snug shadow-[0_1px_3px_rgba(45,42,36,0.05)]" style={{ fontSize: bubbleSize }}>
                     {q}
                   </button>
                 ))}
@@ -583,14 +583,14 @@ export default function MaggiePage() {
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'assistant' && <div className="flex-shrink-0 mt-1 mr-2"><AIMark size={32} /></div>}
                 <div
-                  className={`max-w-[85%] px-5 py-4 rounded-2xl whitespace-pre-wrap ${msg.role === 'user' ? 'bg-[#1B365D] text-white rounded-br-sm' : 'bg-white text-[#2D2A24] rounded-bl-sm shadow-[0_2px_6px_rgba(45,42,36,0.06)] border border-[#E7E2D8]'}`}
+                  className={`max-w-[85%] px-5 py-4 rounded-2xl whitespace-pre-wrap ${msg.role === 'user' ? 'bg-[#1F5A4B] text-white rounded-br-sm' : 'bg-white text-[#2D2A24] rounded-bl-sm shadow-[0_2px_6px_rgba(45,42,36,0.06)] border border-[#E7E2D8]'}`}
                   style={{ fontSize: bubbleSize, lineHeight: 1.6 }}
                 >
                   {msg.content ? (
                     msg.role === 'assistant' && msg.content.length > LONG_REPLY && !expanded.has(i) && !(streaming && i === messages.length - 1) ? (
                       <>
                         {renderRich(foldPreview(msg.content))}
-                        <button type="button" onClick={() => setExpanded(s => { const n = new Set(s); n.add(i); return n })} className="mt-3 block text-[#1B365D] font-semibold underline underline-offset-2" style={{ fontSize: bubbleSize }}>
+                        <button type="button" onClick={() => setExpanded(s => { const n = new Set(s); n.add(i); return n })} className="mt-3 block text-[#1F5A4B] font-semibold underline underline-offset-2" style={{ fontSize: bubbleSize }}>
                           Show the rest
                         </button>
                       </>
@@ -639,7 +639,7 @@ export default function MaggiePage() {
               className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${listening ? 'bg-[#B5483F]' : 'bg-[#F3EFE7]'}`}
               aria-label={listening ? 'Stop listening' : 'Speak instead of typing'}
             >
-              {listening ? <MicOff size={20} color="white" /> : <Mic size={20} color="#1B365D" />}
+              {listening ? <MicOff size={20} color="white" /> : <Mic size={20} color="#1F5A4B" />}
             </button>
           )}
           <textarea
@@ -650,11 +650,11 @@ export default function MaggiePage() {
             placeholder={listening ? 'Listening...' : "What's on your mind?"}
             rows={1}
             disabled={loading || isAtLimit}
-            className="flex-1 px-4 py-3 bg-[#FAF8F4] border border-[#E7E2D8] rounded-2xl resize-none focus:outline-none focus:border-[#1B365D] text-[#2D2A24] leading-relaxed placeholder:italic placeholder:text-[#6B645A]"
+            className="flex-1 px-4 py-3 bg-[#FAF8F4] border border-[#E7E2D8] rounded-2xl resize-none focus:outline-none focus:border-[#1F5A4B] text-[#2D2A24] leading-relaxed placeholder:italic placeholder:text-[#6B645A]"
             style={{ maxHeight: '120px', fontSize: bubbleSize }}
           />
-          <button type="submit" disabled={loading || streaming || !input.trim() || isAtLimit} className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#1B365D] flex items-center justify-center disabled:opacity-40" aria-label="Send">
-            <Send size={18} color="#D4A843" strokeWidth={2} />
+          <button type="submit" disabled={loading || streaming || !input.trim() || isAtLimit} className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#1F5A4B] flex items-center justify-center disabled:opacity-40" aria-label="Send">
+            <Send size={18} color="#F2B544" strokeWidth={2} />
           </button>
         </form>
         <p className={`text-center text-[12px] mt-2 max-w-2xl mx-auto ${counterColor}`}>
@@ -673,10 +673,10 @@ export default function MaggiePage() {
           <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
           <div className="relative w-80 max-w-[85vw] h-full bg-[#FAF8F4] flex flex-col shadow-2xl border-r border-[#E7E2D8]" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#E7E2D8] bg-white">
-              <p className="text-[#1B365D]" style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 700 }}>Your conversations</p>
+              <p className="text-[#1F5A4B]" style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 700 }}>Your conversations</p>
               <button onClick={() => setSidebarOpen(false)} className="p-2 text-[#6B645A] min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Close"><X size={22} /></button>
             </div>
-            <button onClick={startNewConversation} className="m-3 py-3 rounded-xl bg-[#1B365D] text-white font-semibold flex items-center justify-center gap-2 text-base">
+            <button onClick={startNewConversation} className="m-3 py-3 rounded-xl bg-[#1F5A4B] text-white font-semibold flex items-center justify-center gap-2 text-base">
               <Plus size={16} /> New conversation
             </button>
             <div className="flex-1 overflow-y-auto px-3 pb-4">
@@ -690,7 +690,7 @@ export default function MaggiePage() {
                   {conversations.map(c => (
                     <li key={c.id} className={`group flex items-start gap-2 rounded-xl px-3 py-2.5 ${conversation?.id === c.id ? 'bg-[#F5E1E6]/60' : 'bg-white/50'}`}>
                       <button onClick={() => loadConversation(c)} className="flex-1 text-left min-w-0">
-                        <p className="text-[#1B365D] text-sm font-medium truncate">{c.title || 'New conversation'}</p>
+                        <p className="text-[#1F5A4B] text-sm font-medium truncate">{c.title || 'New conversation'}</p>
                         <p className="text-[#6B645A] text-xs italic mt-0.5">{formatWhen(c.updated_at)}</p>
                       </button>
                       <button onClick={(e) => deleteConversation(c.id, e)} className="p-2 text-[#B0AAA0] hover:text-[#B5483F]" aria-label="Delete conversation"><Trash2 size={16} /></button>

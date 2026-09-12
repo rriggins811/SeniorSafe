@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Shield } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import HammockMark from '../components/HammockMark'
 
 const SECTIONS = [
   {
@@ -111,7 +112,7 @@ export default function TermsPage() {
   return (
     <div className="min-h-screen bg-[#FAF8F4] flex flex-col">
       {/* Header */}
-      <div className="bg-[#1B365D] px-5 pt-12 pb-5 flex-shrink-0">
+      <div className="bg-[#1F5A4B] px-5 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
           <button
             onClick={() => navigate(-1)}
@@ -121,7 +122,7 @@ export default function TermsPage() {
           </button>
           <div className="flex items-center gap-3">
             <div className="bg-white/15 rounded-xl p-2">
-              <Shield size={20} color="#D4A843" strokeWidth={1.5} />
+              <HammockMark size={20} />
             </div>
             <div>
               <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Terms of Service</h1>
@@ -138,13 +139,13 @@ export default function TermsPage() {
 
           <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
             <p className="text-gray-600 text-sm leading-relaxed">
-              Hammock365 is operated by <span className="font-semibold text-[#1B365D]">Riggins Strategic Solutions, LLC</span> ("we", "us", "our"). By creating an account and using Hammock365, you agree to these Terms of Service and our Privacy Policy.
+              Hammock365 is operated by <span className="font-semibold text-[#1F5A4B]">Riggins Strategic Solutions, LLC</span> ("we", "us", "our"). By creating an account and using Hammock365, you agree to these Terms of Service and our Privacy Policy.
             </p>
           </div>
 
           {SECTIONS.map(s => (
             <div key={s.title} className="bg-white rounded-2xl px-5 py-4 shadow-sm">
-              <p className="text-[#1B365D] font-semibold text-sm mb-2">{s.title}</p>
+              <p className="text-[#1F5A4B] font-semibold text-sm mb-2">{s.title}</p>
               <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{s.body}</p>
             </div>
           ))}

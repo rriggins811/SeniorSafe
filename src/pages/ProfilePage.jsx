@@ -345,14 +345,14 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-[#FAF8F4] flex flex-col pb-8">
       {/* Header */}
-      <div className="bg-[#1B365D] px-5 pt-12 pb-5 flex-shrink-0">
+      <div className="bg-[#1F5A4B] px-5 pt-12 pb-5 flex-shrink-0">
         <div className="max-w-lg mx-auto">
           <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 text-white/70 text-sm mb-4">
             <ArrowLeft size={16} /> Back
           </button>
           <div className="flex items-center gap-3">
             <div className="bg-white/15 rounded-xl p-2">
-              <Settings size={20} color="#D4A843" strokeWidth={1.5} />
+              <Settings size={20} color="#F2B544" strokeWidth={1.5} />
             </div>
             <div>
               <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Profile &amp; Settings</h1>
@@ -384,7 +384,7 @@ export default function ProfilePage() {
                         value={form.first_name}
                         onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
                         placeholder="Jane"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                         style={{ fontSize: '16px' }}
                       />
                     </div>
@@ -395,7 +395,7 @@ export default function ProfilePage() {
                         value={form.last_name}
                         onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
                         placeholder="Smith"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                         style={{ fontSize: '16px' }}
                       />
                     </div>
@@ -408,7 +408,7 @@ export default function ProfilePage() {
                       value={form.phone}
                       onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                       placeholder="10-digit mobile number"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                       style={{ fontSize: '16px' }}
                     />
                     <p className="text-gray-400 text-xs mt-1.5">
@@ -431,7 +431,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={() => setForm(f => ({ ...f, sms_notifications: !f.sms_notifications }))}
                     className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ml-4 ${
-                      form.sms_notifications ? 'bg-[#1B365D]' : 'bg-gray-300'
+                      form.sms_notifications ? 'bg-[#1F5A4B]' : 'bg-gray-300'
                     }`}
                   >
                     <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
@@ -453,7 +453,7 @@ export default function ProfilePage() {
                         value={form.senior_name}
                         onChange={e => setForm(f => ({ ...f, senior_name: e.target.value }))}
                         placeholder="Mom, Margaret"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                         style={{ fontSize: '16px' }}
                       />
                       <p className="text-gray-400 text-xs mt-1.5">Once they join, the name on their own account is what everyone sees.</p>
@@ -465,7 +465,7 @@ export default function ProfilePage() {
                         value={form.senior_phone}
                         onChange={e => setForm(f => ({ ...f, senior_phone: e.target.value }))}
                         placeholder="10-digit mobile number"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                         style={{ fontSize: '16px' }}
                       />
                       <p className="text-gray-400 text-xs mt-1.5">Where their invite link and nudges are texted.</p>
@@ -479,7 +479,7 @@ export default function ProfilePage() {
                 <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-4">Check-In Reminder</p>
                   <div className="flex items-start gap-3">
-                    <Clock size={18} className="text-[#1B365D] mt-0.5 flex-shrink-0" />
+                    <Clock size={18} className="text-[#1F5A4B] mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-700">Daily check-in time</p>
                       <p className="text-xs text-gray-400 mt-0.5 mb-3">
@@ -490,7 +490,7 @@ export default function ProfilePage() {
                       <select
                         value={form.checkin_alert_time}
                         onChange={e => setForm(f => ({ ...f, checkin_alert_time: e.target.value }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1B365D]"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:border-[#1F5A4B]"
                         style={{ fontSize: '16px' }}
                       >
                         {timeOptions.map(t => (
@@ -523,13 +523,13 @@ export default function ProfilePage() {
                           <Phone size={16} color="#16A34A" strokeWidth={2} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[#1B365D] font-semibold text-sm">{c.label}</p>
+                          <p className="text-[#1F5A4B] font-semibold text-sm">{c.label}</p>
                           <p className="text-gray-400 text-xs truncate">{c.name} · {c.phone}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setEditingContact({ id: c.id, label: c.label, name: c.name, phone: c.phone })}
-                          className="p-2 text-gray-400 hover:text-[#1B365D]"
+                          className="p-2 text-gray-400 hover:text-[#1F5A4B]"
                         >
                           <Pencil size={14} />
                         </button>
@@ -547,7 +547,7 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         onClick={() => setEditingContact({ label: '', name: '', phone: '' })}
-                        className="w-full py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 font-semibold text-sm flex items-center justify-center gap-2 hover:border-[#1B365D] hover:text-[#1B365D]"
+                        className="w-full py-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-400 font-semibold text-sm flex items-center justify-center gap-2 hover:border-[#1F5A4B] hover:text-[#1F5A4B]"
                       >
                         <Plus size={16} />
                         Add Contact ({quickDialContacts.length}/6)
@@ -584,7 +584,7 @@ export default function ProfilePage() {
                 type="submit"
                 disabled={saving}
                 className={`w-full py-4 rounded-xl font-semibold text-lg disabled:opacity-50 transition-colors ${
-                  saved ? 'bg-green-500 text-white' : 'bg-[#1B365D] text-[#D4A843]'
+                  saved ? 'bg-green-500 text-white' : 'bg-[#1F5A4B] text-[#F2B544]'
                 }`}
               >
                 {saving ? 'Saving...' : saved ? '\u2713 Saved!' : 'Save Changes'}
@@ -606,7 +606,7 @@ export default function ProfilePage() {
                     onChange={e => setCurrentPassword(e.target.value)}
                     placeholder="Enter your current password"
                     autoComplete="current-password"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                     style={{ fontSize: '16px' }}
                   />
                 </div>
@@ -618,7 +618,7 @@ export default function ProfilePage() {
                     onChange={e => setNewPassword(e.target.value)}
                     placeholder="At least 6 characters"
                     autoComplete="new-password"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                     style={{ fontSize: '16px' }}
                   />
                 </div>
@@ -630,7 +630,7 @@ export default function ProfilePage() {
                     onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter your password"
                     autoComplete="new-password"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                     style={{ fontSize: '16px' }}
                   />
                 </div>
@@ -639,7 +639,7 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={pwLoading || (!currentPassword || !newPassword || !confirmPassword)}
-                  className="w-full py-3 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold disabled:opacity-40"
+                  className="w-full py-3 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold disabled:opacity-40"
                 >
                   {pwLoading ? 'Updating...' : 'Update Password'}
                 </button>
@@ -653,10 +653,10 @@ export default function ProfilePage() {
                   <CreditCard size={14} className="text-gray-400" />
                   <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Your plan</p>
                 </div>
-                <p className="text-sm text-gray-700 mb-1">You&rsquo;re on the <span className="font-semibold text-[#1B365D]">free plan</span>, free forever.</p>
+                <p className="text-sm text-gray-700 mb-1">You&rsquo;re on the <span className="font-semibold text-[#1F5A4B]">free plan</span>, free forever.</p>
                 <p className="text-xs text-gray-500 mb-3 leading-relaxed">The daily check-in, a text to one family contact when it is missed or I Need Help is pressed, history, the emergency card, medication reminders, and 10 messages with Maggie.</p>
                 {isAdmin && (
-                  <button type="button" onClick={() => navigate('/upgrade?feature=texts')} className="w-full py-3 rounded-xl bg-[#D4A843] text-[#1B365D] font-semibold text-sm">
+                  <button type="button" onClick={() => navigate('/upgrade?feature=texts')} className="w-full py-3 rounded-xl bg-[#F2B544] text-[#2D2A24] font-semibold text-sm">
                     See the paid plan, $14.99 a month
                   </button>
                 )}
@@ -694,7 +694,7 @@ export default function ProfilePage() {
                     href="https://apps.apple.com/account/subscriptions"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block w-full text-center py-3 rounded-xl border border-gray-300 text-[#1B365D] font-semibold text-sm mb-3"
+                    className="block w-full text-center py-3 rounded-xl border border-gray-300 text-[#1F5A4B] font-semibold text-sm mb-3"
                   >
                     Manage Subscription in Settings
                   </a>
@@ -703,7 +703,7 @@ export default function ProfilePage() {
                     href="https://play.google.com/store/account/subscriptions"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block w-full text-center py-3 rounded-xl border border-gray-300 text-[#1B365D] font-semibold text-sm mb-3"
+                    className="block w-full text-center py-3 rounded-xl border border-gray-300 text-[#1F5A4B] font-semibold text-sm mb-3"
                   >
                     Manage Subscription in Play Store
                   </a>
@@ -726,13 +726,13 @@ export default function ProfilePage() {
 
                 <a
                   href="sms:+13365538933?body=Hi%20Ryan%2C%20I%27d%20like%20to%20manage%20my%20Hammock365%20subscription."
-                  className="block w-full text-center py-3 rounded-xl border border-[#1B365D] text-[#1B365D] font-semibold text-sm"
+                  className="block w-full text-center py-3 rounded-xl border border-[#1F5A4B] text-[#1F5A4B] font-semibold text-sm"
                 >
                   Text Ryan at (336) 553-8933
                 </a>
                 <a
                   href="mailto:support@hammock365.com?subject=Subscription%20Change%20Request"
-                  className="block w-full text-center py-2 text-[#1B365D] text-xs mt-2 underline"
+                  className="block w-full text-center py-2 text-[#1F5A4B] text-xs mt-2 underline"
                 >
                   Or email support@hammock365.com
                 </a>
@@ -750,9 +750,9 @@ export default function ProfilePage() {
                         <img src={familyPartner.logo_url} alt="" className="w-14 h-14 rounded-xl object-contain bg-[#F3EFE7] flex-shrink-0" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-[#1B365D] font-semibold text-base truncate">{familyPartner.name}</p>
+                        <p className="text-[#1F5A4B] font-semibold text-base truncate">{familyPartner.name}</p>
                         {familyPartner.phone && (
-                          <a href={telHref(familyPartner.phone)} className="text-sm text-[#1B365D] underline underline-offset-2">
+                          <a href={telHref(familyPartner.phone)} className="text-sm text-[#1F5A4B] underline underline-offset-2">
                             {formatPartnerPhone(familyPartner.phone)}
                           </a>
                         )}
@@ -776,13 +776,13 @@ export default function ProfilePage() {
                         autoCapitalize="none"
                         autoCorrect="off"
                         spellCheck={false}
-                        className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-[#2D2A24] text-base"
+                        className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1F5A4B] text-[#2D2A24] text-base"
                       />
                       <button
                         type="button"
                         onClick={handleAddPartnerCode}
                         disabled={partnerAdding || partnerCodeInput.trim().length < 2}
-                        className="px-4 py-3 rounded-xl bg-[#1B365D] text-white font-semibold text-sm disabled:opacity-50"
+                        className="px-4 py-3 rounded-xl bg-[#1F5A4B] text-white font-semibold text-sm disabled:opacity-50"
                       >
                         {partnerAdding ? 'Adding...' : 'Add'}
                       </button>
@@ -801,11 +801,11 @@ export default function ProfilePage() {
               </div>
               <button
                 onClick={() => navigate('/support')}
-                className="w-full flex items-center gap-3 py-3 px-4 rounded-xl bg-[#1B365D]/5 hover:bg-[#1B365D]/10 transition-colors mb-2"
+                className="w-full flex items-center gap-3 py-3 px-4 rounded-xl bg-[#1F5A4B]/5 hover:bg-[#1F5A4B]/10 transition-colors mb-2"
               >
-                <HelpCircle size={18} className="text-[#D4A843] flex-shrink-0" />
+                <HelpCircle size={18} className="text-[#F2B544] flex-shrink-0" />
                 <div className="text-left">
-                  <p className="text-[#1B365D] font-semibold text-sm">Help Center</p>
+                  <p className="text-[#1F5A4B] font-semibold text-sm">Help Center</p>
                   <p className="text-gray-400 text-xs">FAQs, guides, and contact info</p>
                 </div>
               </button>
@@ -813,9 +813,9 @@ export default function ProfilePage() {
                 href="mailto:support@hammock365.com?subject=Hammock365%20Support%20Request"
                 className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
               >
-                <Mail size={18} className="text-[#1B365D] flex-shrink-0" />
+                <Mail size={18} className="text-[#1F5A4B] flex-shrink-0" />
                 <div>
-                  <p className="text-[#1B365D] font-semibold text-sm">Email Support</p>
+                  <p className="text-[#1F5A4B] font-semibold text-sm">Email Support</p>
                   <p className="text-gray-400 text-xs">support@hammock365.com</p>
                 </div>
               </a>
@@ -823,9 +823,9 @@ export default function ProfilePage() {
                 href="sms:+13365538933?body=Hi%20Ryan%2C%20I%20need%20help%20with%20Hammock365."
                 className="flex items-center gap-3 py-3 px-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors mt-2"
               >
-                <Phone size={18} className="text-[#1B365D] flex-shrink-0" />
+                <Phone size={18} className="text-[#1F5A4B] flex-shrink-0" />
                 <div>
-                  <p className="text-[#1B365D] font-semibold text-sm">Text Ryan</p>
+                  <p className="text-[#1F5A4B] font-semibold text-sm">Text Ryan</p>
                   <p className="text-gray-400 text-xs">(336) 553-8933</p>
                 </div>
               </a>
@@ -962,7 +962,7 @@ export default function ProfilePage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-6">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-xl">
             <div className="flex items-center justify-between">
-              <h2 className="text-[#1B365D] font-bold text-lg">
+              <h2 className="text-[#1F5A4B] font-bold text-lg">
                 {editingContact.id ? 'Edit Contact' : 'Add Speed Dial Contact'}
               </h2>
               <button onClick={() => setEditingContact(null)} className="p-1 text-gray-400 hover:text-gray-600">
@@ -977,7 +977,7 @@ export default function ProfilePage() {
                 value={editingContact.label}
                 onChange={e => setEditingContact(c => ({ ...c, label: e.target.value }))}
                 placeholder="e.g. Daughter, Doctor, Neighbor"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                 style={{ fontSize: '16px' }}
                 maxLength={20}
               />
@@ -989,7 +989,7 @@ export default function ProfilePage() {
                 value={editingContact.name}
                 onChange={e => setEditingContact(c => ({ ...c, name: e.target.value }))}
                 placeholder="e.g. Sarah Johnson"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                 style={{ fontSize: '16px' }}
               />
             </div>
@@ -1000,7 +1000,7 @@ export default function ProfilePage() {
                 value={editingContact.phone}
                 onChange={e => setEditingContact(c => ({ ...c, phone: e.target.value }))}
                 placeholder="10-digit mobile number"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1B365D]"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#1F5A4B]"
                 style={{ fontSize: '16px' }}
               />
             </div>
@@ -1009,7 +1009,7 @@ export default function ProfilePage() {
               type="button"
               disabled={qdSaving || !editingContact.label.trim() || !editingContact.name.trim() || !editingContact.phone.trim()}
               onClick={saveQuickDialContact}
-              className="w-full py-4 rounded-xl bg-[#1B365D] text-[#D4A843] font-semibold text-lg disabled:opacity-40"
+              className="w-full py-4 rounded-xl bg-[#1F5A4B] text-[#F2B544] font-semibold text-lg disabled:opacity-40"
             >
               {qdSaving ? 'Saving...' : editingContact.id ? 'Save Changes' : 'Add Contact'}
             </button>
