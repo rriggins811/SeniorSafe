@@ -108,8 +108,14 @@ export async function ghlUpsert(c: { email: string; name: string; phone: string;
 /** Additive tagging; never throws. */
 export async function ghlTags(contactId: string, add: string[], remove: string[]): Promise<void> {
   try {
-    if (add.length) await ghl("POST", `/contacts/${contactId}/tags`, { tags: add })
-    if (remove.length) await ghl("DELETE", `/contacts/${contactId}/tags`, { tags: remove })
+    if (add.length) {
+      const r = await ghl("POST", `/contacts/${contactId}/tags`, { tags: add })
+      console.log(`ghl tags +${add.join(",")} ${contactId} -> ${r.status}`)
+    }
+    if (remove.length) {
+      const r = await ghl("DELETE", `/contacts/${contactId}/tags`, { tags: remove })
+      console.log(`ghl tags -${remove.join(",")} ${contactId} -> ${r.status}`)
+    }
   } catch (e) {
     console.error("ghl tags threw", e instanceof Error ? e.message : String(e))
   }
@@ -139,7 +145,12 @@ export async function sendEmail(msg: {
       body: JSON.stringify(msg),
       signal: AbortSignal.timeout(20000),
     })
-    if (!res.ok) { console.error(`Resend ${res.status} for "${msg.subject}":`, await res.text()); return false }
+    const body = await res.text()
+    if (!res.ok) { console.error(`Resend ${res.status} for "${msg.subject}":`, body); return false }
+    // The id is what the Resend dashboard searches by when a message goes missing.
+    let id = ""
+    try { id = JSON.parse(body)?.id || "" } catch { /* not json */ }
+    console.log(`resend ok "${msg.subject}" to ${msg.to.join(",")} id=${id}`)
     return true
   } catch (e) {
     console.error("Resend threw", e instanceof Error ? e.message : String(e))

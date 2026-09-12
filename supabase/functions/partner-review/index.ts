@@ -3,16 +3,21 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import {
   SITE, SUPPORT, TAG_DECLINED, TAG_PARTNER, TAG_REQUEST, TYPE_LABELS,
   RULES_TEXT, SIGNATURE_TEXT, emailHtml, escapeHtml, firstName, formatPhone, fromSupport,
-  ghlTags, pageHtml, rulesHtml, sendEmail, signatureHtml, whenEastern,
+  ghlTags, pageHtml, rulesHtml, sendEmail, signatureHtml,
 } from "../_shared/partners.ts"
 
-// partner-review: the page Ryan opens from the "Partner request" email
-// (partner co-branding, Level 1, 2026-09-12). Public, verify_jwt false; the
-// single-use review_token is the credential. GET shows the request with
-// Approve and Decline buttons (a form POST, so a mail scanner that follows
-// the link cannot approve anything). Approve flips the row live and sends the
-// kit email. Decline removes the row and its logo and sends nothing; Ryan
-// writes those himself.
+// partner-review: the approve/decline endpoint behind the "Partner request"
+// email (partner co-branding, Level 1, 2026-09-12). Public, verify_jwt false;
+// the single-use review_token is the credential.
+//
+// The page itself is hammock365.com/partners/review?token=... on the site:
+// the Supabase gateway rewrites text/html to text/plain on GET responses, so
+// a GET here only redirects there. The site page POSTs action=view for the
+// details (JSON) and renders the Approve and Decline forms, which POST back
+// here (a form POST, so a mail scanner following the link cannot approve
+// anything); POST responses keep text/html. Approve flips the row live and
+// sends the kit email. Decline removes the row and its logo and sends
+// nothing; Ryan writes those himself.
 
 const COLS = "code, name, logo_url, phone, tagline, partner_type, contact_name, contact_email, requested_at, terms_version, ghl_contact_id"
 
@@ -22,21 +27,6 @@ function html(body: string, status = 200) {
 
 function usedPage() {
   return html(pageHtml("Link used", `<h1>This link has been used, or is not valid.</h1><p>Approved and declined requests cannot be reopened from the email. If something needs to change, write <a href="mailto:${SUPPORT}">${SUPPORT}</a> or fix the row in the partners table.</p>`), 404)
-}
-
-function details(p: any): string {
-  return `<div class="card">` +
-    (p.logo_url ? `<img class="logo" src="${escapeHtml(p.logo_url)}" alt="logo">` : "") +
-    `<table>` +
-    `<tr><td>Business</td><td><b>${escapeHtml(p.name)}</b></td></tr>` +
-    `<tr><td>Code</td><td><code>${escapeHtml(p.code)}</code></td></tr>` +
-    `<tr><td>Type</td><td>${escapeHtml(TYPE_LABELS[p.partner_type] || p.partner_type)}</td></tr>` +
-    `<tr><td>Phone shown</td><td>${escapeHtml(formatPhone(p.phone))}</td></tr>` +
-    `<tr><td>Their line</td><td>${p.tagline ? escapeHtml(p.tagline) : "(none)"}</td></tr>` +
-    `<tr><td>Contact</td><td>${escapeHtml(p.contact_name || "")}, <a href="mailto:${escapeHtml(p.contact_email || "")}">${escapeHtml(p.contact_email || "")}</a></td></tr>` +
-    `<tr><td>Requested</td><td>${escapeHtml(whenEastern(p.requested_at))}</td></tr>` +
-    `<tr><td>Terms</td><td>accepted, version ${escapeHtml(p.terms_version || "")}</td></tr>` +
-    `</table></div>`
 }
 
 serve(async (req: Request) => {
@@ -50,6 +40,7 @@ serve(async (req: Request) => {
   let action = ""
   if (req.method === "GET") {
     token = new URL(req.url).searchParams.get("token") || ""
+    return Response.redirect(`${SITE}/partners/review?token=${encodeURIComponent(token)}`, 302)
   } else if (req.method === "POST") {
     try {
       const form = await req.formData()
@@ -59,26 +50,23 @@ serve(async (req: Request) => {
   } else {
     return html(pageHtml("Not found", "<h1>Nothing here.</h1>"), 404)
   }
-  if (!/^[0-9a-f]{48}$/.test(token)) return usedPage()
+  const wantsJson = action === "view"
+  if (!/^[0-9a-f]{48}$/.test(token)) {
+    return wantsJson ? Response.json({ error: "used" }, { status: 404 }) : usedPage()
+  }
 
   const { data: p } = await supabase.from("partners").select(COLS)
     .eq("review_token", token).eq("active", false).maybeSingle()
-  if (!p) return usedPage()
+  if (!p) return wantsJson ? Response.json({ error: "used" }, { status: 404 }) : usedPage()
 
-  // ---- GET: show it ----
-  if (req.method === "GET") {
-    return html(pageHtml(`Review: ${p.name}`,
-      `<h1>Partner request: ${escapeHtml(p.name)}</h1>` +
-      details(p) +
-      `<div class="card">` +
-      `<p style="margin:0 0 12px"><b>Approve</b> makes the code live, tags the GHL contact <code>${TAG_PARTNER}</code>, and emails ${escapeHtml(p.contact_email || "them")} their link, QR code and flyer (bcc ${SUPPORT}). ` +
-      `<b>Decline</b> removes the request and the logo and sends nothing; write them yourself if you want to.</p>` +
-      `<div class="actions">` +
-      `<form method="post"><input type="hidden" name="token" value="${token}"><input type="hidden" name="action" value="approve"><button class="approve" type="submit">Approve and send their kit</button></form>` +
-      `<form method="post" onsubmit="return confirm('Decline ${escapeHtml(p.name).replace(/'/g, "\\'")}? The request is removed and no email goes out.')"><input type="hidden" name="token" value="${token}"><input type="hidden" name="action" value="decline"><button class="decline" type="submit">Decline</button></form>` +
-      `</div></div>` +
-      `<p class="muted">Not sure? Close this page; the link keeps working until you use it. The partner terms they accepted: <a href="${SITE}/partners/terms">${SITE}/partners/terms</a>.</p>`,
-    ))
+  // ---- POST view: the site page's data, no side effects ----
+  if (wantsJson) {
+    return Response.json({
+      code: p.code, name: p.name, logo_url: p.logo_url, phone: p.phone, tagline: p.tagline,
+      partner_type: p.partner_type, type_label: TYPE_LABELS[p.partner_type] || p.partner_type,
+      contact_name: p.contact_name, contact_email: p.contact_email,
+      requested_at: p.requested_at, terms_version: p.terms_version, ghl: !!p.ghl_contact_id,
+    }, { headers: { "Cache-Control": "no-store" } })
   }
 
   // ---- POST approve ----

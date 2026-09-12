@@ -112,7 +112,9 @@ serve(async (req: Request) => {
     await supabase.from("partners").update({ ghl_contact_id: contactId }).eq("code", code)
   }
 
-  const reviewUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/partner-review?token=${token}`
+  // The page is on the site, not on the function's GET: the Supabase gateway
+  // rewrites text/html to text/plain on GET responses (POST is left alone).
+  const reviewUrl = `${SITE}/partners/review?token=${token}`
   const phoneNice = formatPhone(phone)
   const first = firstName(contact)
 
