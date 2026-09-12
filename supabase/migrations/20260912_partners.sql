@@ -91,6 +91,8 @@ create trigger validate_partner_code_on_insert
 
 -- After insert the client may not change partner_code directly; the one
 -- client path is set_partner_code() below, which sets app.partner_code_write.
+-- Hand edits in the SQL editor use the existing operator override:
+--   set app.family_admin = 'on';
 -- Body below is the live definition (with the app.family_admin bypass the
 -- beta-comp cron uses) plus the partner_code block at the top.
 create or replace function public.protect_user_profile_columns()
@@ -102,7 +104,8 @@ begin
   if new.partner_code is distinct from old.partner_code then
     if auth.role() = 'service_role'
        or current_setting('role', true) in ('service_role', 'supabase_admin')
-       or current_setting('app.partner_code_write', true) = 'on' then
+       or current_setting('app.partner_code_write', true) = 'on'
+       or current_setting('app.family_admin', true) = 'on' then
       null;
     else
       raise exception 'partner_code is set through set_partner_code()';
