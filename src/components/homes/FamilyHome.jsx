@@ -82,6 +82,7 @@ export default function FamilyHome({
   smsToast,
   onDismissToast,
   preview = false,
+  partner = null,
 }) {
   const name = seniorName || 'Your loved one'
   const hour = new Date().getHours()
@@ -361,6 +362,40 @@ export default function FamilyHome({
             </div>
           )}
         </section>
+
+        {/* Partner co-branding, Level 1: "Shared by" with the partner's logo,
+            tagline and a call button. Sits under the status card so it never
+            pushes the check-in below the fold. Renders only when the family
+            carries a valid, active partner code. */}
+        {partner && (
+          <section className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
+            {partner.logo_url && (
+              <img
+                src={partner.logo_url}
+                alt=""
+                className="w-14 h-14 rounded-xl object-contain bg-[#F3EFE7] flex-shrink-0"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-[#6B645A] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
+                SHARED BY
+              </p>
+              <p className="text-[#1B365D] font-bold truncate" style={{ fontSize: '17px' }}>{partner.name}</p>
+              {partner.tagline && (
+                <p className="text-[#6B645A] text-sm truncate">{partner.tagline}</p>
+              )}
+            </div>
+            {partner.phone && (
+              <a
+                href={formatTelHref(partner.phone)}
+                aria-label={`Call ${partner.name}`}
+                className="flex-shrink-0 px-3.5 py-2.5 rounded-xl bg-[#1B365D] text-white font-semibold text-sm flex items-center gap-1.5"
+              >
+                <Phone size={16} strokeWidth={2} /> Call
+              </a>
+            )}
+          </section>
+        )}
 
         {seniorJoined && history.length > 0 && (
           <section className="bg-white rounded-2xl p-4 shadow-sm">

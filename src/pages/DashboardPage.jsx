@@ -515,6 +515,7 @@ export default function DashboardPage() {
         onAsk={() => navigate('/ai')}
         onNavigate={(path) => navigate(path)}
         unreadMsgCount={unreadMsgCount}
+        partner={family.partner}
       />
     )
   }
@@ -543,6 +544,7 @@ export default function DashboardPage() {
       adminCheckIn={seniorCheckIn}
       adminCheckInLoaded={seniorCheckInLoaded}
       history={history}
+      partner={family.partner}
       medsDue={medsDue}
       medsTotal={medsTotal}
       nextAppt={nextAppt}

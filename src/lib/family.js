@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { sendSMS } from './sms'
 import { getAppUrl } from './platform'
+import { lookupPartner } from './partner'
 
 // One place that answers "who is in this family and which of them is the
 // senior". Every screen that shows family state loads this instead of
@@ -22,7 +23,7 @@ export async function loadFamily(userId) {
   const ownerId = me.invited_by || me.user_id
   const { data: rows } = await supabase
     .from('user_profile')
-    .select('user_id, first_name, last_name, phone, role, invited_by, is_senior, senior_name, senior_phone, family_name, family_code, subscription_tier, trial_status, subscription_period_end, stripe_subscription_id, checkin_alert_time, timezone, device_token, created_at')
+    .select('user_id, first_name, last_name, phone, role, invited_by, is_senior, senior_name, senior_phone, family_name, family_code, subscription_tier, trial_status, subscription_period_end, stripe_subscription_id, checkin_alert_time, timezone, device_token, created_at, partner_code')
     .or(`user_id.eq.${ownerId},invited_by.eq.${ownerId}`)
 
   const all = rows || []
@@ -30,6 +31,10 @@ export async function loadFamily(userId) {
   const senior = all.find(r => r.is_senior) || null
   const others = all.filter(r => r.user_id !== userId)
   const tier = owner?.subscription_tier || me.subscription_tier || 'free'
+  // The partner belongs to the family, so it is read from the owner, never
+  // from the member's own row. null when the family has no code.
+  const partnerCode = owner?.partner_code || null
+  const partner = partnerCode ? await lookupPartner(partnerCode) : null
 
   return {
     me,
@@ -39,6 +44,8 @@ export async function loadFamily(userId) {
     all,
     others,
     tier,
+    partnerCode,
+    partner,
     isSenior: !!me.is_senior,
     isOwner: me.user_id === ownerId,
     familyName: owner?.family_name || me.family_name || '',

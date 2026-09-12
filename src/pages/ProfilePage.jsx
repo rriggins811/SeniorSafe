@@ -4,8 +4,9 @@ import { ArrowLeft, Settings, Clock, Lock, Trash2, AlertTriangle, Phone, Plus, X
 import { supabase } from '../lib/supabase'
 import { isIOS, isAndroid } from '../lib/platform'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
-import { loadFamily } from '../lib/family'
+import { loadFamily, telHref } from '../lib/family'
 import { isPremium, tasteDaysRemaining } from '../lib/subscription'
+import { canAddPartnerCode, addPartnerCode, formatPartnerPhone } from '../lib/partner'
 
 const SUPABASE_FN_URL = 'https://ynsakoxsmuvwfjgbhxky.supabase.co/functions/v1'
 
@@ -54,12 +55,20 @@ export default function ProfilePage() {
   const [qdSaving, setQdSaving] = useState(false)
   // The plan belongs to the family owner; members and the senior read it from the family.
   const [familyTier, setFamilyTier] = useState(null)
+  // Partner co-branding: the family's partner (from the owner), and the
+  // add-a-code field an owner sees for 30 days when there is none.
+  const [familyPartner, setFamilyPartner] = useState(null)
+  const [partnerCodeInput, setPartnerCodeInput] = useState('')
+  const [partnerAdding, setPartnerAdding] = useState(false)
+  const [partnerError, setPartnerError] = useState('')
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       setUser(user)
-      loadFamily(user.id).then(fam => setFamilyTier(fam?.tier || 'free')).catch(() => setFamilyTier('free'))
+      loadFamily(user.id)
+        .then(fam => { setFamilyTier(fam?.tier || 'free'); setFamilyPartner(fam?.partner || null) })
+        .catch(() => setFamilyTier('free'))
       supabase.from('user_profile').select('*').eq('user_id', user.id).single()
         .then(({ data }) => {
           setProfile(data)
@@ -184,6 +193,18 @@ export default function ProfilePage() {
       setConfirmPassword('')
       setTimeout(() => setPwMessage(''), 4000)
     }
+  }
+
+  async function handleAddPartnerCode() {
+    dismissKeyboard()
+    setPartnerAdding(true)
+    setPartnerError('')
+    const { partner, error } = await addPartnerCode(partnerCodeInput)
+    setPartnerAdding(false)
+    if (error || !partner) { setPartnerError(error || 'That did not go through. Please try again.'); return }
+    setFamilyPartner(partner)
+    setProfile(p => (p ? { ...p, partner_code: partner.code } : p))
+    setPartnerCodeInput('')
   }
 
   async function handleDeleteAccount() {
@@ -715,6 +736,60 @@ export default function ProfilePage() {
                 >
                   Or email support@hammock365.com
                 </a>
+              </div>
+            )}
+
+            {/* ───────── Shared by (partner co-branding) ───────── */}
+            {(familyPartner || canAddPartnerCode(profile)) && (
+              <div className="bg-white rounded-2xl px-4 py-5 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3">Shared by</p>
+                {familyPartner ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      {familyPartner.logo_url && (
+                        <img src={familyPartner.logo_url} alt="" className="w-14 h-14 rounded-xl object-contain bg-[#F3EFE7] flex-shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[#1B365D] font-semibold text-base truncate">{familyPartner.name}</p>
+                        {familyPartner.phone && (
+                          <a href={telHref(familyPartner.phone)} className="text-sm text-[#1B365D] underline underline-offset-2">
+                            {formatPartnerPhone(familyPartner.phone)}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-3">
+                      {familyPartner.name} shared Hammock365 with your family. They do not see your family&rsquo;s information.
+                    </p>
+                  </>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-xs text-gray-400">
+                      Did a business or advisor share Hammock365 with you? Add their code within 30 days of signing up.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={partnerCodeInput}
+                        onChange={e => { setPartnerCodeInput(e.target.value); setPartnerError('') }}
+                        placeholder="Partner code"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#1B365D] text-[#2D2A24] text-base"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddPartnerCode}
+                        disabled={partnerAdding || partnerCodeInput.trim().length < 2}
+                        className="px-4 py-3 rounded-xl bg-[#1B365D] text-white font-semibold text-sm disabled:opacity-50"
+                      >
+                        {partnerAdding ? 'Adding...' : 'Add'}
+                      </button>
+                    </div>
+                    {partnerError && <p className="text-[#7A2E28] text-sm">{partnerError}</p>}
+                  </div>
+                )}
               </div>
             )}
 

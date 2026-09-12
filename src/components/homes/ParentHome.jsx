@@ -48,6 +48,7 @@ export default function ParentHome({
   onTakeDose,
   todaysAppointments = [],
   planEnded = false,
+  partner = null,
 }) {
   // The web install banner never shows on the senior's screen.
   useEffect(() => { setSeniorScreen(true); return () => setSeniorScreen(false) }, [])
@@ -303,6 +304,13 @@ export default function ParentHome({
             </div>
           )}
         </div>
+        {/* Partner co-branding: on the senior's screen only this one quiet line.
+            No logo, no button. The big buttons stay the only thing that matters. */}
+        {partner && (
+          <p className="text-center text-[#6B645A] mt-6" style={{ fontSize: '14px', opacity: 0.75 }}>
+            Shared by {partner.name}
+          </p>
+        )}
       </main>
 
       {moreOpen && (

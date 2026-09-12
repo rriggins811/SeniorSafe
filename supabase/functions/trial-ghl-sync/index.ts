@@ -24,6 +24,7 @@ const TAG_SIGNUP = "seniorsafe-app-signup"
 const TAG_BACKFILL = "trial-backfill-jun4"
 const TAG_PREMIUM = "seniorsafe-premium"
 const TAG_PREMIUM_PLUS = "seniorsafe-premium-plus"
+const TAG_FREE = "seniorsafe-free"
 
 const CUTOFF = Deno.env.get("TRIAL_SYNC_ACTIVE_CUTOFF") || "2026-06-04T00:00:00Z"
 
@@ -76,20 +77,25 @@ serve(async (req: Request) => {
     return data?.user?.email ?? null
   }
 
+  // 2026-09-12: free-door signups (tier free, status none, since 2026-09-08)
+  // never matched the trial filter, so they never reached GHL. They sync here
+  // with the seniorsafe-free tag. A family that came in through a partner
+  // link or code also gets partner-<code> (partner co-branding, Level 1).
   const { data: newTrials, error: e1 } = await supabase
     .from("user_profile")
-    .select("user_id, first_name, last_name, phone, created_at")
-    .eq("subscription_tier", "trial")
-    .eq("trial_status", "active")
+    .select("user_id, first_name, last_name, phone, created_at, subscription_tier, trial_status, partner_code")
+    .or("and(subscription_tier.eq.trial,trial_status.eq.active),and(subscription_tier.eq.free,trial_status.eq.none)")
     .eq("role", "admin")
     .not("is_test", "is", true)
     .is("ghl_contact_id", null)
   if (e1) return j({ error: e1.message }, 500)
 
   for (const u of newTrials ?? []) {
-    const isBackfill = new Date(u.created_at).getTime() < new Date(CUTOFF).getTime()
-    const stage = isBackfill ? "backfill" : "active"
-    const tags = isBackfill ? [TAG_SIGNUP, TAG_BACKFILL] : [TAG_ACTIVE, TAG_SIGNUP]
+    const isFree = u.subscription_tier === "free"
+    const isBackfill = !isFree && new Date(u.created_at).getTime() < new Date(CUTOFF).getTime()
+    const stage = isFree ? "free" : isBackfill ? "backfill" : "active"
+    const tags = isFree ? [TAG_FREE, TAG_SIGNUP] : isBackfill ? [TAG_SIGNUP, TAG_BACKFILL] : [TAG_ACTIVE, TAG_SIGNUP]
+    if (u.partner_code) tags.push(`partner-${u.partner_code}`)
     try {
       const email = await emailFor(u.user_id)
       if (!email) { summary.errors.push({ user: u.user_id, err: "no email in auth.users" }); continue }
@@ -104,7 +110,7 @@ serve(async (req: Request) => {
         firstName: u.first_name || undefined,
         lastName: u.last_name || undefined,
         phone: u.phone || undefined,
-        source: "Hammock365 app trial",
+        source: isFree ? "Hammock365 app signup" : "Hammock365 app trial",
       })
       if (up.status < 200 || up.status >= 300) {
         console.error("trial-ghl-sync upsert fail", email, up.status, JSON.stringify(up.body))

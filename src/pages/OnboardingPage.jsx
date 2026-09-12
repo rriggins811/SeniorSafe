@@ -11,6 +11,7 @@ import {
 } from '../components/SetupUI'
 import { TIME_OPTIONS, formatTime12 } from '../lib/time'
 import { baseProfileRow, PENDING_SIGNUP_KEY } from '../lib/signup'
+import { resolvePartnerCode } from '../lib/partner'
 import {
   seniorInviteLink, seniorInviteText, memberInviteLink, memberInviteText, smsHref, sendInvite,
 } from '../lib/family'
@@ -62,6 +63,8 @@ export default function OnboardingPage() {
   const [seniorFirst, setSeniorFirst] = useState('')
   const [seniorPhone, setSeniorPhone] = useState('')
   const [alertTime, setAlertTime] = useState('09:00')
+  // Partner code typed on SignUpPage before a Google / Apple redirect
+  const [pendingPartner, setPendingPartner] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -108,6 +111,7 @@ export default function OnboardingPage() {
         if (raw) pending = JSON.parse(raw)
         localStorage.removeItem(PENDING_SIGNUP_KEY)
       } catch { /* ignore */ }
+      if (pending?.partner) setPendingPartner(pending.partner)
 
       if (pending?.code && (pending.mode === 'join' || pending.mode === 'senior')) {
         const { data: rows } = await supabase.rpc('lookup_invite_code', { invite_code: pending.code })
@@ -169,6 +173,7 @@ export default function OnboardingPage() {
         senior_name: isSelf ? first : senior,
         senior_phone: isSelf ? null : sPhone,
         checkin_alert_time: alertTime,
+        partner_code: await resolvePartnerCode(pendingPartner),
         onboarding_complete: false,
       }, { onConflict: 'user_id' })
       if (pErr) { setError('Saving failed: ' + pErr.message); setSaving(false); return }

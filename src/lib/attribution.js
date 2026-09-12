@@ -6,8 +6,37 @@
 
 const KEYS = ['fbclid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
 const STORAGE_KEY = 'ss_attribution'
+const PARTNER_KEY = 'h365_partner'
+const PARTNER_CODE_RE = /^[a-z0-9][a-z0-9-]{1,39}$/
+
+// Partner co-branding (2026-09-12). hammock365.com/p/<code> sends a family to
+// /signup?partner=<code>. The code waits here until signup writes it onto the
+// owner's profile. Its own key, first-touch: an ad click never overwrites a
+// partner and a partner never overwrites an ad click.
+export function capturePartner() {
+  try {
+    if (typeof window === 'undefined') return
+    const code = (new URLSearchParams(window.location.search).get('partner') || '').trim().toLowerCase()
+    if (!PARTNER_CODE_RE.test(code)) return
+    if (localStorage.getItem(PARTNER_KEY)) return
+    localStorage.setItem(PARTNER_KEY, JSON.stringify({ code, captured_at: new Date().toISOString() }))
+  } catch {
+    /* best-effort only */
+  }
+}
+
+export function getPartnerCode() {
+  try {
+    if (typeof window === 'undefined') return null
+    const raw = localStorage.getItem(PARTNER_KEY)
+    return raw ? (JSON.parse(raw).code || null) : null
+  } catch {
+    return null
+  }
+}
 
 export function captureAttribution() {
+  capturePartner()
   try {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)

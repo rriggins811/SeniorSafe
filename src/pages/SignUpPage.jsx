@@ -8,6 +8,9 @@ import { isNative } from '../lib/platform'
 import { Browser } from '@capacitor/browser'
 import { dismissKeyboard } from '../lib/dismissKeyboard'
 import { baseProfileRow, PENDING_SIGNUP_KEY } from '../lib/signup'
+import { getPartnerCode } from '../lib/attribution'
+import { lookupPartner, resolvePartnerCode } from '../lib/partner'
+import PartnerCodeField from '../components/PartnerCodeField'
 import {
   Shell, Heading, Field, BigButton, TextLink, ErrorText, Disclosure, OAuthButtons, Divider, Select,
 } from '../components/SetupUI'
@@ -53,6 +56,16 @@ export default function SignUpPage() {
     firstName: '', lastName: '', phone: '', email: '', password: '', relationship: '',
   })
   const update = (k, v) => { setForm(f => ({ ...f, [k]: v })); setError('') }
+
+  // Partner co-branding: the code a partner link left behind (looked up once
+  // for the "Shared with you by" line), or one typed on this screen. Owners
+  // only; members and the senior inherit the owner's partner.
+  const [partnerInput, setPartnerInput] = useState('')
+  const [linkPartner, setLinkPartner] = useState(null)
+  useEffect(() => {
+    const c = getPartnerCode()
+    if (c) lookupPartner(c).then(p => setLinkPartner(p))
+  }, [])
 
   // A link with a code: look it up once and pick the right screen.
   useEffect(() => {
@@ -104,6 +117,7 @@ export default function SignUpPage() {
       localStorage.setItem(PENDING_SIGNUP_KEY, JSON.stringify({
         mode,
         code: invite ? code : null,
+        partner: partnerInput.trim() || null,
         savedAt: Date.now(),
       }))
       if (isNative()) {
@@ -181,6 +195,7 @@ export default function SignUpPage() {
       role: 'admin', family_code: familyCode,
       is_senior: isSelf,
       senior_name: isSelf ? first : null,
+      partner_code: await resolvePartnerCode(partnerInput),
       onboarding_complete: false,
     }, { onConflict: 'user_id' })
     setLoading(false)
@@ -344,6 +359,7 @@ export default function SignUpPage() {
           <Field large label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
           <Field large label="Choose a password" type="password" autoComplete="new-password" hint="At least 6 characters. Tap the eye to see it." value={form.password} onChange={v => update('password', v)} />
         </div>
+        <PartnerCodeField linkPartner={linkPartner} value={partnerInput} onChange={setPartnerInput} />
         <ErrorText>{error}</ErrorText>
         <BigButton large onClick={() => createOwner(true)} disabled={loading}>
           {loading ? 'One moment...' : 'Create my account'}
@@ -376,6 +392,7 @@ export default function SignUpPage() {
         <Field label="Email" type="email" inputMode="email" autoComplete="email" placeholder="name@example.com" value={form.email} onChange={v => update('email', v)} />
         <Field label="Password" type="password" autoComplete="new-password" hint="At least 6 characters." value={form.password} onChange={v => update('password', v)} />
       </div>
+      <PartnerCodeField linkPartner={linkPartner} value={partnerInput} onChange={setPartnerInput} />
       <ErrorText>{error}</ErrorText>
       <BigButton onClick={() => createOwner(false)} disabled={loading}>
         {loading ? 'Creating your account...' : 'Create my account'}
