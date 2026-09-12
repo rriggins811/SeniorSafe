@@ -380,7 +380,7 @@ export default function FamilyHome({
               <p className="text-[#6B645A] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
                 SHARED BY
               </p>
-              <p className="text-[#1B365D] font-bold truncate" style={{ fontSize: '17px' }}>{partner.name}</p>
+              <p className="text-[#1B365D] font-bold leading-tight" style={{ fontSize: '17px' }}>{partner.name}</p>
               {partner.tagline && (
                 <p className="text-[#6B645A] text-sm truncate">{partner.tagline}</p>
               )}
