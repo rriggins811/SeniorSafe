@@ -304,12 +304,25 @@ export default function ParentHome({
             </div>
           )}
         </div>
-        {/* Partner co-branding: on the senior's screen only this one quiet line.
-            No logo, no button. The big buttons stay the only thing that matters. */}
+        {/* Partner co-branding on the senior's screen (Ryan, 9/12: logo and
+            name, not just a line). Still no button and nothing that looks
+            tappable, so the big buttons stay the only thing that matters. */}
         {partner && (
-          <p className="text-center text-[#6B645A] mt-6" style={{ fontSize: '14px', opacity: 0.75 }}>
-            Shared by {partner.name}
-          </p>
+          <div className="mt-6 bg-white rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3">
+            {partner.logo_url && (
+              <img
+                src={partner.logo_url}
+                alt=""
+                className="w-12 h-12 rounded-xl object-contain bg-[#F3EFE7] flex-shrink-0"
+              />
+            )}
+            <div className="min-w-0">
+              <p className="text-[#6B645A] font-semibold" style={{ fontSize: '11px', letterSpacing: '0.14em' }}>
+                SHARED BY
+              </p>
+              <p className="text-[#1B365D] font-bold leading-tight" style={{ fontSize: '17px' }}>{partner.name}</p>
+            </div>
+          </div>
         )}
       </main>
 
