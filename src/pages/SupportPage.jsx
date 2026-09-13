@@ -59,7 +59,7 @@ const sections = [
     items: [
       {
         q: 'What\'s included in the free plan?',
-        a: 'Free forever: the daily "I\'m Okay" check-in with a push nudge, a text to one family contact when a check-in is missed or I Need Help is pressed, check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite, siblings and caregivers joining by code to see the same board, and 10 messages with Maggie, total. Nothing to enter, no card, no clock.'
+        a: 'Free forever: the daily "I\'m Okay" check-in, a nudge the family can send that pops up in the store app, a text to one family contact when a check-in is missed or I Need Help is pressed, check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite, siblings, caregivers, friends and neighbors joining by code to see the same board, and 10 messages with Maggie, total. Nothing to enter, no card, no clock.'
       },
       {
         q: 'How much does the paid plan cost?',

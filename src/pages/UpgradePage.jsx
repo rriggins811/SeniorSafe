@@ -97,7 +97,7 @@ function DoubleBillingModal({ open, platform, onClose }) {
 }
 
 const FREE_FEATURES = [
-  { text: 'The daily "I\'m Okay" check-in and the push nudge, free forever' },
+  { text: 'The daily "I\'m Okay" check-in, and a nudge that pops up in the store app, free forever' },
   { text: 'A text to one family contact when a check-in is missed or I Need Help is pressed' },
   { text: 'Check-in history, the emergency card, and medication reminders on the senior\'s screen' },
   { text: 'The senior\'s invite by text or link' },
