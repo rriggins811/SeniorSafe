@@ -78,13 +78,13 @@ No refunds are provided for partial billing periods. Prices may change with noti
   },
   {
     title: '11. Limitation of Liability',
-    body: `TO THE MAXIMUM EXTENT PERMITTED BY LAW, RIGGINS STRATEGIC SOLUTIONS, LLC SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF Hammock365.
+    body: `TO THE MAXIMUM EXTENT PERMITTED BY LAW, RIGGINS PROPERTIES LLC D/B/A RIGGINS STRATEGIC SOLUTIONS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF Hammock365.
 
 This includes but is not limited to: missed check-in notifications, failed SMS delivery, AI assistant errors, data loss, medication reminder failures, or any reliance on information provided through the app. Hammock365 is provided "as is" without warranties of any kind.`,
   },
   {
     title: '12. Indemnification',
-    body: `You agree to indemnify and hold harmless Riggins Strategic Solutions, LLC from any claims, damages, or expenses arising from your use of Hammock365 or your violation of these Terms.`,
+    body: `You agree to indemnify and hold harmless Riggins Properties LLC d/b/a Riggins Strategic Solutions from any claims, damages, or expenses arising from your use of Hammock365 or your violation of these Terms.`,
   },
   {
     title: '13. Changes to Terms',
@@ -98,7 +98,8 @@ This includes but is not limited to: missed check-in notifications, failed SMS d
     title: '15. Contact',
     body: `Questions about these Terms? Contact us:
 
-Riggins Strategic Solutions, LLC
+Riggins Properties LLC d/b/a Riggins Strategic Solutions
+4030 Wake Forest Rd Ste 349, Raleigh, NC 27609
 Ryan Riggins
 Email: ryan@rigginsstrategicsolutions.com
 Phone: (336) 553-8933
@@ -126,8 +127,7 @@ export default function TermsPage() {
             </div>
             <div>
               <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Terms of Service</h1>
-              <p className="text-white/60 text-sm">Last updated: September 11, 2026</p>
-              <p className="text-white/60 text-sm">Hammock365 was called SeniorSafeApp until September 11, 2026. Same app, same company, same policy.</p>
+              <p className="text-white/60 text-sm">Last updated: September 14, 2026</p>
             </div>
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function TermsPage() {
 
           <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
             <p className="text-gray-600 text-sm leading-relaxed">
-              Hammock365 is operated by <span className="font-semibold text-[#1F5A4B]">Riggins Strategic Solutions, LLC</span> ("we", "us", "our"). By creating an account and using Hammock365, you agree to these Terms of Service and our Privacy Policy.
+              Hammock365 is operated by <span className="font-semibold text-[#1F5A4B]">Riggins Properties LLC d/b/a Riggins Strategic Solutions</span> ("we", "us", "our"). By creating an account and using Hammock365, you agree to these Terms of Service and our Privacy Policy.
             </p>
           </div>
 
@@ -151,7 +151,7 @@ export default function TermsPage() {
           ))}
 
           <p className="text-center text-xs text-gray-400 pb-4">
-            Riggins Strategic Solutions, LLC · rigginsstrategicsolutions.com
+            Riggins Properties LLC d/b/a Riggins Strategic Solutions · rigginsstrategicsolutions.com
           </p>
         </div>
       </div>

@@ -8,7 +8,7 @@ export const SITE = "https://hammock365.com"
 export const SUPPORT = "support@hammock365.com"
 // The GHL line, so partner calls and texts land in GHL (Ryan, 9/12).
 export const PHONE_DISPLAY = "(336) 733-6462"
-export const TERMS_VERSION = "2026-09-12"
+export const TERMS_VERSION = "2026-09-14"
 
 export const TAG_REQUEST = "hammock-partner-request"
 export const TAG_PARTNER = "hammock-partner"
@@ -180,7 +180,7 @@ export function emailHtml(bodyHtml: string): string {
 <tr><td style="background:#1F5A4B;border-radius:14px 14px 0 0;padding:18px 26px;font-family:Georgia,'Times New Roman',serif;font-size:20px;color:#F4E7CF;font-weight:700">Hammock365</td></tr>
 <tr><td style="padding:24px 26px 28px;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;line-height:1.55;color:#2D2A24">${bodyHtml}</td></tr>
 </table>
-<p style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#6B645A;margin:14px 0 0">Hammock365 is built by Riggins Strategic Solutions, LLC, Greensboro, NC. It is not an emergency service.</p>
+<p style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#6B645A;margin:14px 0 0">Hammock365 is built by Riggins Properties LLC d/b/a Riggins Strategic Solutions, 4030 Wake Forest Rd Ste 349, Raleigh, NC 27609. It is not an emergency service.</p>
 </td></tr></table></body></html>`
 }
 

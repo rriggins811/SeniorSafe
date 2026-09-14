@@ -118,7 +118,8 @@ To request account deletion or data export, contact us at ryan@rigginsstrategics
   },
   {
     title: '12. Contact Us',
-    body: `Riggins Strategic Solutions, LLC
+    body: `Riggins Properties LLC d/b/a Riggins Strategic Solutions
+4030 Wake Forest Rd Ste 349, Raleigh, NC 27609
 Ryan Riggins
 Email: ryan@rigginsstrategicsolutions.com
 Phone: (336) 553-8933
@@ -146,8 +147,7 @@ export default function PrivacyPage() {
             </div>
             <div>
               <h1 className="text-white font-bold" style={{ fontSize: '20px' }}>Privacy Policy</h1>
-              <p className="text-white/60 text-sm">Last updated: September 11, 2026</p>
-              <p className="text-white/60 text-sm">Hammock365 was called SeniorSafeApp until September 11, 2026. Same app, same company, same policy.</p>
+              <p className="text-white/60 text-sm">Last updated: September 14, 2026</p>
             </div>
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function PrivacyPage() {
 
           <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
             <p className="text-gray-600 text-sm leading-relaxed">
-              <span className="font-semibold text-[#1F5A4B]">Riggins Strategic Solutions, LLC</span> ("we", "us", "our") operates Hammock365. This Privacy Policy explains what information we collect, how we use it, who we share it with, and your rights regarding your data. Hammock365 is a family coordination tool, not a medical device, emergency service, or healthcare provider.
+              <span className="font-semibold text-[#1F5A4B]">Riggins Properties LLC d/b/a Riggins Strategic Solutions</span> ("we", "us", "our") operates Hammock365. This Privacy Policy explains what information we collect, how we use it, who we share it with, and your rights regarding your data. Hammock365 is a family coordination tool, not a medical device, emergency service, or healthcare provider.
             </p>
           </div>
 
@@ -171,7 +171,7 @@ export default function PrivacyPage() {
           ))}
 
           <p className="text-center text-xs text-gray-400 pb-4">
-            Riggins Strategic Solutions, LLC · rigginsstrategicsolutions.com
+            Riggins Properties LLC d/b/a Riggins Strategic Solutions · rigginsstrategicsolutions.com
           </p>
         </div>
       </div>
