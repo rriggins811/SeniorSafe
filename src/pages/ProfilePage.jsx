@@ -654,7 +654,7 @@ export default function ProfilePage() {
                   <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Your plan</p>
                 </div>
                 <p className="text-sm text-gray-700 mb-1">You&rsquo;re on the <span className="font-semibold text-[#1F5A4B]">free plan</span>, free forever.</p>
-                <p className="text-xs text-gray-500 mb-3 leading-relaxed">The daily check-in, a text to one family contact when it is missed or I Need Help is pressed, history, the emergency card, medication reminders, and 10 messages with Maggie.</p>
+                <p className="text-xs text-gray-500 mb-3 leading-relaxed">The daily check-in, a text to one contact when it is missed or I Need Help is pressed, history, the emergency card, medication reminders, and 10 messages with Maggie.</p>
                 {isAdmin && (
                   <button type="button" onClick={() => navigate('/upgrade?feature=texts')} className="w-full py-3 rounded-xl bg-[#F2B544] text-[#2D2A24] font-semibold text-sm">
                     See the paid plan, $14.99 a month

@@ -108,7 +108,7 @@ export default function ParentHome({
             <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4" role="status">
               <p className="text-red-800 font-bold" style={{ fontSize: '19px', lineHeight: 1.2 }}>Your family's plan has ended</p>
               <p className="text-red-700 mt-1" style={{ fontSize: '17px', lineHeight: 1.4 }}>
-                You can still tap the button, and one family contact still gets a text if you miss a day or press I Need Help. Ask your family to turn the plan back on for the rest.
+                You can still tap the button, and one contact still gets a text if you miss a day or press I Need Help. Ask the person who manages the plan to turn it back on for the rest.
               </p>
             </div>
           )}

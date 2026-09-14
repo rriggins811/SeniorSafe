@@ -15,7 +15,7 @@ const sections = [
     items: [
       {
         q: 'What is the daily check-in?',
-        a: 'The daily check-in is the "I\'m Okay Today" button on the senior\'s screen. Tap it once each day. The family sees it in the app right away. If it has not been tapped by the family\'s chosen time, one family contact gets a text on the free plan, and everyone in the family on the paid plan.'
+        a: 'The daily check-in is the "I\'m Okay Today" button on the senior\'s screen. Tap it once each day. The family sees it in the app right away. If it has not been tapped by the family\'s chosen time, one contact gets a text on the free plan (family, a friend or a neighbor), and everyone in the family group on the paid plan.'
       },
       {
         q: 'How do I set up medication reminders?',
@@ -49,7 +49,7 @@ const sections = [
       },
       {
         q: 'What does the "I Need Help" button do?',
-        a: 'The "I Need Help" button on the senior\'s screen sends an urgent text asking someone to check on them: to one family contact on the free plan, to everyone in the family on the paid plan. A confirmation prompt prevents accidental alerts. It is not 911.'
+        a: 'The "I Need Help" button on the senior\'s screen sends an urgent text asking someone to check on them: to one contact on the free plan, to everyone in the family group on the paid plan. A confirmation prompt prevents accidental alerts. It is not 911.'
       }
     ]
   },
@@ -59,7 +59,7 @@ const sections = [
     items: [
       {
         q: 'What\'s included in the free plan?',
-        a: 'Free forever: the daily "I\'m Okay" check-in, a nudge the family can send that pops up in the store app, a text to one family contact when a check-in is missed or I Need Help is pressed, check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite, siblings, caregivers, friends and neighbors joining by code to see the same board, and 10 messages with Maggie, total. Nothing to enter, no card, no clock.'
+        a: 'Free forever: the daily "I\'m Okay" check-in, a nudge the family can send that pops up in the store app, a text to one contact (family, a friend or a neighbor) when a check-in is missed or I Need Help is pressed, check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite, siblings, caregivers, friends and neighbors joining by code to see the same board, and 10 messages with Maggie, total. Nothing to enter, no card, no clock.'
       },
       {
         q: 'How much does the paid plan cost?',

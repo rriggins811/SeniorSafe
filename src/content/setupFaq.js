@@ -110,7 +110,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'What is the red "I Need Help" button?',
-        a: 'It sends an urgent text asking your family to check on you right away: one family contact on the free plan, everyone on the paid plan. It asks "Are you sure?" first, so a bump does not send it. It is not 911. If it is an emergency, call 911.',
+        a: 'It sends an urgent text asking someone to check on you right away: one contact on the free plan, everyone on the paid plan. It asks "Are you sure?" first, so a bump does not send it. It is not 911. If it is an emergency, call 911.',
       },
       {
         q: 'I cannot find the app on my phone.',
@@ -144,7 +144,7 @@ export const SETUP_FAQ = [
     items: [
       {
         q: 'Is Hammock365 free?',
-        a: 'Yes. The free plan is free forever, no card: the daily check-in button, a text to one family contact when the check-in is missed or I Need Help is pressed, a nudge the family can send that pops up if the senior has the store app, the check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite by text or link, siblings, caregivers, friends and neighbors joining by code to see the same board, and 10 messages with Maggie.',
+        a: 'Yes. The free plan is free forever, no card: the daily check-in button, a text to one contact (family, a friend or a neighbor) when the check-in is missed or I Need Help is pressed, a nudge the family can send that pops up if the senior has the store app, the check-in history, the emergency card, medication reminders on the senior\'s screen, the senior\'s invite by text or link, siblings, caregivers, friends and neighbors joining by code to see the same board, and 10 messages with Maggie.',
       },
       {
         q: 'What does the paid plan add, and what does it cost?',
