@@ -650,7 +650,7 @@ serve(async (req: Request) => {
         const ok = await sendEmail(
           fields.email,
           `Your Hammock365 free trial ends ${when}`,
-          `Hi ${fields.firstName || 'there'},\n\nYour free days of Hammock365 end on ${when}. After that your card is charged ${amountText} and everything stays on: texts to everyone in the family, siblings by code, missed-dose alerts, family messages, the vault, appointments, and Maggie every day.\n\nIf you would rather stop, open Settings at https://app.hammock365.com/profile and tap Cancel Subscription before ${when}. You will not be charged.\n\nQuestions? Reply to this email or text Ryan at (336) 553-8933.\n\nHammock365`,
+          `Hi ${fields.firstName || 'there'},\n\nYour free days of Hammock365 end on ${when}. After that your card is charged ${amountText} and everything stays on: texts to everyone in the family, missed-dose alerts, family messages, the vault, appointments, and Maggie every day.\n\nIf you would rather stop, open Settings at https://app.hammock365.com/profile and tap Cancel Subscription before ${when}. You will not be charged.\n\nQuestions? Reply to this email or text Ryan at (336) 553-8933.\n\nHammock365`,
         )
         await logNotification(userId, 'trial_ending', 'in_app', ok)
       }

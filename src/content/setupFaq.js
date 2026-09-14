@@ -38,7 +38,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'How do I add my brother, sister, or a caregiver?',
-        a: 'Tap the family icon at the top of your home screen. Type their mobile number and tap Send, and they get a text with a link. You can also share the link or the 6-character family code any way you like. On the paid plan everyone who joins gets the texts and can send a nudge; the free plan covers one family contact.',
+        a: 'Tap the family icon at the top of your home screen. Type their mobile number and tap Send, and they get a text with a link. You can also share the link or the 6-character family code any way you like. Everyone who joins sees the same board, free on every plan. On the paid plan everyone who joins also gets the texts and can send a nudge; on the free plan the texts go to one contact.',
       },
       {
         q: 'Where do I find the family code?',
@@ -164,7 +164,7 @@ export const SETUP_FAQ = [
       },
       {
         q: 'Does the person I look after pay anything? Do my siblings?',
-        a: 'No. One plan covers the whole family, and only the person who set up the family has a card on file. On the free plan, one family contact is included; siblings and caregivers join on the paid plan.',
+        a: 'No. One plan covers the whole family, and only the person who set up the family has a card on file. Siblings, caregivers, friends and neighbors join free with the family code on every plan. On the free plan the texts go to one contact; the paid plan texts everyone.',
       },
       {
         q: 'I signed up on the website but use the iPhone app. Where is my subscription?',
