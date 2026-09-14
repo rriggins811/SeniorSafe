@@ -420,24 +420,35 @@ export default function DashboardPage() {
     if (!family?.senior || reminding) return
     if (nudgeCount >= 2) return
     setReminding(true)
+    setNudgeWarning('')
+    const who = family.seniorName || 'them'
     const phone = family.seniorPhone
-    if (!phone) {
-      alert(`No phone number on file for ${family.seniorName || 'them'} yet. They can add one in Settings.`)
-      setReminding(false)
-      return
-    }
+    const paid = isPremium(family.tier)
     const senderName = family.me.first_name || 'Your family'
     const nudgeText = `${senderName} is thinking of you. Just tap I'm Okay when you get a chance! Hammock365. Reply STOP to opt out`
-    // Notification when the senior has the app; the text is the fallback for a
-    // senior on the web with no app installed.
+    // Notification when the senior has the store app. On paid, a text is the
+    // fallback for a senior on the web; free covers the push nudge only, so a
+    // phone number is needed just for that paid fallback.
     const { texted: nudgeTexted, pushed } = await notifyFamily([family.senior], {
       title: `${senderName} is thinking of you`,
       body: "Just tap I'm Okay when you get a chance.",
       type: 'nudge',
       sms: null,
     })
-    // The text fallback is a paid-plan extra; free covers the push nudge.
-    if (!pushed && !nudgeTexted && isPremium(family.tier)) await sendSMS(phone, nudgeText)
+    let delivered = pushed > 0 || nudgeTexted > 0
+    if (!delivered && paid && phone) delivered = await sendSMS(phone, nudgeText, 'nudge')
+    // Only a nudge that actually reached them counts toward the 2 a day.
+    if (!delivered) {
+      setNudgeWarning(
+        !paid
+          ? `The nudge didn't reach ${who}. Nudges pop up only in the Hammock365 app on their phone, so give them a call instead.`
+          : !phone
+          ? `The nudge didn't reach ${who}, and there's no phone number on file to text instead. Give them a call, or add their number in Settings.`
+          : `The nudge didn't go through just now. Try again in a few minutes, or give ${who} a call.`
+      )
+      setReminding(false)
+      return
+    }
     await supabase.from('nudge_logs').insert({ admin_id: family.senior.user_id, sent_by: user.id, date: localDateStr() })
     const n = nudgeCount + 1
     setNudgeCount(n)

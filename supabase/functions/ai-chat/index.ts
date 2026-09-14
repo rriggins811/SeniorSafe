@@ -17,6 +17,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const MODEL = 'claude-haiku-4-5-20251001'
 const FREE_LIMIT = 10
+const TRIAL_DAYS = 7 // matches TASTE_DAYS in create-checkout
 const PAID_LIMIT = 500
 const MONTHLY_CAP_DOLLARS = 4.00
 const MAX_KB_SECTIONS = 2
@@ -372,12 +373,31 @@ function approxTokens(text: string): number {
   return Math.ceil(text.length / 4)
 }
 
+// Trial dates come from user_profile, never from the model. While a family is
+// trialing, subscription_period_end is the trial end (Stripe trial_end, or the
+// store expiration via RevenueCat); trial_start_date is the fallback.
+function trialDates(owner: any, tz: string): { daysLeft: number; endLabel: string } | null {
+  let endMs = owner.subscription_period_end ? Date.parse(owner.subscription_period_end) : NaN
+  if (isNaN(endMs) && owner.trial_start_date) {
+    const start = Date.parse(owner.trial_start_date)
+    if (!isNaN(start)) endMs = start + TRIAL_DAYS * 86400000
+  }
+  if (isNaN(endMs) || endMs <= Date.now()) return null
+  const daysLeft = Math.max(1, Math.ceil((endMs - Date.now()) / 86400000))
+  const fmt: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric' }
+  let endLabel: string
+  try { endLabel = new Date(endMs).toLocaleDateString('en-US', { ...fmt, timeZone: tz }) }
+  catch { endLabel = new Date(endMs).toLocaleDateString('en-US', fmt) }
+  return { daysLeft, endLabel }
+}
+
 function buildContext(opts: {
   profile: any
   isSenior: boolean
   isOwner: boolean
   seniorName: string
   tier: string
+  trial: { daysLeft: number; endLabel: string } | null
   freeRemaining: number | null
   familySummary: string
   recentTopics: string[]
@@ -398,10 +418,13 @@ function buildContext(opts: {
   if (opts.tier === 'free' && opts.freeRemaining !== null) {
     lines.push(`This family is on the free plan with ${opts.freeRemaining} message${opts.freeRemaining === 1 ? '' : 's'} left, ever.`)
   } else if (opts.tier === 'trial') {
-    lines.push('This family is in its 7 free days of the paid plan (a card is on file; the first charge comes after day 7 unless they cancel).')
+    lines.push(opts.trial
+      ? `This family is in the ${TRIAL_DAYS} free days of the paid plan (a card is on file). The free days end on ${opts.trial.endLabel} (${opts.trial.daysLeft} day${opts.trial.daysLeft === 1 ? '' : 's'} left, counting today). If they keep the paid plan, the first charge is that day.`
+      : `This family is in the ${TRIAL_DAYS} free days of the paid plan (a card is on file). You cannot see which day of the free days it is or when the first charge comes.`)
   } else {
     lines.push('This family is on the paid plan.')
   }
+  lines.push('Never state a specific trial day, charge date or renewal date unless it is given in this context. If someone asks and it is not here, say you cannot see it from here and suggest they check their plan in the app.')
   if (opts.firstConversation) lines.push('This is their first conversation with you. Open with one warm line saying you are Maggie, an AI Ryan built, that you keep a running summary so they need not repeat themselves, and that they can clear it in Settings. Then answer.')
   if (opts.medNames.length) lines.push(`Medications being tracked in the app (names only): ${opts.medNames.join(', ')}.`)
   if (opts.recentTopics.length) lines.push(`Their recent conversation titles: ${opts.recentTopics.join('; ')}.`)
@@ -460,7 +483,7 @@ serve(async (req) => {
     if (ownerId !== profile.user_id) {
       const { data: o } = await supabaseAdmin
         .from('user_profile')
-        .select('user_id, family_code, subscription_tier, senior_name, first_name')
+        .select('user_id, family_code, subscription_tier, senior_name, first_name, trial_start_date, subscription_period_end')
         .eq('user_id', ownerId)
         .single()
       if (o) owner = { ...profile, ...o, user_id: profile.user_id }
@@ -552,6 +575,7 @@ serve(async (req) => {
     const sections = pickSections(messages)
     const context = buildContext({
       profile, isSenior, isOwner, seniorName, tier,
+      trial: tier === 'trial' ? trialDates(owner, profile.timezone || 'America/New_York') : null,
       freeRemaining: tierKey ? null : Math.max(0, FREE_LIMIT - count),
       familySummary, recentTopics: Array.isArray(recentTopics) ? recentTopics.slice(0, 3) : [],
       medNames, firstConversation, sections,
