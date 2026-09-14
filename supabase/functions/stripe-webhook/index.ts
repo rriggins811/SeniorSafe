@@ -261,12 +261,13 @@ async function lookupSubscriberFields(userId: string): Promise<{
   email: string | null
   firstName: string | null
   lastName: string | null
+  isTest: boolean
 }> {
   const [{ data: authUser }, { data: profile }] = await Promise.all([
     supabaseAdmin.auth.admin.getUserById(userId),
     supabaseAdmin
       .from('user_profile')
-      .select('first_name, last_name')
+      .select('first_name, last_name, is_test')
       .eq('user_id', userId)
       .maybeSingle(),
   ])
@@ -274,6 +275,7 @@ async function lookupSubscriberFields(userId: string): Promise<{
     email: authUser?.user?.email ?? null,
     firstName: profile?.first_name ?? null,
     lastName: profile?.last_name ?? null,
+    isTest: profile?.is_test === true,
   }
 }
 
@@ -452,41 +454,49 @@ serve(async (req: Request) => {
 
       const fields = await lookupSubscriberFields(userId)
 
-      if (fields.email && tier === 'trial') {
-        await ghlProxyUpsertAndTag(
-          { email: fields.email, firstName: fields.firstName, lastName: fields.lastName },
-          'seniorsafe-card-trial',
-          'seniorsafe_card_trial',
-          'seniorsafe-card-trial',
-        )
-      }
+      // QA/test accounts (user_profile.is_test = true) never reach GHL or
+      // Meta from here, same rule trial-ghl-sync already follows. Without
+      // this, a test checkout creates a real marketing contact and fires a
+      // real ad-attribution event for money that was never actually charged.
+      if (fields.isTest) {
+        console.log(`[is_test] skipping GHL + Meta for ${userId}`)
+      } else {
+        if (fields.email && tier === 'trial') {
+          await ghlProxyUpsertAndTag(
+            { email: fields.email, firstName: fields.firstName, lastName: fields.lastName },
+            'seniorsafe-card-trial',
+            'seniorsafe_card_trial',
+            'seniorsafe-card-trial',
+          )
+        }
 
-      if (fields.email && (tier === 'paid' || tier === 'premium_plus')) {
-        await ghlProxyUpsertAndTag(
-          {
+        if (fields.email && (tier === 'paid' || tier === 'premium_plus')) {
+          await ghlProxyUpsertAndTag(
+            {
+              email: fields.email,
+              firstName: fields.firstName,
+              lastName: fields.lastName,
+            },
+            'seniorsafe-paid',
+            `seniorsafe_${tier}_purchase`,
+            `seniorsafe-${tier}`,
+          )
+        }
+
+        if (tier === 'paid' || tier === 'premium_plus') {
+          await fireMetaPurchase({
+            tier,
             email: fields.email,
             firstName: fields.firstName,
             lastName: fields.lastName,
-          },
-          'seniorsafe-paid',
-          `seniorsafe_${tier}_purchase`,
-          `seniorsafe-${tier}`,
-        )
-      }
-
-      if (tier === 'paid' || tier === 'premium_plus') {
-        await fireMetaPurchase({
-          tier,
-          email: fields.email,
-          firstName: fields.firstName,
-          lastName: fields.lastName,
-          userId,
-          stripeCustomerId: customerId,
-          stripeSubscriptionId: subscriptionId,
-          stripeSessionId: session.id,
-          amountTotalCents: session.amount_total ?? null,
-          currency: session.currency ?? null,
-        })
+            userId,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subscriptionId,
+            stripeSessionId: session.id,
+            amountTotalCents: session.amount_total ?? null,
+            currency: session.currency ?? null,
+          })
+        }
       }
 
       break
@@ -569,7 +579,7 @@ serve(async (req: Request) => {
         console.log(`Downgraded ${members.length} family member(s) to free`)
       }
 
-      if (fields.email) {
+      if (fields.email && !fields.isTest) {
         await ghlProxyUpsertAndTag(
           {
             email: fields.email,
