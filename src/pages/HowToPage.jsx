@@ -8,7 +8,7 @@ const VIDEOS = [
   { id: 'invite-link', title: 'How Mom opens her invite link', plan: 'Free', seconds: 24, file: 'howto_07_mom_opens_invite_link_h365.mp4', poster: 'poster_07.jpg',
     steps: ['She taps the link you sent her. No app store, no download.', 'Her name is already there. She types an email and picks a password; do it for her if you are holding her phone.', 'Tap Continue. Her button is waiting.', 'She taps it once, and your phone says she is okay.'] },
   { id: 'medication', title: 'How to add a medication', plan: 'Free', seconds: 27, file: 'howto_08_add_medication_h365.mp4', poster: 'poster_08.jpg',
-    steps: ['Tap Medications, then the plus.', 'Name, dose, how often, and what time.', 'Turn on Remind me on my phone. Her phone tells her when it is time, with an I took it button.', 'On the paid plan, if the box is still empty an hour later, the family hears about it.'] },
+    steps: ['Tap Medications, then the plus.', 'Name, dose, how often, and what time.', 'Turn on Reminder at dose time. Due doses show on her screen with an I took it button, and the reminder pops up if she uses the Hammock365 app.', 'On the paid plan, if the box is still empty an hour later, the family hears about it.'] },
   { id: 'appointment', title: 'How to add an appointment', plan: 'Paid plan', seconds: 19, file: 'howto_09_add_appointment_h365.mp4', poster: 'poster_09.jpg',
     steps: ['Tap Next appointment, then the plus.', 'Who, and where.', 'Pick the day and the time.', 'Notes are for the family. Tap Add Appointment and everyone can see it.'] },
   { id: 'emergency-card', title: 'How to set up the emergency card', plan: 'Free', seconds: 18, file: 'howto_10_emergency_card_h365.mp4', poster: 'poster_10.jpg',

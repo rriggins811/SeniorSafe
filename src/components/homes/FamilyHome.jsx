@@ -470,6 +470,18 @@ export default function FamilyHome({
           </button>
         )}
 
+        {/* Paid features show a lock with the price (the Help Center promises it). */}
+        {!premium && (
+          <button
+            onClick={() => onNavigate('/upgrade?feature=texts')}
+            className="w-full flex items-center gap-2 px-4 py-1 text-left"
+          >
+            <Lock size={14} color="#6B645A" />
+            <span className="flex-1 text-[#6B645A] text-sm">Texts to everyone: paid plan, {MONTHLY_PRICE} a month</span>
+            <ChevronRight size={14} color="#C4BDB3" />
+          </button>
+        )}
+
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F2B544] mb-3 px-1">
             {seniorName ? `${seniorName}'s day` : 'Today'}

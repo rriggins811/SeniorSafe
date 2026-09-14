@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2, Pill, X, Check, Lock, Calendar } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { loadFamily } from '../lib/family'
+import { isPremium, MONTHLY_PRICE } from '../lib/subscription'
 import { localDateStr } from '../lib/time'
 import { googleCalendarUrl, addMinutes } from '../lib/calendar'
 import { openExternalLink } from '../lib/platform'
@@ -61,6 +62,8 @@ export default function MedicationsPage() {
   const [saving, setSaving] = useState(false)
   const [toggling, setToggling] = useState(null)   // dose key being toggled
   const [userPhone, setUserPhone] = useState('')
+  const [tier, setTier] = useState(null)          // family plan, from the owner
+  const [isSenior, setIsSenior] = useState(false) // the senior's screen never shows an upsell
   const [form, setForm] = useState({
     med_name: '', dosage: '', frequency: 'Once daily', times: ['08:00'],
     reminder_enabled: false, reminder_phone: '',
@@ -84,13 +87,17 @@ export default function MedicationsPage() {
       setUser(user)
       fetchAll()
       // Fetch user's phone + subscription tier
-      supabase.from('user_profile').select('phone').eq('user_id', user.id).single()
+      supabase.from('user_profile').select('phone, is_senior').eq('user_id', user.id).single()
         .then(({ data }) => {
           const phone = data?.phone || user.user_metadata?.phone || ''
           setUserPhone(phone)
+          setIsSenior(!!data?.is_senior)
         })
-      // The family name comes from the owner, so every member writes the same one.
-      loadFamily(user.id).then(fam => { if (fam?.familyName) setFamilyName(fam.familyName) })
+      // The family name and plan come from the owner, so every member sees the same ones.
+      loadFamily(user.id).then(fam => {
+        if (fam?.familyName) setFamilyName(fam.familyName)
+        setTier(fam?.tier ?? null)
+      })
     })
   }, [])
 
@@ -194,6 +201,16 @@ export default function MedicationsPage() {
       {/* Medication list */}
       <div className="flex-1 overflow-y-auto px-4 py-5 keyboard-safe-bottom">
         <div className="max-w-lg mx-auto flex flex-col gap-4">
+          {/* Paid features show a lock with the price (the Help Center promises it). */}
+          {!isSenior && tier !== null && !isPremium(tier) && (
+            <button
+              onClick={() => navigate('/upgrade?feature=missed_dose')}
+              className="w-full flex items-center gap-2 bg-white rounded-xl px-4 py-3 text-left border border-gray-200"
+            >
+              <Lock size={16} color="#6B645A" />
+              <span className="flex-1 text-sm text-[#6B645A]">Missed-dose alerts to the family: paid plan, {MONTHLY_PRICE} a month</span>
+            </button>
+          )}
           {loading ? (
             <p className="text-center text-gray-400 py-16" style={{ fontSize: '16px' }}>Loading...</p>
           ) : medications.length === 0 ? (
@@ -365,8 +382,8 @@ export default function MedicationsPage() {
             <div className="border-t border-gray-100 pt-3">
               <div className="flex items-center justify-between py-1">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Remind me on my phone</p>
-                  <p className="text-xs text-gray-400 mt-0.5">A notification on the senior's phone when it's time to take this</p>
+                  <p className="text-sm font-medium text-gray-700">Reminder at dose time</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Pops up on the senior's phone in the Hammock365 app, and turns on the missed-dose alert to the family on the paid plan. Due doses always show on the I'm Okay screen.</p>
                 </div>
                 <button
                   type="button"

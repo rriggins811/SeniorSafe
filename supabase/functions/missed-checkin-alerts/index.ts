@@ -97,6 +97,17 @@ serve(async (req) => {
   const FROM_NUMBER = Deno.env.get('TWILIO_PHONE_NUMBER')!
   const credentials = btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`)
 
+  // Every missed check-in text goes in notification_log like the app's other texts, so a
+  // Twilio rejection shows up in the data, not only in the function logs. The push leg is
+  // logged by send-push-notification itself. A logging failure never blocks the alert.
+  async function logSms(userId: string, familyName: string, phone: string, ok: boolean, error: string | null) {
+    const { error: logError } = await supabase.from('notification_log').insert({
+      user_id: userId, family_name: familyName, notification_type: 'missed_check_in', channel: 'sms',
+      status: ok ? 'sent' : 'failed', recipient_phone: phone, error_message: error ? error.slice(0, 500) : null,
+    })
+    if (logError) console.error('notification_log insert failed:', logError.message)
+  }
+
   // 1. Every senior.
   const { data: seniors, error: sErr } = await supabase
     .from('user_profile')
@@ -213,13 +224,16 @@ serve(async (req) => {
           if (response.ok) {
             totalSent++
             console.log(`Missed check-in SMS sent to ${member.first_name} (${toPhone}) for senior ${senior.user_id}`)
+            await logSms(member.user_id, familyLabel, toPhone, true, null)
           } else {
             const errText = await response.text()
             console.error(`Twilio error for ${toPhone}:`, errText)
+            await logSms(member.user_id, familyLabel, toPhone, false, `Twilio HTTP ${response.status}: ${errText}`)
             await sendFailureAlertEmail(familyLabel, toPhone, seniorName, `Twilio HTTP ${response.status}: ${errText}`)
           }
         } catch (smsErr) {
           console.error(`SMS error for member ${member.first_name}:`, smsErr)
+          await logSms(member.user_id, familyLabel, toPhone, false, `Exception: ${smsErr}`)
           await sendFailureAlertEmail(familyLabel, toPhone, seniorName, `Exception: ${smsErr}`)
         }
       }
